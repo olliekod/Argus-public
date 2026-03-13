@@ -1,0 +1,10 @@
+{
+  "type": "FEED_DATA",
+  "channel": 1,
+  "data": [
+    "Quote",
+    ["eventSymbol", "bidPrice", "askPrice", "bidSize", "askSize", "bidTime", "askTime", "sequence"],
+    ["SPY", 500.10, 500.15, 100, 200, 1700000000000, 1700000000000, 12345],
+    ["IBIT", 52.30, 52.35, 50, 75, 1700000000000, 1700000000000, 12346]
+  ]
+}

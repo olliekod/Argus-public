@@ -1,0 +1,6 @@
+{
+  "type": "ERROR",
+  "channel": 0,
+  "error": "Authentication failed",
+  "message": "Invalid token"
+}

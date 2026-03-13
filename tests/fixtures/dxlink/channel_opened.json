@@ -1,0 +1,8 @@
+{
+  "type": "CHANNEL_OPENED",
+  "channel": 1,
+  "service": "FEED",
+  "parameters": {
+    "contract": "AUTO"
+  }
+}

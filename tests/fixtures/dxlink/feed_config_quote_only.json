@@ -1,0 +1,7 @@
+{
+  "type": "FEED_CONFIG",
+  "channel": 1,
+  "aggregationPeriod": 0,
+  "acceptedEventTypes": ["Quote"],
+  "eventTypes": ["Quote"]
+}

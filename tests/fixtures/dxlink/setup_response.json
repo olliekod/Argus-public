@@ -1,0 +1,5 @@
+{
+  "type": "AUTH_STATE",
+  "channel": 0,
+  "state": "UNAUTHORIZED"
+}

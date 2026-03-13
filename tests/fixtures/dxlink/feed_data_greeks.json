@@ -1,0 +1,9 @@
+{
+  "type": "FEED_DATA",
+  "channel": 1,
+  "data": [
+    "Greeks",
+    ["eventSymbol", "price", "volatility", "delta", "gamma", "theta", "rho", "vega"],
+    [".SPY250221C500", 5.20, 0.18, 0.55, 0.03, -0.05, 0.02, 0.15]
+  ]
+}

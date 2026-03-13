@@ -1,0 +1,12 @@
+{
+  "type": "FEED_DATA",
+  "channel": 1,
+  "data": [
+    "Quote",
+    ["eventSymbol", "bidPrice", "askPrice", "bidSize", "askSize", "bidTime", "askTime", "sequence"],
+    ["SPY", 500.10, 500.15, 100, 200, 1700000000000, 1700000000000, 12345],
+    "Greeks",
+    ["eventSymbol", "price", "volatility", "delta", "gamma", "theta", "rho", "vega"],
+    [".SPY250221C500", 5.20, 0.18, 0.55, 0.03, -0.05, 0.02, 0.15]
+  ]
+}
