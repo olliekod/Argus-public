@@ -123,15 +123,10 @@ htmlcov/
 .agent/
 .claude/
 .cursor/
-AGENTS.md
-CLAUDE.md
-GEMINI.md
-MASTER_PLAN.md
 *plan*.md
 *PLAN*.md
 *backlog*.md
 *BACKLOG*.md
-AUDIT_REPORT.md
 
 # -----------------------------------------------------------------------------
 # Local config backups and ad hoc outputs
