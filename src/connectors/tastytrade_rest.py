@@ -1,9 +1,8 @@
-"""
-Tastytrade REST API Client
-==========================
+# Created by Oliver Meihls
 
-Thin REST client with session auth, retries, and timestamp parsing.
-"""
+# Tastytrade REST API Client
+#
+# Thin REST client with session auth, retries, and timestamp parsing.
 
 from __future__ import annotations
 
@@ -22,11 +21,13 @@ TASTYTRADE_SANDBOX_URL = "https://api.cert.tastytrade.com"
 
 
 class TastytradeError(RuntimeError):
-    """Raised when Tastytrade REST calls fail."""
+    # Raised when Tastytrade REST calls fail.
 
+
+    pass
 
 def ensure_bearer_prefix(token: str) -> str:
-    """Ensure the token starts with 'Bearer '."""
+    # Ensure the token starts with 'Bearer '.
     if token.startswith("Bearer "):
         return token
     return f"Bearer {token}"
@@ -40,7 +41,7 @@ class RetryConfig:
 
 
 def parse_rfc3339_nano(timestamp: str) -> datetime:
-    """Parse RFC3339 timestamps with optional nanoseconds into UTC datetime."""
+    # Parse RFC3339 timestamps with optional nanoseconds into UTC datetime.
     if not timestamp:
         raise ValueError("Timestamp is empty")
     if timestamp.endswith("Z"):
@@ -106,13 +107,12 @@ def _attach_nested_chain_timestamps(payload: Dict[str, Any]) -> None:
 
 
 class TastytradeRestClient:
-    """Synchronous REST client for Tastytrade.
-
-    Supports two auth modes:
-    - OAuth 2.0 (preferred): pass oauth_access_token; requests use Authorization: Bearer <token>.
-      Tastytrade has deprecated session auth; OAuth is required for market-data/option-chain endpoints.
-    - Session (legacy): pass username/password and call login() to get a session-token.
-    """
+    # Synchronous REST client for Tastytrade.
+    #
+    # Supports two auth modes:
+    # - OAuth 2.0 (preferred): pass oauth_access_token; requests use Authorization: Bearer <token>.
+    # Tastytrade has deprecated session auth; OAuth is required for market-data/option-chain endpoints.
+    # - Session (legacy): pass username/password and call login() to get a session-token.
 
     def __init__(
         self,
@@ -146,7 +146,7 @@ class TastytradeRestClient:
             self._session.close()
 
     def set_oauth_token(self, access_token: str) -> None:
-        """Set or refresh the OAuth access token (Bearer). Use when token has been refreshed."""
+        # Set or refresh the OAuth access token (Bearer). Use when token has been refreshed.
         self._token = ensure_bearer_prefix(access_token)
         self._session.headers["Authorization"] = self._token
         self._using_oauth = True
@@ -198,15 +198,14 @@ class TastytradeRestClient:
         return data
 
     def get_api_quote_token(self) -> Dict[str, str]:
-        """Fetch a DXLink streaming token.
-
-        Returns:
-            Dict with ``"token"`` and ``"dxlink-url"`` keys.
-
-        Raises:
-            TastytradeError: if the request fails or required fields are
-                missing in the response.
-        """
+        # Fetch a DXLink streaming token.
+        #
+        # Returns:
+        # Dict with ``"token"`` and ``"dxlink-url"`` keys.
+        #
+        # Raises:
+        # TastytradeError: if the request fails or required fields are
+        # missing in the response.
         data = self._request("GET", "/api-quote-tokens")
         payload = data.get("data", data)
         token = payload.get("token")
@@ -222,9 +221,8 @@ class TastytradeRestClient:
         return {"symbols": symbols, "data": []}
 
     def get_equity_snapshot(self, symbol: str) -> Optional[Dict[str, Any]]:
-        """Fetch equity market-data snapshot for underlying price.
-        GET /market-data/snapshots/{symbol}. Returns dict with price fields (e.g. mark, last) or None on failure.
-        """
+        # Fetch equity market-data snapshot for underlying price.
+        # GET /market-data/snapshots/{symbol}. Returns dict with price fields (e.g. mark, last) or None on failure.
         try:
             data = self._request(
                 "GET",
@@ -294,7 +292,7 @@ class TastytradeRestClient:
 
 
 class TastytradeClient(TastytradeRestClient):
-    """Backward-compatible alias for TastytradeRestClient."""
+    # Backward-compatible alias for TastytradeRestClient.
 
     def __init__(
         self,

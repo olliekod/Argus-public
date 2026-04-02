@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import time
 
 from src.core.status_tracker import ActivityStatusTracker

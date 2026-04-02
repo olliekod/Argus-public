@@ -1,19 +1,18 @@
-"""
-DSL Strategy — Manifest-driven strategy execution engine.
-==========================================================
+# Created by Oliver Meihls
 
-Turns a :class:`~src.core.manifests.StrategyManifest` into a live
-:class:`BaseStrategy` that evaluates indicator-based logic trees on
-each incoming bar.
-
-The DSL supports boolean (AND/OR/NOT), comparison (GT/LT/GE/LE/EQ/NE),
-crossover (CROSS_ABOVE/CROSS_BELOW), and regime filter (IN_REGIME/
-NOT_IN_REGIME) operators.
-
-**Determinism guarantee**: Given identical bar data and regime state,
-the strategy will always produce identical signals.  No wall-clock,
-no randomness, no mutable global state.
-"""
+# DSL Strategy — Manifest-driven strategy execution engine.
+#
+# Turns a :class:`~src.core.manifests.StrategyManifest` into a live
+# :class:`BaseStrategy` that evaluates indicator-based logic trees on
+# each incoming bar.
+#
+# The DSL supports boolean (AND/OR/NOT), comparison (GT/LT/GE/LE/EQ/NE),
+# crossover (CROSS_ABOVE/CROSS_BELOW), and regime filter (IN_REGIME/
+# NOT_IN_REGIME) operators.
+#
+# **Determinism guarantee**: Given identical bar data and regime state,
+# the strategy will always produce identical signals.  No wall-clock,
+# no randomness, no mutable global state.
 
 from __future__ import annotations
 
@@ -51,17 +50,14 @@ from ..core.signals import (
 logger = logging.getLogger("argus.strategies.dsl_strategy")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Indicator State Registry
-# ═══════════════════════════════════════════════════════════════════════════
 
 class _IndicatorBank:
-    """Per-symbol collection of incremental indicator state machines.
-
-    Manages warmup and provides a flat ``name -> value`` mapping consumed
-    by the DSL evaluator.  All indicators are registered once from the
-    manifest's ``signals`` list and then updated on every bar.
-    """
+    # Per-symbol collection of incremental indicator state machines.
+    #
+    # Manages warmup and provides a flat ``name -> value`` mapping consumed
+    # by the DSL evaluator.  All indicators are registered once from the
+    # manifest's ``signals`` list and then updated on every bar.
 
     __slots__ = (
         "_emas", "_rsi", "_macd", "_vwap", "_atr",
@@ -143,7 +139,7 @@ class _IndicatorBank:
 
     @staticmethod
     def _ema_suffixes(params: Dict[str, Any]) -> List[str]:
-        """Extract EMA period suffixes from parameters."""
+        # Extract EMA period suffixes from parameters.
         suffixes: List[str] = []
         for key, val in params.items():
             if key.startswith("ema_") and key[4:].isdigit():
@@ -159,7 +155,7 @@ class _IndicatorBank:
         return suffixes
 
     def update(self, bar: BarEvent) -> Dict[str, Optional[float]]:
-        """Feed one bar into all indicators and return the current snapshot."""
+        # Feed one bar into all indicators and return the current snapshot.
         close = bar.close
         self._close_buf.append(close)
 
@@ -263,7 +259,7 @@ class _IndicatorBank:
         return dict(self._values)
 
     def _pick_primary_ema(self) -> str:
-        """Return the key of the first available EMA."""
+        # Return the key of the first available EMA.
         for name in sorted(self._emas.keys()):
             return name
         return "ema_12"
@@ -274,7 +270,7 @@ class _IndicatorBank:
 
     @property
     def is_warm(self) -> bool:
-        """True when all core indicators have produced at least one value."""
+        # True when all core indicators have produced at least one value.
         for key, val in self._values.items():
             if key in ("close", "high", "low", "open", "volume"):
                 continue
@@ -283,21 +279,20 @@ class _IndicatorBank:
         return True
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # DSL Parser — Recursive logic tree evaluator
-# ═══════════════════════════════════════════════════════════════════════════
 
 class DSLEvalError(Exception):
-    """Non-fatal evaluation error for a single bar."""
+    # Non-fatal evaluation error for a single bar.
 
+
+    pass
 
 class DSLParser:
-    """Evaluates a logic tree node against indicator values and regimes.
-
-    All comparisons are strictly typed (float vs float).  Missing
-    indicator data causes the entire tree to evaluate to ``False``
-    (conservative default), never ``True``.
-    """
+    # Evaluates a logic tree node against indicator values and regimes.
+    #
+    # All comparisons are strictly typed (float vs float).  Missing
+    # indicator data causes the entire tree to evaluate to ``False``
+    # (conservative default), never ``True``.
 
     @staticmethod
     def evaluate(
@@ -306,25 +301,22 @@ class DSLParser:
         prev_values: Dict[str, Optional[float]],
         regimes: Dict[str, str],
     ) -> bool:
-        """Recursively evaluate a logic node.
-
-        Parameters
-        ----------
-        node : dict
-            A logic node with at minimum an ``op`` key.
-        values : dict
-            Current indicator name -> float mapping.
-        prev_values : dict
-            Previous-bar indicator name -> float mapping (for crossovers).
-        regimes : dict
-            Current regime name -> regime value mapping.
-
-        Returns
-        -------
-        bool
-            True if the condition is met, False otherwise.
-            Returns False for any evaluation error (missing data, bad types).
-        """
+        # Recursively evaluate a logic node.
+        #
+        # Parameters
+        # node : dict
+        # A logic node with at minimum an ``op`` key.
+        # values : dict
+        # Current indicator name -> float mapping.
+        # prev_values : dict
+        # Previous-bar indicator name -> float mapping (for crossovers).
+        # regimes : dict
+        # Current regime name -> regime value mapping.
+        #
+        # Returns
+        # bool
+        # True if the condition is met, False otherwise.
+        # Returns False for any evaluation error (missing data, bad types).
         if not isinstance(node, dict):
             return False
 
@@ -367,13 +359,12 @@ class DSLParser:
     def _resolve_operand(
         operand: Any, values: Dict[str, Optional[float]]
     ) -> Optional[float]:
-        """Resolve an operand to a float value.
-
-        Operand can be:
-        - A string (indicator name to look up)
-        - A number (literal)
-        - A nested logic node (not supported for comparisons — returns None)
-        """
+        # Resolve an operand to a float value.
+        #
+        # Operand can be:
+        # - A string (indicator name to look up)
+        # - A number (literal)
+        # - A nested logic node (not supported for comparisons — returns None)
         if isinstance(operand, (int, float)):
             return float(operand)
         if isinstance(operand, str):
@@ -422,11 +413,10 @@ class DSLParser:
         values: Dict[str, Optional[float]],
         prev_values: Dict[str, Optional[float]],
     ) -> bool:
-        """Detect a crossover event between two series.
-
-        CROSS_ABOVE: left was <= right on previous bar, and left > right now.
-        CROSS_BELOW: left was >= right on previous bar, and left < right now.
-        """
+        # Detect a crossover event between two series.
+        #
+        # CROSS_ABOVE: left was <= right on previous bar, and left > right now.
+        # CROSS_BELOW: left was >= right on previous bar, and left < right now.
         left_curr = DSLParser._resolve_operand(node.get("left"), values)
         right_curr = DSLParser._resolve_operand(node.get("right"), values)
         left_prev = DSLParser._resolve_operand(node.get("left"), prev_values)
@@ -447,11 +437,10 @@ class DSLParser:
         regimes: Dict[str, str],
         negate: bool,
     ) -> bool:
-        """Evaluate an IN_REGIME / NOT_IN_REGIME condition.
-
-        Node format: {"op": "IN_REGIME", "condition": {"vol_regime": "VOL_LOW"}}
-        or:          {"op": "IN_REGIME", "condition": {"vol_regime": ["VOL_LOW", "VOL_NORMAL"]}}
-        """
+        # Evaluate an IN_REGIME / NOT_IN_REGIME condition.
+        #
+        # Node format: {"op": "IN_REGIME", "condition": {"vol_regime": "VOL_LOW"}}
+        # or:          {"op": "IN_REGIME", "condition": {"vol_regime": ["VOL_LOW", "VOL_NORMAL"]}}
         condition = node.get("condition", {})
         if not isinstance(condition, dict):
             return False
@@ -476,26 +465,22 @@ class DSLParser:
         return True
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # DSLStrategy
-# ═══════════════════════════════════════════════════════════════════════════
 
 class DSLStrategy(BaseStrategy):
-    """Strategy driven by a :class:`StrategyManifest` logic tree.
-
-    On each bar, the indicator bank is updated, then the entry and exit
-    logic trees are evaluated.  If entry conditions are met a signal is
-    emitted; if exit conditions are met an exit signal is emitted.
-
-    Parameters
-    ----------
-    bus : EventBus
-        The Argus pub/sub event bus.
-    manifest : StrategyManifest
-        The validated strategy manifest to execute.
-    config : dict, optional
-        Override config (merged with manifest parameters).
-    """
+    # Strategy driven by a :class:`StrategyManifest` logic tree.
+    #
+    # On each bar, the indicator bank is updated, then the entry and exit
+    # logic trees are evaluated.  If entry conditions are met a signal is
+    # emitted; if exit conditions are met an exit signal is emitted.
+    #
+    # Parameters
+    # bus : EventBus
+    # The Argus pub/sub event bus.
+    # manifest : StrategyManifest
+    # The validated strategy manifest to execute.
+    # config : dict, optional
+    # Override config (merged with manifest parameters).
 
     def __init__(
         self,
@@ -574,7 +559,7 @@ class DSLStrategy(BaseStrategy):
         return self._manifest
 
     def _get_indicator_bank(self, symbol: str) -> _IndicatorBank:
-        """Get or create the indicator bank for a symbol."""
+        # Get or create the indicator bank for a symbol.
         if symbol not in self._indicator_banks:
             self._indicator_banks[symbol] = _IndicatorBank(
                 signals=self._config["signals"],
@@ -587,7 +572,7 @@ class DSLStrategy(BaseStrategy):
         symbol_regime: Optional[SymbolRegimeEvent],
         market_regime: Optional[MarketRegimeEvent],
     ) -> Dict[str, str]:
-        """Build a flat regime dict for DSL evaluation."""
+        # Build a flat regime dict for DSL evaluation.
         regimes: Dict[str, str] = {}
 
         if symbol_regime is not None:
@@ -612,10 +597,9 @@ class DSLStrategy(BaseStrategy):
         return regimes
 
     def _check_regime_filters(self, regimes: Dict[str, str]) -> bool:
-        """Check that current regimes pass the manifest's regime filters.
-
-        Returns True if all filters pass (or no filters configured).
-        """
+        # Check that current regimes pass the manifest's regime filters.
+        #
+        # Returns True if all filters pass (or no filters configured).
         filters = self._config.get("regime_filters", {})
         if not filters:
             return True
@@ -639,17 +623,16 @@ class DSLStrategy(BaseStrategy):
         symbol_regime: Optional[SymbolRegimeEvent],
         market_regime: Optional[MarketRegimeEvent],
     ) -> Optional[SignalEvent]:
-        """Evaluate the manifest logic trees for this bar.
-
-        Steps:
-        1. Filter by universe (skip symbols not in manifest universe).
-        2. Update indicator bank with bar data.
-        3. Wait for indicator warmup.
-        4. Check regime filters.
-        5. Evaluate entry logic tree.
-        6. Evaluate exit logic tree.
-        7. Emit signal if conditions are met.
-        """
+        # Evaluate the manifest logic trees for this bar.
+        #
+        # Steps:
+        # 1. Filter by universe (skip symbols not in manifest universe).
+        # 2. Update indicator bank with bar data.
+        # 3. Wait for indicator warmup.
+        # 4. Check regime filters.
+        # 5. Evaluate entry logic tree.
+        # 6. Evaluate exit logic tree.
+        # 7. Emit signal if conditions are met.
         # 1. Universe filter
         universe = self._config.get("universe", [])
         if universe and bar.symbol not in universe:
@@ -743,7 +726,7 @@ class DSLStrategy(BaseStrategy):
         manifest: StrategyManifest,
         config: Optional[Dict[str, Any]] = None,
     ) -> DSLStrategy:
-        """Factory method for creating a DSLStrategy from a manifest."""
+        # Factory method for creating a DSLStrategy from a manifest.
         return cls(bus=bus, manifest=manifest, config=config)
 
     @classmethod
@@ -753,7 +736,7 @@ class DSLStrategy(BaseStrategy):
         data: Dict[str, Any],
         config: Optional[Dict[str, Any]] = None,
     ) -> DSLStrategy:
-        """Factory method for creating from a raw dict (e.g., from JSON)."""
+        # Factory method for creating from a raw dict (e.g., from JSON).
         manifest = StrategyManifest.from_dict(data)
         return cls(bus=bus, manifest=manifest, config=config)
 
@@ -764,6 +747,6 @@ class DSLStrategy(BaseStrategy):
         json_str: str,
         config: Optional[Dict[str, Any]] = None,
     ) -> DSLStrategy:
-        """Factory method for creating from a JSON string."""
+        # Factory method for creating from a JSON string.
         manifest = StrategyManifest.from_json(json_str)
         return cls(bus=bus, manifest=manifest, config=config)

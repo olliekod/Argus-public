@@ -1,11 +1,10 @@
-"""
-Trader Config Generator
-=======================
+# Created by Oliver Meihls
 
-Generates 35,000 unique trader configurations across 4 strategies.
-Covers all 33,600 unique parameter combinations with small buffer.
-Includes market regime awareness.
-"""
+# Trader Config Generator
+#
+# Generates 35,000 unique trader configurations across 4 strategies.
+# Covers all 33,600 unique parameter combinations with small buffer.
+# Includes market regime awareness.
 
 import itertools
 import logging
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class MarketRegime(Enum):
-    """Market regime for strategy filtering."""
+    # Market regime for strategy filtering.
     BULL = "bull"      # BTC up >5% in 2 weeks
     BEAR = "bear"      # BTC down >5% in 2 weeks  
     NEUTRAL = "neutral"  # Within ±5%
@@ -67,7 +66,7 @@ STRATEGY_REGIME_COMPAT = {
 
 
 def generate_all_combinations_for_strategy(strategy: StrategyType) -> List[tuple]:
-    """Generate all valid parameter combinations for a strategy."""
+    # Generate all valid parameter combinations for a strategy.
     iv_range = STRATEGY_IV_RANGES.get(strategy, [55, 60, 65, 70, 75])
     valid_regimes = STRATEGY_REGIME_COMPAT.get(strategy, [MarketRegime.ANY])
     
@@ -92,17 +91,15 @@ def generate_configs_for_strategy(
     max_count: Optional[int] = None,
     start_id: int = 0,
 ) -> List[TraderConfig]:
-    """
-    Generate trader configs for a single strategy.
-    
-    Args:
-        strategy: Strategy type
-        max_count: Optional max number of configs (None = all combinations)
-        start_id: Starting ID number
-        
-    Returns:
-        List of TraderConfig objects
-    """
+    # Generate trader configs for a single strategy.
+    #
+    # Args:
+    # strategy: Strategy type
+    # max_count: Optional max number of configs (None = all combinations)
+    # start_id: Starting ID number
+    #
+    # Returns:
+    # List of TraderConfig objects
     all_combos = generate_all_combinations_for_strategy(strategy)
     
     # Sample if max_count specified and less than total
@@ -145,17 +142,15 @@ def generate_all_configs(
     full_coverage: bool = True,
     max_traders: int = 2_000_000,
 ) -> List[TraderConfig]:
-    """
-    Generate all trader configurations.
-    
-    Args:
-        total_traders: Target number of traders
-        strategies: List of strategies to use (default: all 4)
-        full_coverage: If True, generate ALL unique combinations
-        
-    Returns:
-        List of all TraderConfig objects
-    """
+    # Generate all trader configurations.
+    #
+    # Args:
+    # total_traders: Target number of traders
+    # strategies: List of strategies to use (default: all 4)
+    # full_coverage: If True, generate ALL unique combinations
+    #
+    # Returns:
+    # List of all TraderConfig objects
     if strategies is None:
         strategies = list(StrategyType)
     
@@ -197,7 +192,7 @@ def generate_all_configs(
 
 
 def get_config_summary(configs: List[TraderConfig]) -> Dict:
-    """Get summary statistics for a list of configs."""
+    # Get summary statistics for a list of configs.
     from collections import Counter
     
     strategies = Counter(c.strategy_type.value for c in configs)
@@ -241,7 +236,7 @@ def get_config_summary(configs: List[TraderConfig]) -> Dict:
 
 
 def get_total_combinations() -> Dict[str, int]:
-    """Calculate total unique combinations per strategy."""
+    # Calculate total unique combinations per strategy.
     totals = {}
     for strategy in StrategyType:
         combos = generate_all_combinations_for_strategy(strategy)
@@ -251,7 +246,7 @@ def get_total_combinations() -> Dict[str, int]:
 
 
 def save_configs_to_file(configs: List[TraderConfig], filepath: str) -> None:
-    """Save configs to JSON file for persistence."""
+    # Save configs to JSON file for persistence.
     import json
     from datetime import datetime, timezone
     
@@ -266,7 +261,7 @@ def save_configs_to_file(configs: List[TraderConfig], filepath: str) -> None:
 
 
 def load_configs_from_file(filepath: str) -> List[TraderConfig]:
-    """Load configs from JSON file."""
+    # Load configs from JSON file.
     import json
     
     with open(filepath, 'r') as f:
@@ -277,7 +272,7 @@ def load_configs_from_file(filepath: str) -> List[TraderConfig]:
 
 # Test function
 def test_generator():
-    """Test configuration generator."""
+    # Test configuration generator.
     print("Trader Config Generator Test (Full Coverage)")
     print("=" * 60)
     

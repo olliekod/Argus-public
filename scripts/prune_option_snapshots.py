@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Prune old rows from option_quote_snapshots."""
+# Created by Oliver Meihls
+
+# Prune old rows from option_quote_snapshots.
 
 from __future__ import annotations
 

@@ -1,10 +1,10 @@
-"""
-Web dashboard for Argus Kalshi — matches terminal UI layout, fully decoupled from backend.
+# Created by Oliver Meihls
 
-When visualizer_process == "separate", the backend runs one snapshot producer
-and pushes to (1) IPC for terminal UI, (2) this dashboard via a callback.
-Open http://localhost:<dashboard_port> in a browser.
-"""
+# Web dashboard for Argus Kalshi — matches terminal UI layout, fully decoupled from backend.
+#
+# When visualizer_process == "separate", the backend runs one snapshot producer
+# and pushes to (1) IPC for terminal UI, (2) this dashboard via a callback.
+# Open http://localhost:<dashboard_port> in a browser.
 
 from __future__ import annotations
 
@@ -21,14 +21,14 @@ _snapshot: Optional[Dict[str, Any]] = None
 
 
 def set_snapshot(snapshot: Dict[str, Any]) -> None:
-    """Called from IPC broadcast loop (async main thread)."""
+    # Called from IPC broadcast loop (async main thread).
     with _lock:
         global _snapshot
         _snapshot = snapshot
 
 
 def get_snapshot() -> Optional[Dict[str, Any]]:
-    """Called from HTTP handler (server thread)."""
+    # Called from HTTP handler (server thread).
     with _lock:
         return _snapshot
 
@@ -340,7 +340,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
 
 
 def run_dashboard_server(host: str = "127.0.0.1", port: int = 9998) -> None:
-    """Run HTTP server in the current thread (call from a dedicated thread)."""
+    # Run HTTP server in the current thread (call from a dedicated thread).
     server = HTTPServer((host, port), _DashboardHandler)
     log.info("Dashboard HTTP server on http://%s:%s", host, port)
     try:
@@ -352,7 +352,7 @@ def run_dashboard_server(host: str = "127.0.0.1", port: int = 9998) -> None:
 
 
 def start_dashboard_thread(host: str = "127.0.0.1", port: int = 9998) -> threading.Thread:
-    """Start the dashboard HTTP server in a daemon thread. Returns the thread."""
+    # Start the dashboard HTTP server in a daemon thread. Returns the thread.
     t = threading.Thread(target=run_dashboard_server, args=(host, port), daemon=True)
     t.start()
     return t

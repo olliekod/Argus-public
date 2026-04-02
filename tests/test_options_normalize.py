@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from src.core.options_normalize import normalize_tastytrade_nested_chain
 
 

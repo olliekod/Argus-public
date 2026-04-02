@@ -1,17 +1,17 @@
-"""
-Kalshi run-pack wrapper for post-window analytics.
+# Created by Oliver Meihls
 
-Generates one timestamped output directory containing:
-- context report (JSON + TXT)
-- promotion gate (JSON + TXT)
-- concentration summary (JSON + TXT)
-- cycle stability summary (JSON + TXT)
-
-Usage:
-    python scripts/kalshi_run_pack.py
-    python scripts/kalshi_run_pack.py --hours 8
-    python scripts/kalshi_run_pack.py --windows 4,8,24
-"""
+# Kalshi run-pack wrapper for post-window analytics.
+#
+# Generates one timestamped output directory containing:
+# - context report (JSON + TXT)
+# - promotion gate (JSON + TXT)
+# - concentration summary (JSON + TXT)
+# - cycle stability summary (JSON + TXT)
+#
+# Usage:
+# python scripts/kalshi_run_pack.py
+# python scripts/kalshi_run_pack.py --hours 8
+# python scripts/kalshi_run_pack.py --windows 4,8,24
 
 from __future__ import annotations
 
@@ -564,7 +564,7 @@ def _build_cycle_stability_summary(
 def _build_context_feature_coverage(
     settlements: List[Dict[str, Any]],
 ) -> Tuple[Dict[str, Any], str]:
-    """Report coverage of new v2 decision_context fields."""
+    # Report coverage of new v2 decision_context fields.
     total = len(settlements)
     if total == 0:
         empty = {"total": 0, "coverage": {}}
@@ -632,7 +632,7 @@ def _build_context_feature_coverage(
 
 
 def _build_policy_snapshot() -> Tuple[Dict[str, Any], str]:
-    """Load current policy file and produce a snapshot for run-pack."""
+    # Load current policy file and produce a snapshot for run-pack.
     policy_path = Path("config/kalshi_context_policy.json")
     if not policy_path.exists():
         return {"loaded": False}, "No policy file found.\n"
@@ -662,7 +662,7 @@ def _build_edge_retention_summary(
     *,
     min_samples: int = 20,
 ) -> Tuple[Dict[str, Any], str]:
-    """Compute expected vs realized edge by context key."""
+    # Compute expected vs realized edge by context key.
     by_key: Dict[str, List[Tuple[float, float]]] = defaultdict(list)
     for r in settlements:
         ctx = r.get("decision_context") or {}
@@ -739,7 +739,7 @@ def _file_hash(path: Path) -> str:
 
 
 def _compute_max_drawdown(settlements: List[Dict[str, Any]]) -> float:
-    """Peak-to-trough max drawdown on cumulative PnL sorted by timestamp."""
+    # Peak-to-trough max drawdown on cumulative PnL sorted by timestamp.
     sorted_s = sorted(settlements, key=lambda r: float(r.get("timestamp") or 0.0))
     cum = 0.0
     peak = 0.0
@@ -757,7 +757,7 @@ def _compute_max_drawdown(settlements: List[Dict[str, Any]]) -> float:
 def _build_sleeve_metrics(
     settlements: List[Dict[str, Any]],
 ) -> Tuple[Dict[str, Any], str]:
-    """Break down fills, PnL, and win rate by source (sleeve)."""
+    # Break down fills, PnL, and win rate by source (sleeve).
     by_source: Dict[str, Dict[str, float]] = defaultdict(
         lambda: {"fills": 0.0, "pnl": 0.0, "wins": 0.0}
     )
@@ -799,7 +799,7 @@ def _build_population_metrics(
     *,
     top: int = 20,
 ) -> Tuple[Dict[str, Any], str]:
-    """Per-bot performance summary."""
+    # Per-bot performance summary.
     by_bot: Dict[str, Dict[str, float]] = defaultdict(
         lambda: {"fills": 0.0, "pnl": 0.0, "wins": 0.0}
     )
@@ -859,7 +859,7 @@ def _parse_windows(value: str) -> List[float]:
 
 
 def _validate_runpack(out_dir: Path, manifest: Dict[str, Any]) -> None:
-    """Validate all runpack artifacts exist and have required keys. Exits 1 on failure."""
+    # Validate all runpack artifacts exist and have required keys. Exits 1 on failure.
     REQUIRED_MANIFEST = {"run_id", "generated_at_utc", "git_hash", "config_hash", "windows_hours", "outputs"}
     REQUIRED_METRICS = {"run_id", "windows"}
     REQUIRED_CONTEXT = {"settlements", "total_pnl_usd", "sections"}

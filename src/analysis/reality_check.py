@@ -1,21 +1,19 @@
-"""
-Reality Check / SPA Test
-=========================
+# Created by Oliver Meihls
 
-Implements White's (2000) Reality Check for data snooping, with the
-Stationary Bootstrap of Politis & Romano (1994).
-
-Tests whether the best strategy outperforms a benchmark after correcting
-for multiple testing (data snooping).
-
-References
-----------
-- White, H. (2000). A Reality Check for Data Snooping. *Econometrica*.
-- Hansen, P.R. (2005). A Test for Superior Predictive Ability.
-  *Journal of Business & Economic Statistics*.
-- Politis, D.N. & Romano, J.P. (1994). The Stationary Bootstrap.
-  *JASA*, 89(428), 1303–1313.
-"""
+# Reality Check / SPA Test
+#
+# Implements White's (2000) Reality Check for data snooping, with the
+# Stationary Bootstrap of Politis & Romano (1994).
+#
+# Tests whether the best strategy outperforms a benchmark after correcting
+# for multiple testing (data snooping).
+#
+# References
+# - White, H. (2000). A Reality Check for Data Snooping. *Econometrica*.
+# - Hansen, P.R. (2005). A Test for Superior Predictive Ability.
+# *Journal of Business & Economic Statistics*.
+# - Politis, D.N. & Romano, J.P. (1994). The Stationary Bootstrap.
+# *JASA*, 89(428), 1303–1313.
 
 from __future__ import annotations
 
@@ -32,26 +30,23 @@ def _stationary_bootstrap_indices(
     block_size: float,
     rng: random.Random,
 ) -> List[int]:
-    """Generate bootstrap indices using the stationary bootstrap.
-
-    The stationary bootstrap draws block starts randomly and extends
-    each block with probability ``1 - 1/block_size`` at each step,
-    producing random-length blocks with expected length ``block_size``.
-
-    Parameters
-    ----------
-    n : int
-        Length of the original series.
-    block_size : float
-        Expected block length (geometric distribution parameter).
-    rng : random.Random
-        Random number generator.
-
-    Returns
-    -------
-    list of int
-        Bootstrap index sequence of length ``n``.
-    """
+    # Generate bootstrap indices using the stationary bootstrap.
+    #
+    # The stationary bootstrap draws block starts randomly and extends
+    # each block with probability ``1 - 1/block_size`` at each step,
+    # producing random-length blocks with expected length ``block_size``.
+    #
+    # Parameters
+    # n : int
+    # Length of the original series.
+    # block_size : float
+    # Expected block length (geometric distribution parameter).
+    # rng : random.Random
+    # Random number generator.
+    #
+    # Returns
+    # list of int
+    # Bootstrap index sequence of length ``n``.
     if n == 0:
         return []
 
@@ -72,21 +67,18 @@ def _stationary_bootstrap_indices(
 
 
 def _compute_hac_variance(series: Sequence[float], bandwidth: int = 0) -> float:
-    """Compute HAC (Newey-West) variance of the mean of a series.
-
-    Parameters
-    ----------
-    series : sequence of float
-        Time series.
-    bandwidth : int
-        Number of lags for Newey-West correction.  If 0, uses no
-        correction (simple variance of the mean).
-
-    Returns
-    -------
-    float
-        Estimated variance of the sample mean.
-    """
+    # Compute HAC (Newey-West) variance of the mean of a series.
+    #
+    # Parameters
+    # series : sequence of float
+    # Time series.
+    # bandwidth : int
+    # Number of lags for Newey-West correction.  If 0, uses no
+    # correction (simple variance of the mean).
+    #
+    # Returns
+    # float
+    # Estimated variance of the sample mean.
     n = len(series)
     if n < 2:
         return 1.0
@@ -118,34 +110,31 @@ def reality_check(
     seed: Optional[int] = 42,
     hac_bandwidth: int = 0,
 ) -> dict:
-    """Run White's Reality Check for data snooping.
-
-    Tests H0: no strategy beats the benchmark, after correcting for
-    having tested multiple strategies.
-
-    Parameters
-    ----------
-    strategy_returns : dict[str, sequence of float]
-        Mapping from strategy name to per-period return series.
-        All series must have the same length.
-    benchmark_returns : sequence of float, optional
-        Per-period benchmark returns.  If None, assumes zero
-        (i.e., tests whether any strategy has positive returns).
-    n_bootstrap : int
-        Number of bootstrap replications (default 1000).
-    block_size : float
-        Expected block length for stationary bootstrap (default 10).
-    seed : int, optional
-        Random seed for reproducibility.
-    hac_bandwidth : int
-        Bandwidth for HAC variance estimation (0 = no correction).
-
-    Returns
-    -------
-    dict
-        ``p_value``, ``test_statistic``, ``best_strategy``,
-        ``best_mean_excess``, ``n_strategies``, ``n_obs``.
-    """
+    # Run White's Reality Check for data snooping.
+    #
+    # Tests H0: no strategy beats the benchmark, after correcting for
+    # having tested multiple strategies.
+    #
+    # Parameters
+    # strategy_returns : dict[str, sequence of float]
+    # Mapping from strategy name to per-period return series.
+    # All series must have the same length.
+    # benchmark_returns : sequence of float, optional
+    # Per-period benchmark returns.  If None, assumes zero
+    # (i.e., tests whether any strategy has positive returns).
+    # n_bootstrap : int
+    # Number of bootstrap replications (default 1000).
+    # block_size : float
+    # Expected block length for stationary bootstrap (default 10).
+    # seed : int, optional
+    # Random seed for reproducibility.
+    # hac_bandwidth : int
+    # Bandwidth for HAC variance estimation (0 = no correction).
+    #
+    # Returns
+    # dict
+    # ``p_value``, ``test_statistic``, ``best_strategy``,
+    # ``best_mean_excess``, ``n_strategies``, ``n_obs``.
     if not strategy_returns:
         return {
             "p_value": 1.0,

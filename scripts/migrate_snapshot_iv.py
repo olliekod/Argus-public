@@ -1,17 +1,18 @@
-"""One-time migration: re-derive IV from quotes_json for snapshots with missing atm_iv.
+# Created by Oliver Meihls
 
-For each option_chain_snapshot where atm_iv IS NULL or atm_iv <= 0, attempts to derive
-IV from quotes_json (put-level iv, bid/ask, GreeksEngine). Updates the DB when derived
-IV is valid.
-
-Usage:
-  python scripts/migrate_snapshot_iv.py [--db PATH] [--symbol SYM] [--dry-run] [--verbose]
-
-  --db       Path to argus.db (default: data/argus.db)
-  --symbol   Migrate only this symbol (default: all)
-  --dry-run  Don't write; print what would be updated
-  --verbose  Log derivation failures (useful to diagnose why derivation fails)
-"""
+# One-time migration: re-derive IV from quotes_json for snapshots with missing atm_iv.
+#
+# For each option_chain_snapshot where atm_iv IS NULL or atm_iv <= 0, attempts to derive
+# IV from quotes_json (put-level iv, bid/ask, GreeksEngine). Updates the DB when derived
+# IV is valid.
+#
+# Usage:
+# python scripts/migrate_snapshot_iv.py [--db PATH] [--symbol SYM] [--dry-run] [--verbose]
+#
+# --db       Path to argus.db (default: data/argus.db)
+# --symbol   Migrate only this symbol (default: all)
+# --dry-run  Don't write; print what would be updated
+# --verbose  Log derivation failures (useful to diagnose why derivation fails)
 
 from __future__ import annotations
 
@@ -86,7 +87,7 @@ async def run(db_path: str, symbol: str | None, dry_run: bool, verbose: bool) ->
 
 
 def _diagnose_failure(quotes_json: str, underlying: float) -> str:
-    """Return a short reason why derivation failed (for diagnostics)."""
+    # Return a short reason why derivation failed (for diagnostics).
     import json
     if not quotes_json or not quotes_json.strip():
         return "empty quotes_json"
@@ -104,6 +105,7 @@ def _diagnose_failure(quotes_json: str, underlying: float) -> str:
                 underlying_resolved = float(raw)
             except (TypeError, ValueError):
                 pass
+
     if underlying_resolved <= 0:
         return "underlying_price missing or 0"
     puts = data.get("puts") or []

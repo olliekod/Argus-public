@@ -1,9 +1,10 @@
-"""Verify terminal UI leaderboard numbers against paper_trades.jsonl.
+# Created by Oliver Meihls
 
-The UI leaderboard is built from bus events (SettlementOutcome, FillEvent) in the
-current session only. This script checks that the numbers are consistent with
-the full paper_trades.jsonl (and can verify a subset like 'last N' for Balain).
-"""
+# Verify terminal UI leaderboard numbers against paper_trades.jsonl.
+#
+# The UI leaderboard is built from bus events (SettlementOutcome, FillEvent) in the
+# current session only. This script checks that the numbers are consistent with
+# the full paper_trades.jsonl (and can verify a subset like 'last N' for Balain).
 import json
 import sys
 from collections import defaultdict

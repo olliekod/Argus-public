@@ -1,16 +1,17 @@
-"""Tests for family-adaptive farm system.
+# Created by Oliver Meihls
 
-Covers:
-  - FAMILIES tuple includes all 6 families (ETH Range fixed)
-  - assign_family returns ETH Range correctly
-  - FamilyWeightManager rebalance logic and min/max floors
-  - Per-family epoch ranking (evaluate_epoch_by_family)
-  - Novelty distance prevents near-clones
-  - Exploit/explore lanes with family domains
-  - RegimeGate wiring in KalshiPaperFarm
-  - Config validation for new fields
-  - Family weight diagnostics
-"""
+# Tests for family-adaptive farm system.
+#
+# Covers:
+# - FAMILIES tuple includes all 6 families (ETH Range fixed)
+# - assign_family returns ETH Range correctly
+# - FamilyWeightManager rebalance logic and min/max floors
+# - Per-family epoch ranking (evaluate_epoch_by_family)
+# - Novelty distance prevents near-clones
+# - Exploit/explore lanes with family domains
+# - RegimeGate wiring in KalshiPaperFarm
+# - Config validation for new fields
+# - Family weight diagnostics
 import time
 import asyncio
 from unittest.mock import MagicMock, patch
@@ -32,9 +33,7 @@ from argus_kalshi.simulation import (
 )
 
 
-# ---------------------------------------------------------------------------
 #  Phase 1: FAMILIES fix
-# ---------------------------------------------------------------------------
 
 class TestFamiliesFix:
     def test_families_has_6_entries(self):
@@ -64,9 +63,7 @@ class TestFamiliesFix:
         assert assign_family("KXETH-26MAR05-T4500") == "ETH Range"
 
 
-# ---------------------------------------------------------------------------
 #  Phase 2: FamilyWeightManager
-# ---------------------------------------------------------------------------
 
 class TestFamilyWeightManager:
     def test_initial_weights_equal(self):
@@ -132,9 +129,7 @@ class TestFamilyWeightManager:
         assert mgr.get_diagnostics()["reseed_count"]["BTC 15m"] == 2
 
 
-# ---------------------------------------------------------------------------
 #  Phase 2: Per-family epoch ranking
-# ---------------------------------------------------------------------------
 
 class TestPerFamilyEpoch:
     def test_per_family_retires_within_family_only(self):
@@ -185,13 +180,11 @@ class TestPerFamilyEpoch:
         assert family_split == {}
 
 
-# ---------------------------------------------------------------------------
 #  Exploit/explore lanes
-# ---------------------------------------------------------------------------
 
 class TestExploitExploreLanes:
     def test_perturb_config_tight_smaller_magnitude(self):
-        """Tight perturbation should produce smaller changes than standard."""
+        # Tight perturbation should produce smaller changes than standard.
         import random
         rng = random.Random(42)
         base = {"min_edge_threshold": 0.10, "persistence_window_ms": 200}
@@ -203,7 +196,7 @@ class TestExploitExploreLanes:
         assert "min_edge_threshold" in tight
 
     def test_family_param_domains_applied(self):
-        """BTC Range family should use different bounds for min_entry_cents."""
+        # BTC Range family should use different bounds for min_entry_cents.
         bounds = _resolve_param_bounds("BTC Range")
         assert bounds["min_entry_cents"] == (30, 60)
         assert bounds["max_entry_cents"] == (55, 80)
@@ -218,9 +211,7 @@ class TestExploitExploreLanes:
         assert 55 <= cfg["max_entry_cents"] <= 80
 
 
-# ---------------------------------------------------------------------------
 #  Novelty distance
-# ---------------------------------------------------------------------------
 
 class TestNoveltyDistance:
     def test_novelty_distance_empty_population(self):
@@ -238,9 +229,7 @@ class TestNoveltyDistance:
         assert dist > 0.5, f"Very different configs should have high distance, got {dist}"
 
 
-# ---------------------------------------------------------------------------
 #  Config validation
-# ---------------------------------------------------------------------------
 
 class TestConfigValidation:
     def test_family_min_weight_validates(self):
@@ -271,14 +260,12 @@ class TestConfigValidation:
         assert cfg.family_context_features_enabled is False
 
 
-# ---------------------------------------------------------------------------
 #  RegimeGate wiring (farm_runner integration)
-# ---------------------------------------------------------------------------
 
 class TestRegimeGateWiring:
     @pytest.mark.asyncio
     async def test_regime_gate_instantiated_in_farm_start(self):
-        """When enable_regime_gating=True, RegimeGate should be created and passed to dispatcher."""
+        # When enable_regime_gating=True, RegimeGate should be created and passed to dispatcher.
         from argus_kalshi.bus import Bus
         from argus_kalshi.farm_runner import KalshiPaperFarm
 
@@ -318,7 +305,7 @@ class TestRegimeGateWiring:
 
     @pytest.mark.asyncio
     async def test_regime_gate_preserved_on_register_deregister(self):
-        """Evaluator rebuild after register/deregister must preserve regime_gate."""
+        # Evaluator rebuild after register/deregister must preserve regime_gate.
         from argus_kalshi.bus import Bus
         from argus_kalshi.farm_runner import KalshiPaperFarm
 
@@ -339,9 +326,7 @@ class TestRegimeGateWiring:
         await farm.stop()
 
 
-# ---------------------------------------------------------------------------
 #  Diagnostics
-# ---------------------------------------------------------------------------
 
 class TestDiagnostics:
     @pytest.mark.asyncio

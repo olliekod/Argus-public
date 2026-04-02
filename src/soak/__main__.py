@@ -1,24 +1,23 @@
-"""
-Argus Soak Summary CLI
-======================
+# Created by Oliver Meihls
 
-Usage::
-
-    # Fetch from running dashboard (default http://127.0.0.1:8777)
-    python -m argus.soak
-
-    # Custom host/port
-    python -m argus.soak --url http://localhost:9000
-
-    # JSON output (for piping)
-    python -m argus.soak --json
-
-    # Export tape (if tape recorder is enabled in running instance)
-    python -m argus.soak export-tape --minutes 5 --output tape.jsonl
-
-    # Replay a tape and compare bars for determinism
-    python -m argus.soak replay --tape tape.jsonl
-"""
+# Argus Soak Summary CLI
+#
+# Usage::
+#
+# # Fetch from running dashboard (default http://127.0.0.1:8777)
+# python -m argus.soak
+#
+# # Custom host/port
+# python -m argus.soak --url http://localhost:9000
+#
+# # JSON output (for piping)
+# python -m argus.soak --json
+#
+# # Export tape (if tape recorder is enabled in running instance)
+# python -m argus.soak export-tape --minutes 5 --output tape.jsonl
+#
+# # Replay a tape and compare bars for determinism
+# python -m argus.soak replay --tape tape.jsonl
 
 from __future__ import annotations
 
@@ -30,7 +29,7 @@ import urllib.error
 
 
 def _fetch_soak(url: str) -> dict:
-    """Fetch the soak summary from the running dashboard."""
+    # Fetch the soak summary from the running dashboard.
     try:
         req = urllib.request.Request(url, headers={"Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -53,7 +52,7 @@ def _health_icon(status: str) -> str:
 
 
 def _print_summary(data: dict) -> None:
-    """Pretty-print the soak summary to stdout."""
+    # Pretty-print the soak summary to stdout.
     print("=" * 60)
     print("  ARGUS SOAK SUMMARY")
     print("=" * 60)
@@ -219,7 +218,7 @@ def _print_summary(data: dict) -> None:
 
 
 def _cmd_replay(args):
-    """Replay a tape file twice and compare bars."""
+    # Replay a tape file twice and compare bars.
     from .tape import TapeRecorder, _to_ms
 
     tape = TapeRecorder.load_tape(args.tape)
@@ -300,7 +299,7 @@ def _cmd_replay(args):
 
 
 def _cmd_export_tape(args):
-    """Fetch tape data from running instance and save to JSONL."""
+    # Fetch tape data from running instance and save to JSONL.
     url = f"{args.url.rsplit('/', 1)[0]}/tape/export"
     if args.minutes:
         url += f"?minutes={args.minutes}"

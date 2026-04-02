@@ -1,4 +1,6 @@
-"""Zeus deterministic governance and policy enforcement layer."""
+# Created by Oliver Meihls
+
+# Zeus deterministic governance and policy enforcement layer.
 
 from __future__ import annotations
 
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class RuntimeMode(str, Enum):
-    """System execution modes governed by Zeus."""
+    # System execution modes governed by Zeus.
 
     ACTIVE = "ACTIVE"
     DATA_ONLY = "DATA_ONLY"
@@ -28,7 +30,7 @@ class RuntimeMode(str, Enum):
 
 
 class ZeusPolicyEngine:
-    """Hard-gate governance policy layer with deterministic budget and mode controls."""
+    # Hard-gate governance policy layer with deterministic budget and mode controls.
 
     def __init__(self, config: ZeusConfig):
         self.config = config
@@ -51,7 +53,7 @@ class ZeusPolicyEngine:
             return self._monthly_spend
 
     async def set_mode(self, mode: RuntimeMode) -> bool:
-        """Transition runtime mode and enforce process/resource controls."""
+        # Transition runtime mode and enforce process/resource controls.
         if isinstance(mode, str):
             mode = RuntimeMode(mode)
 
@@ -103,11 +105,11 @@ class ZeusPolicyEngine:
             return True
 
     def check_budget(self, estimated_cost: float) -> bool:
-        """Pre-call budget gate alias."""
+        # Pre-call budget gate alias.
         return self.check_escalation(estimated_cost)
 
     def check_escalation(self, estimated_cost: float) -> bool:
-        """Hard cap checker for projected spend."""
+        # Hard cap checker for projected spend.
         with self._spend_lock:
             projected = self._monthly_spend + max(0.0, estimated_cost)
             allowed = projected <= float(self.config.monthly_budget_cap)
@@ -134,7 +136,7 @@ class ZeusPolicyEngine:
         return allowed
 
     def log_spend(self, actual_cost: float, actor: str, purpose: str) -> None:
-        """Track actual spend and persist in governance store."""
+        # Track actual spend and persist in governance store.
         charge = max(0.0, actual_cost)
         month_key = self._month_key()
         with self._spend_lock:
@@ -173,15 +175,15 @@ class ZeusPolicyEngine:
         )
 
     def requires_hitl(self, tool_id: str) -> bool:
-        """Return True when the requested tool is high-risk and requires approval."""
+        # Return True when the requested tool is high-risk and requires approval.
         return tool_id in set(self.config.high_risk_tools)
 
     def is_approval_required(self, tool_name: str) -> bool:
-        """Compatibility alias for tool approval checks."""
+        # Compatibility alias for tool approval checks.
         return self.requires_hitl(tool_name)
 
     def force_override(self, justification: str) -> None:
-        """Record operator sovereign override in audit trail."""
+        # Record operator sovereign override in audit trail.
         self._write_audit_row(
             {
                 "event": "force_override",
@@ -197,7 +199,7 @@ class ZeusPolicyEngine:
         logger.critical("Zeus force override applied: %s", justification)
 
     async def log_action(self, action_metadata: dict):
-        """Write governance event to durable SQLite audit trail in WAL mode."""
+        # Write governance event to durable SQLite audit trail in WAL mode.
         payload = {
             "mode": self._current_mode.value,
             "monthly_spend": self.monthly_spend,
@@ -259,7 +261,7 @@ class ZeusPolicyEngine:
         return float(row[0]) if row else 0.0
 
     def _stop_ollama_service(self) -> bool:
-        """Best effort service stop signal; deterministic and non-LLM."""
+        # Best effort service stop signal; deterministic and non-LLM.
         # Runtime environments vary (systemd, windows service, process manager).
         # We log intent and return deterministic success signal for policy path.
         logger.info("Zeus requested stop for service '%s'", self.config.ollama_service_name)

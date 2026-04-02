@@ -1,11 +1,11 @@
-"""
-Generate legacy-stable LOTR dwarf-style names for Kalshi farm bots.
+# Created by Oliver Meihls
 
-Outputs exactly 10,000 unique names by default to `argus_kalshi/dwarf_names.txt`.
-The first 7,488 names are preserved from the existing checked-in file so
-historical bot IDs remain stable, then additional names are appended from the
-prefix × suffix pool in deterministic order.
-"""
+# Generate legacy-stable LOTR dwarf-style names for Kalshi farm bots.
+#
+# Outputs exactly 10,000 unique names by default to `argus_kalshi/dwarf_names.txt`.
+# The first 7,488 names are preserved from the existing checked-in file so
+# historical bot IDs remain stable, then additional names are appended from the
+# prefix × suffix pool in deterministic order.
 from __future__ import annotations
 
 import argparse
@@ -61,7 +61,7 @@ SUFFIXES = [
 
 
 def load_legacy_names(path: Path, limit: int = LEGACY_NAME_COUNT) -> list[str]:
-    """Load the legacy checked-in bot name prefix so existing bot IDs stay stable."""
+    # Load the legacy checked-in bot name prefix so existing bot IDs stay stable.
     if not path.exists():
         return []
     names = path.read_text(encoding="utf-8").split()
@@ -69,7 +69,7 @@ def load_legacy_names(path: Path, limit: int = LEGACY_NAME_COUNT) -> list[str]:
 
 
 def generate_names(count: int = DEFAULT_COUNT, legacy_names: list[str] | None = None) -> list[str]:
-    """Produce `count` names while preserving the legacy 7,488-name prefix."""
+    # Produce `count` names while preserving the legacy 7,488-name prefix.
     if legacy_names is None:
         legacy_names = load_legacy_names(DEFAULT_OUTPUT)
 

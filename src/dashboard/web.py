@@ -1,10 +1,9 @@
-"""
-Argus Local Web Dashboard
-=========================
+# Created by Oliver Meihls
 
-Lightweight localhost-only dashboard for debugging and command access.
-Runs alongside the headless main process, reading status via callbacks.
-"""
+# Argus Local Web Dashboard
+#
+# Lightweight localhost-only dashboard for debugging and command access.
+# Runs alongside the headless main process, reading status via callbacks.
 
 import asyncio
 import errno
@@ -158,7 +157,7 @@ load();setInterval(load,30000);
 
 
 class ArgusWebDashboard:
-    """Lightweight local web dashboard for Argus."""
+    # Lightweight local web dashboard for Argus.
 
     def __init__(self, host: str = '127.0.0.1', port: int = 8777, port_scan_range: int = 5):
         self.host = host
@@ -345,7 +344,7 @@ class ArgusWebDashboard:
         return web.json_response(response, status=status_code)
 
     async def _handle_soak(self, request):
-        """GET /debug/soak — single-payload soak summary."""
+        # GET /debug/soak — single-payload soak summary.
         start = time.perf_counter()
         try:
             if self._get_soak_summary:
@@ -369,7 +368,7 @@ class ArgusWebDashboard:
         return web.json_response(_ensure_json_safe(result))
 
     async def _handle_tape_export(self, request):
-        """GET /debug/tape/export?minutes=N — export tape to JSONL."""
+        # GET /debug/tape/export?minutes=N — export tape to JSONL.
         start = time.perf_counter()
         try:
             minutes = request.query.get('minutes')

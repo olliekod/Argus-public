@@ -1,4 +1,6 @@
-"""Tastytrade OAuth helpers for bootstrap flows."""
+# Created by Oliver Meihls
+
+# Tastytrade OAuth helpers for bootstrap flows.
 
 from __future__ import annotations
 
@@ -88,7 +90,7 @@ class OAuthTokenResult:
 
 
 class TastytradeOAuthClient:
-    """Synchronous OAuth client for refreshing access tokens."""
+    # Synchronous OAuth client for refreshing access tokens.
 
     def __init__(
         self,

@@ -1,21 +1,20 @@
-"""
-Argus Indicators Module
-=======================
+# Created by Oliver Meihls
 
-Pure, deterministic technical indicators for live, replay, and backtest.
-
-This module provides two interfaces for each indicator:
-1. **Batch functions** — stateless, take full sequence, return full result sequence
-2. **Incremental state classes** — stateful, update one value at a time
-
-PARITY GUARANTEE: Incremental outputs match batch outputs exactly for the
-same input series. This is enforced by tests.
-
-WARMUP SEMANTICS: Both batch and incremental return `None` for positions
-where insufficient data exists.
-
-NO RANDOMNESS. NO WALL-CLOCK. Fully deterministic.
-"""
+# Argus Indicators Module
+#
+# Pure, deterministic technical indicators for live, replay, and backtest.
+#
+# This module provides two interfaces for each indicator:
+# 1. **Batch functions** — stateless, take full sequence, return full result sequence
+# 2. **Incremental state classes** — stateful, update one value at a time
+#
+# PARITY GUARANTEE: Incremental outputs match batch outputs exactly for the
+# same input series. This is enforced by tests.
+#
+# WARMUP SEMANTICS: Both batch and incremental return `None` for positions
+# where insufficient data exists.
+#
+# NO RANDOMNESS. NO WALL-CLOCK. Fully deterministic.
 
 from __future__ import annotations
 
@@ -25,13 +24,11 @@ from dataclasses import dataclass
 from typing import Deque, List, NamedTuple, Optional, Sequence
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Data Types
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class BarTuple(NamedTuple):
-    """Lightweight bar representation for indicator calculations."""
+    # Lightweight bar representation for indicator calculations.
     timestamp: float  # bar open time (UTC epoch)
     open: float
     high: float
@@ -42,32 +39,28 @@ class BarTuple(NamedTuple):
 
 @dataclass(frozen=True, slots=True)
 class MACDResult:
-    """MACD indicator output."""
+    # MACD indicator output.
     macd_line: float
     signal_line: float
     histogram: float
 
 
 class InsufficientDataError(Exception):
-    """Raised when insufficient data for indicator calculation."""
+    # Raised when insufficient data for indicator calculation.
     pass
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # EMA (Exponential Moving Average)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def ema_batch(prices: Sequence[float], period: int) -> List[Optional[float]]:
-    """
-    Compute EMA for entire price series.
-    
-    Returns list of same length as prices.
-    First (period-1) values are None (warmup).
-    
-    Uses Wilder's smoothing: alpha = 2 / (period + 1)
-    Initial EMA = SMA of first `period` prices.
-    """
+    # Compute EMA for entire price series.
+    #
+    # Returns list of same length as prices.
+    # First (period-1) values are None (warmup).
+    #
+    # Uses Wilder's smoothing: alpha = 2 / (period + 1)
+    # Initial EMA = SMA of first `period` prices.
     if period < 1:
         raise ValueError("period must be >= 1")
     
@@ -92,14 +85,11 @@ def ema_batch(prices: Sequence[float], period: int) -> List[Optional[float]]:
 
 
 class EMAState:
-    """
-    Incremental EMA calculator.
-    
-    Parameters
-    ----------
-    period : int
-        EMA period.
-    """
+    # Incremental EMA calculator.
+    #
+    # Parameters
+    # period : int
+    # EMA period.
     __slots__ = ("_period", "_alpha", "_ema", "_warmup", "_warmup_sum")
     
     def __init__(self, period: int) -> None:
@@ -112,11 +102,9 @@ class EMAState:
         self._warmup_sum: float = 0.0
     
     def update(self, price: float) -> Optional[float]:
-        """
-        Update EMA with new price.
-        
-        Returns None during warmup (first period-1 values).
-        """
+        # Update EMA with new price.
+        #
+        # Returns None during warmup (first period-1 values).
         if self._ema is None:
             # Still in warmup
             self._warmup_sum += price
@@ -131,24 +119,20 @@ class EMAState:
             return self._ema
     
     def reset(self) -> None:
-        """Reset state for new session."""
+        # Reset state for new session.
         self._ema = None
         self._warmup = 0
         self._warmup_sum = 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # RSI (Relative Strength Index — Wilder's smoothed)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def rsi_batch(prices: Sequence[float], period: int = 14) -> List[Optional[float]]:
-    """
-    Compute RSI for entire price series using Wilder's smoothing.
-    
-    Returns list of same length as prices.
-    First `period` values are None (need period+1 prices for period changes).
-    """
+    # Compute RSI for entire price series using Wilder's smoothing.
+    #
+    # Returns list of same length as prices.
+    # First `period` values are None (need period+1 prices for period changes).
     if period < 1:
         raise ValueError("period must be >= 1")
     
@@ -199,14 +183,11 @@ def rsi_batch(prices: Sequence[float], period: int = 14) -> List[Optional[float]
 
 
 class RSIState:
-    """
-    Incremental RSI calculator using Wilder's smoothing.
-    
-    Parameters
-    ----------
-    period : int
-        RSI period (default 14).
-    """
+    # Incremental RSI calculator using Wilder's smoothing.
+    #
+    # Parameters
+    # period : int
+    # RSI period (default 14).
     __slots__ = ("_period", "_prev_price", "_warmup", "_gains", "_losses",
                  "_avg_gain", "_avg_loss")
     
@@ -222,11 +203,9 @@ class RSIState:
         self._avg_loss: Optional[float] = None
     
     def update(self, price: float) -> Optional[float]:
-        """
-        Update RSI with new price.
-        
-        Returns None during warmup (first `period` prices).
-        """
+        # Update RSI with new price.
+        #
+        # Returns None during warmup (first `period` prices).
         if self._prev_price is None:
             self._prev_price = price
             return None
@@ -262,7 +241,7 @@ class RSIState:
         return 100.0 - (100.0 / (1.0 + rs))
     
     def reset(self) -> None:
-        """Reset state for new session."""
+        # Reset state for new session.
         self._prev_price = None
         self._warmup = 0
         self._gains = []
@@ -271,21 +250,17 @@ class RSIState:
         self._avg_loss = None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # VWAP (Volume Weighted Average Price)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def vwap_batch(bars: Sequence[BarTuple]) -> List[Optional[float]]:
-    """
-    Compute session VWAP for bar series.
-    
-    Uses typical price = (high + low + close) / 3.
-    Assumes all bars are in same session. For multi-session,
-    split bars by session before calling.
-    
-    Returns None for bars with zero cumulative volume.
-    """
+    # Compute session VWAP for bar series.
+    #
+    # Uses typical price = (high + low + close) / 3.
+    # Assumes all bars are in same session. For multi-session,
+    # split bars by session before calling.
+    #
+    # Returns None for bars with zero cumulative volume.
     n = len(bars)
     result: List[Optional[float]] = [None] * n
     
@@ -304,11 +279,9 @@ def vwap_batch(bars: Sequence[BarTuple]) -> List[Optional[float]]:
 
 
 class VWAPState:
-    """
-    Incremental VWAP calculator.
-    
-    Call reset() at session boundaries.
-    """
+    # Incremental VWAP calculator.
+    #
+    # Call reset() at session boundaries.
     __slots__ = ("_cum_vol", "_cum_vp")
     
     def __init__(self) -> None:
@@ -316,11 +289,9 @@ class VWAPState:
         self._cum_vp: float = 0.0
     
     def update(self, bar: BarTuple) -> Optional[float]:
-        """
-        Update VWAP with new bar.
-        
-        Returns None if cumulative volume is zero.
-        """
+        # Update VWAP with new bar.
+        #
+        # Returns None if cumulative volume is zero.
         typical_price = (bar.high + bar.low + bar.close) / 3.0
         self._cum_vp += typical_price * bar.volume
         self._cum_vol += bar.volume
@@ -330,14 +301,12 @@ class VWAPState:
         return None
     
     def reset(self) -> None:
-        """Reset for new session."""
+        # Reset for new session.
         self._cum_vol = 0.0
         self._cum_vp = 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # MACD (Moving Average Convergence Divergence)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def macd_batch(
@@ -346,12 +315,10 @@ def macd_batch(
     slow: int = 26,
     signal: int = 9,
 ) -> List[Optional[MACDResult]]:
-    """
-    Compute MACD for entire price series.
-    
-    Returns list of MACDResult. None during warmup.
-    Warmup = slow - 1 + signal - 1 = slow + signal - 2 prices.
-    """
+    # Compute MACD for entire price series.
+    #
+    # Returns list of MACDResult. None during warmup.
+    # Warmup = slow - 1 + signal - 1 = slow + signal - 2 prices.
     if fast < 1 or slow < 1 or signal < 1:
         raise ValueError("periods must be >= 1")
     if fast >= slow:
@@ -395,18 +362,15 @@ def macd_batch(
 
 
 class MACDState:
-    """
-    Incremental MACD calculator.
-    
-    Parameters
-    ----------
-    fast : int
-        Fast EMA period (default 12).
-    slow : int
-        Slow EMA period (default 26).
-    signal : int
-        Signal line EMA period (default 9).
-    """
+    # Incremental MACD calculator.
+    #
+    # Parameters
+    # fast : int
+    # Fast EMA period (default 12).
+    # slow : int
+    # Slow EMA period (default 26).
+    # signal : int
+    # Signal line EMA period (default 9).
     __slots__ = ("_fast_ema", "_slow_ema", "_signal_ema")
     
     def __init__(self, fast: int = 12, slow: int = 26, signal: int = 9) -> None:
@@ -419,11 +383,9 @@ class MACDState:
         self._signal_ema = EMAState(signal)
     
     def update(self, price: float) -> Optional[MACDResult]:
-        """
-        Update MACD with new price.
-        
-        Returns None during warmup.
-        """
+        # Update MACD with new price.
+        #
+        # Returns None during warmup.
         fast_val = self._fast_ema.update(price)
         slow_val = self._slow_ema.update(price)
         
@@ -443,35 +405,29 @@ class MACDState:
         )
     
     def reset(self) -> None:
-        """Reset for new session."""
+        # Reset for new session.
         self._fast_ema.reset()
         self._slow_ema.reset()
         self._signal_ema.reset()
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Log Return
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def log_return(price_prev: float, price_curr: float) -> float:
-    """
-    Compute single-period log return.
-    
-    Returns math.log(price_curr / price_prev).
-    Raises ValueError if either price <= 0.
-    """
+    # Compute single-period log return.
+    #
+    # Returns math.log(price_curr / price_prev).
+    # Raises ValueError if either price <= 0.
     if price_prev <= 0 or price_curr <= 0:
         raise ValueError("prices must be positive")
     return math.log(price_curr / price_prev)
 
 
 def log_returns_batch(prices: Sequence[float]) -> List[Optional[float]]:
-    """
-    Compute log returns for price series.
-    
-    First value is None (no prior price).
-    """
+    # Compute log returns for price series.
+    #
+    # First value is None (no prior price).
     n = len(prices)
     result: List[Optional[float]] = [None] * n
     
@@ -482,9 +438,7 @@ def log_returns_batch(prices: Sequence[float]) -> List[Optional[float]]:
     return result
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Rolling Volatility
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def rolling_vol_batch(
@@ -492,20 +446,17 @@ def rolling_vol_batch(
     window: int,
     annualize_factor: float,
 ) -> List[Optional[float]]:
-    """
-    Compute rolling annualized volatility from log returns.
-    
-    Returns None for first (window-1) values.
-    
-    Parameters
-    ----------
-    returns : sequence of float
-        Log returns.
-    window : int
-        Rolling window size.
-    annualize_factor : float
-        Annualization multiplier (e.g., sqrt(252) for daily, sqrt(365.25*24*60) for 1-min).
-    """
+    # Compute rolling annualized volatility from log returns.
+    #
+    # Returns None for first (window-1) values.
+    #
+    # Parameters
+    # returns : sequence of float
+    # Log returns.
+    # window : int
+    # Rolling window size.
+    # annualize_factor : float
+    # Annualization multiplier (e.g., sqrt(252) for daily, sqrt(365.25*24*60) for 1-min).
     if window < 2:
         raise ValueError("window must be >= 2")
     
@@ -530,16 +481,13 @@ def rolling_vol_batch(
 
 
 class RollingVolState:
-    """
-    Incremental rolling volatility calculator.
-    
-    Parameters
-    ----------
-    window : int
-        Rolling window size.
-    annualize_factor : float
-        Annualization multiplier.
-    """
+    # Incremental rolling volatility calculator.
+    #
+    # Parameters
+    # window : int
+    # Rolling window size.
+    # annualize_factor : float
+    # Annualization multiplier.
     __slots__ = ("_window", "_annualize", "_buf")
     
     def __init__(self, window: int, annualize_factor: float) -> None:
@@ -550,11 +498,9 @@ class RollingVolState:
         self._buf: Deque[float] = deque(maxlen=window)
     
     def update(self, log_return: float) -> Optional[float]:
-        """
-        Update with new log return.
-        
-        Returns None during warmup.
-        """
+        # Update with new log return.
+        #
+        # Returns None during warmup.
         self._buf.append(log_return)
         
         if len(self._buf) < self._window:
@@ -565,17 +511,15 @@ class RollingVolState:
         return math.sqrt(variance) * self._annualize
     
     def reset(self) -> None:
-        """Reset for new session."""
+        # Reset for new session.
         self._buf.clear()
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # ATR (Average True Range)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def _true_range(high: float, low: float, close: float, prev_close: float) -> float:
-    """Compute true range."""
+    # Compute true range.
     return max(
         high - low,
         abs(high - prev_close),
@@ -584,11 +528,9 @@ def _true_range(high: float, low: float, close: float, prev_close: float) -> flo
 
 
 def atr_batch(bars: Sequence[BarTuple], period: int = 14) -> List[Optional[float]]:
-    """
-    Compute ATR for bar series using Wilder's smoothing.
-    
-    Returns None for first `period` bars.
-    """
+    # Compute ATR for bar series using Wilder's smoothing.
+    #
+    # Returns None for first `period` bars.
     if period < 1:
         raise ValueError("period must be >= 1")
     
@@ -624,14 +566,11 @@ def atr_batch(bars: Sequence[BarTuple], period: int = 14) -> List[Optional[float
 
 
 class ATRState:
-    """
-    Incremental ATR calculator using Wilder's smoothing.
-    
-    Parameters
-    ----------
-    period : int
-        ATR period (default 14).
-    """
+    # Incremental ATR calculator using Wilder's smoothing.
+    #
+    # Parameters
+    # period : int
+    # ATR period (default 14).
     __slots__ = ("_period", "_prev_close", "_warmup", "_trs", "_atr")
     
     def __init__(self, period: int = 14) -> None:
@@ -644,11 +583,9 @@ class ATRState:
         self._atr: Optional[float] = None
     
     def update(self, high: float, low: float, close: float) -> Optional[float]:
-        """
-        Update ATR with new bar data.
-        
-        Returns None during warmup.
-        """
+        # Update ATR with new bar data.
+        #
+        # Returns None during warmup.
         if self._prev_close is None:
             self._prev_close = close
             return None
@@ -672,7 +609,7 @@ class ATRState:
             return self._atr
     
     def reset(self) -> None:
-        """Reset for new session."""
+        # Reset for new session.
         self._prev_close = None
         self._warmup = 0
         self._trs = []

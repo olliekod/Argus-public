@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import sqlite3
 import os
 import time
@@ -8,7 +10,7 @@ from typing import Dict, List, Any, Optional
 DB_PATH = "data/argus.db"
 
 def format_table(headers: List[str], rows: List[List[Any]]) -> str:
-    """Pretty-print a table to console."""
+    # Pretty-print a table to console.
     if not rows:
         return "No data found."
     
@@ -29,7 +31,7 @@ def format_table(headers: List[str], rows: List[List[Any]]) -> str:
     return "\n".join(output)
 
 def parse_iso(ts_str: str) -> datetime:
-    """Safe parse of ISO timestamp, handling various formats."""
+    # Safe parse of ISO timestamp, handling various formats.
     # SQLite might store with/without Z or +00:00 or as naive string
     try:
         t_str = ts_str
@@ -57,7 +59,7 @@ def parse_iso(ts_str: str) -> datetime:
                 raise ValueError(f"Could not parse timestamp: {ts_str}")
 
 def get_duration_info(conn: sqlite3.Connection) -> Dict[str, Any]:
-    """Calculate the total duration of data in the DB across all tables."""
+    # Calculate the total duration of data in the DB across all tables.
     tables = ["market_bars", "market_metrics", "detections"]
     min_ts = None
     max_ts = None
@@ -88,7 +90,7 @@ def get_duration_info(conn: sqlite3.Connection) -> Dict[str, Any]:
     }
 
 def audit_bars(conn: sqlite3.Connection):
-    """Analyze bar continuity and gaps."""
+    # Analyze bar continuity and gaps.
     print("\n>>> 1. Bar Continuity Analysis")
     rows = conn.execute("SELECT DISTINCT symbol FROM market_bars").fetchall()
     symbols = [r[0] for r in rows]
@@ -135,7 +137,7 @@ def audit_bars(conn: sqlite3.Connection):
             print(report)
 
 def audit_metrics(conn: sqlite3.Connection, duration: Dict[str, Any]):
-    """Analyze metric ingestion rates."""
+    # Analyze metric ingestion rates.
     print("\n>>> 2. Metric Ingestion Cadence")
     sql = """
         SELECT metric, source, symbol, count(*) as count 
@@ -160,7 +162,7 @@ def audit_metrics(conn: sqlite3.Connection, duration: Dict[str, Any]):
     print(f"\nTotal metrics: {total_rows} ({total_rows / hrs:.1f}/hr average)")
 
 def audit_detections(conn: sqlite3.Connection, duration: Dict[str, Any]):
-    """Analyze detection volume."""
+    # Analyze detection volume.
     print("\n>>> 3. Signal Detection Analysis")
     sql = """
         SELECT opportunity_type, asset, count(*) as count 
@@ -184,7 +186,7 @@ def audit_detections(conn: sqlite3.Connection, duration: Dict[str, Any]):
         print(f"Skipping detections: {e}")
 
 def audit_storage(db_path: str, duration: Dict[str, Any]):
-    """Analyze DB size and growth projections."""
+    # Analyze DB size and growth projections.
     print("\n>>> 4. Storage & Growth Diagnostics")
     size_bytes = os.path.getsize(db_path)
     size_mb = size_bytes / (1024 * 1024)
@@ -198,7 +200,7 @@ def audit_storage(db_path: str, duration: Dict[str, Any]):
     print(f"Projected 7d:  {(size_mb + rate_mb * 24 * 7):.2f} MB")
 
 def audit_freshness(conn: sqlite3.Connection):
-    """Check newest timestamps for data staleness."""
+    # Check newest timestamps for data staleness.
     print("\n>>> 5. Data Freshness (Age)")
     tables = ["price_snapshots", "market_bars", "market_metrics", "detections", "system_health"]
     now = datetime.now(timezone.utc)

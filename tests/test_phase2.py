@@ -1,14 +1,14 @@
-"""
-Phase 2 comprehensive tests — Streams 1-4.
+# Created by Oliver Meihls
 
-Tests cover:
-* Stream 1: Bar provenance fields, invariant enforcement, close reasons
-* Stream 2: Heartbeat emission, lag tracking, equity market-close continuity
-* Stream 3: Polymarket watchlist filtering
-* Stream 4: FeatureBuilder metrics, RegimeDetector transitions
-
-Run with:  python -m pytest tests/test_phase2.py -v
-"""
+# Phase 2 comprehensive tests — Streams 1-4.
+#
+# Tests cover:
+# * Stream 1: Bar provenance fields, invariant enforcement, close reasons
+# * Stream 2: Heartbeat emission, lag tracking, equity market-close continuity
+# * Stream 3: Polymarket watchlist filtering
+# * Stream 4: FeatureBuilder metrics, RegimeDetector transitions
+#
+# Run with:  python -m pytest tests/test_phase2.py -v
 
 import math
 import time
@@ -67,13 +67,11 @@ M1 = M0 + 60
 M2 = M0 + 120
 
 
-# ═══════════════════════════════════════════════════════════
 #  STREAM 1 — Bar Provenance
-# ═══════════════════════════════════════════════════════════
 
 
 class TestBarProvenance:
-    """Provenance fields are correctly populated in emitted bars."""
+    # Provenance fields are correctly populated in emitted bars.
 
     def test_n_ticks_equals_tick_count(self):
         bus = EventBus()
@@ -176,7 +174,7 @@ class TestBarProvenance:
 
 
 class TestBarInvariants:
-    """Bar invariant enforcement repairs bad data without crashing."""
+    # Bar invariant enforcement repairs bad data without crashing.
 
     def test_high_enforced(self):
         acc = _BarAccumulator(100.0, 0.0, M0, "test")
@@ -213,7 +211,7 @@ class TestBarInvariants:
 
 
 class TestLateTicks:
-    """Late ticks are counted per-symbol and never mutate emitted bars."""
+    # Late ticks are counted per-symbol and never mutate emitted bars.
 
     def test_late_tick_count_in_provenance(self):
         bus = EventBus()
@@ -237,13 +235,11 @@ class TestLateTicks:
             bus.stop()
 
 
-# ═══════════════════════════════════════════════════════════
 #  STREAM 2 — Heartbeats & Lag
-# ═══════════════════════════════════════════════════════════
 
 
 class TestComponentHeartbeats:
-    """Component heartbeat emission."""
+    # Component heartbeat emission.
 
     def test_bar_builder_heartbeat(self):
         bus = EventBus()
@@ -264,7 +260,7 @@ class TestComponentHeartbeats:
 
 
 class TestEquityContinuity:
-    """QueryLayer recognizes market-close gaps for equity symbols."""
+    # QueryLayer recognizes market-close gaps for equity symbols.
 
     def test_is_equity_market_open_weekend(self):
         from src.core.query_layer import _is_equity_market_open
@@ -279,13 +275,11 @@ class TestEquityContinuity:
         assert _is_equity_market_open(monday_utc)
 
 
-# ═══════════════════════════════════════════════════════════
 #  STREAM 4 — FeatureBuilder
-# ═══════════════════════════════════════════════════════════
 
 
 class TestFeatureBuilder:
-    """FeatureBuilder computes rolling metrics from bars."""
+    # FeatureBuilder computes rolling metrics from bars.
 
     def _make_bar(self, symbol, close, ts, source="test"):
         return BarEvent(
@@ -361,13 +355,11 @@ class TestFeatureBuilder:
             bus.stop()
 
 
-# ═══════════════════════════════════════════════════════════
 #  STREAM 4 — RegimeDetector
-# ═══════════════════════════════════════════════════════════
 
 
 class TestRegimeDetector:
-    """RegimeDetector classifies market regimes from bars."""
+    # RegimeDetector classifies market regimes from bars.
 
     def _make_bar(self, symbol: str, close: float, ts: float) -> BarEvent:
         return BarEvent(
@@ -443,13 +435,11 @@ class TestRegimeDetector:
         assert rd.get_symbol_regime("BTC") is None
 
 
-# ═══════════════════════════════════════════════════════════
 #  STREAM 3 — Polymarket Watchlist
-# ═══════════════════════════════════════════════════════════
 
 
 class TestPolymarketWatchlist:
-    """Watchlist service filters and syncs markets to CLOB."""
+    # Watchlist service filters and syncs markets to CLOB.
 
     def test_volume_filter(self):
         # Import directly using importlib.util to avoid triggering __init__.py
@@ -520,13 +510,11 @@ class TestPolymarketWatchlist:
         assert "tok2" not in tokens
 
 
-# ═══════════════════════════════════════════════════════════
 #  Event schema versioning
-# ═══════════════════════════════════════════════════════════
 
 
 class TestSchemaVersioning:
-    """All event types carry the schema version field."""
+    # All event types carry the schema version field.
 
     def test_quote_event_has_version(self):
         q = QuoteEvent(symbol="X", bid=1, ask=2, mid=1.5, last=1.5,

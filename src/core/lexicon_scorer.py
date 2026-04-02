@@ -1,4 +1,6 @@
-"""Lexicon-based sentiment scoring for finance headlines."""
+# Created by Oliver Meihls
+
+# Lexicon-based sentiment scoring for finance headlines.
 
 from __future__ import annotations
 
@@ -18,7 +20,7 @@ _FALLBACK_NEGATIVE = {
 
 
 class LexiconScorer:
-    """Score text using positive/negative word lists."""
+    # Score text using positive/negative word lists.
 
     def __init__(self, lexicon: str = "loughran_mcdonald", lexicon_path: Optional[str] = None):
         self._lexicon = lexicon
@@ -60,7 +62,7 @@ class LexiconScorer:
         return [tok for tok in re.split(r"[^a-zA-Z]+", text.lower()) if tok]
 
     def score_text(self, text: str) -> tuple[float, Dict[str, int]]:
-        """Returns ``(score, counts)`` where counts has pos/neg/word counts."""
+        # Returns ``(score, counts)`` where counts has pos/neg/word counts.
         tokens = self._tokenize(text or "")
         pos_count = sum(1 for token in tokens if token in self._positive)
         neg_count = sum(1 for token in tokens if token in self._negative)

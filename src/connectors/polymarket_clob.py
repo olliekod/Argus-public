@@ -1,24 +1,22 @@
-"""
-Polymarket CLOB Connector (Stream 3)
-====================================
+# Created by Oliver Meihls
 
-Fetches order-book snapshots and probability data from the
-Polymarket CLOB (Central Limit Order Book) REST API.
-
-Provides:
-* Order-book snapshots (bids/asks) for tracked tokens
-* Mid-price / probability extraction
-* Publishes OrderBookEvent-style MetricEvents to the bus
-
-A future iteration can upgrade to WebSocket streaming; the REST
-poller is simpler and sufficient for the watchlist use-case.
-
-Safety constraints
-------------------
-* Read-only — no order placement.
-* Rate-limited polling with configurable interval.
-* Bounded internal state (only tracks watchlisted tokens).
-"""
+# Polymarket CLOB Connector (Stream 3)
+#
+# Fetches order-book snapshots and probability data from the
+# Polymarket CLOB (Central Limit Order Book) REST API.
+#
+# Provides:
+# * Order-book snapshots (bids/asks) for tracked tokens
+# * Mid-price / probability extraction
+# * Publishes OrderBookEvent-style MetricEvents to the bus
+#
+# A future iteration can upgrade to WebSocket streaming; the REST
+# poller is simpler and sufficient for the watchlist use-case.
+#
+# Safety constraints
+# * Read-only — no order placement.
+# * Rate-limited polling with configurable interval.
+# * Bounded internal state (only tracks watchlisted tokens).
 
 from __future__ import annotations
 
@@ -44,15 +42,13 @@ _REQUEST_TIMEOUT = 15.0
 
 
 class PolymarketCLOBClient:
-    """REST client for the Polymarket CLOB order-book API.
-
-    Parameters
-    ----------
-    event_bus : EventBus, optional
-        If provided, price / probability updates are published.
-    poll_interval : float
-        Seconds between order-book polls.
-    """
+    # REST client for the Polymarket CLOB order-book API.
+    #
+    # Parameters
+    # event_bus : EventBus, optional
+    # If provided, price / probability updates are published.
+    # poll_interval : float
+    # Seconds between order-book polls.
 
     def __init__(
         self,
@@ -91,7 +87,7 @@ class PolymarketCLOBClient:
     # ── watchlist management ─────────────────────────────────
 
     def set_watchlist(self, token_ids: List[str]) -> None:
-        """Set the list of token IDs to track."""
+        # Set the list of token IDs to track.
         self._token_ids = list(token_ids)
         logger.info("CLOB watchlist updated: %d tokens", len(self._token_ids))
 
@@ -106,7 +102,7 @@ class PolymarketCLOBClient:
     # ── polling loop ─────────────────────────────────────────
 
     async def poll_loop(self) -> None:
-        """Continuous polling loop — run as asyncio.Task."""
+        # Continuous polling loop — run as asyncio.Task.
         while self._running:
             try:
                 await self.fetch_books()
@@ -116,7 +112,7 @@ class PolymarketCLOBClient:
             await asyncio.sleep(self._poll_interval)
 
     async def fetch_books(self) -> Dict[str, Dict[str, Any]]:
-        """Fetch order books for all watchlisted tokens."""
+        # Fetch order books for all watchlisted tokens.
         if not self._client or not self._token_ids:
             return {}
 
@@ -164,7 +160,7 @@ class PolymarketCLOBClient:
         return results
 
     async def _fetch_book(self, token_id: str) -> Optional[Dict[str, Any]]:
-        """Fetch a single token's order book."""
+        # Fetch a single token's order book.
         if not self._client:
             return None
         resp = await self._client.get("/book", params={"token_id": token_id})
@@ -173,7 +169,7 @@ class PolymarketCLOBClient:
 
     @staticmethod
     def _best_price(side: List[Dict[str, Any]]) -> Optional[float]:
-        """Extract the best price from an order-book side."""
+        # Extract the best price from an order-book side.
         if not side:
             return None
         try:
@@ -187,7 +183,7 @@ class PolymarketCLOBClient:
         return self._books.get(token_id)
 
     def get_probability(self, token_id: str) -> Optional[float]:
-        """Return last mid-price probability for a token."""
+        # Return last mid-price probability for a token.
         book = self._books.get(token_id)
         if not book:
             return None

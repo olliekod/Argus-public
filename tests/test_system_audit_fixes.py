@@ -1,11 +1,10 @@
-"""
-Tests for System Audit Fixes (Sections 1-12)
-==============================================
+# Created by Oliver Meihls
 
-Regression tests for all bugs fixed from the comprehensive system audit.
-Tests use source inspection for modules with heavy dependency chains
-(pandas/yfinance), and direct imports for lightweight modules.
-"""
+# Tests for System Audit Fixes (Sections 1-12)
+#
+# Regression tests for all bugs fixed from the comprehensive system audit.
+# Tests use source inspection for modules with heavy dependency chains
+# (pandas/yfinance), and direct imports for lightweight modules.
 
 from __future__ import annotations
 
@@ -18,22 +17,18 @@ from datetime import datetime, timezone
 import pytest
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helper: read source file without importing
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _read_source(path: str) -> str:
     with open(path) as f:
         return f.read()
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 1.2: Ollama SIGKILL fallback
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestOllamaSIGKILL:
-    """Verify SIGKILL escalation in RuntimeController."""
+    # Verify SIGKILL escalation in RuntimeController.
 
     def test_sigkill_in_source(self):
         source = _read_source("src/agent/runtime_controller.py")
@@ -52,13 +47,11 @@ class TestOllamaSIGKILL:
         assert sigterm_pos < sigkill_pos
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 2.2a: ETF detector uses explicit symbol set
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestBITSubstringFix:
-    """Verify explicit symbol set replaces fragile 'BIT in symbol' check."""
+    # Verify explicit symbol set replaces fragile 'BIT in symbol' check.
 
     def test_explicit_set_used(self):
         source = _read_source("src/detectors/etf_options_detector.py")
@@ -73,26 +66,22 @@ class TestBITSubstringFix:
         assert "BITW" not in {"IBIT", "BITO"}
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 5.1a: Context key mismatch fix
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestContextKeyMismatch:
-    """Verify orchestrator uses correct regime keys."""
+    # Verify orchestrator uses correct regime keys.
 
     def test_warmth_label_key_used(self):
         source = _read_source("src/orchestrator.py")
         assert "warmth_label" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 6.1a: Ghost import fix
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestGhostImportFix:
-    """Verify verify_system.py imports ETFOptionsDetector."""
+    # Verify verify_system.py imports ETFOptionsDetector.
 
     def test_no_ibit_detector_import(self):
         source = _read_source("scripts/verify_system.py")
@@ -100,13 +89,11 @@ class TestGhostImportFix:
         assert "ETFOptionsDetector" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 6.3a: EventBus circuit breaker
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestEventBusCircuitBreaker:
-    """Verify handler circuit breaker prevents unbounded error logging."""
+    # Verify handler circuit breaker prevents unbounded error logging.
 
     def test_handler_disabled_after_consecutive_errors(self):
         from src.core.bus import EventBus
@@ -182,13 +169,11 @@ class TestEventBusCircuitBreaker:
         assert isinstance(bus._circuit_broken_handlers, set)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 7.1: DOW strategy replay adapter
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestDowReplayAdapter:
-    """Verify the DowRegimeTimingGateReplayStrategy works."""
+    # Verify the DowRegimeTimingGateReplayStrategy works.
 
     def test_instantiation_with_params_dict(self):
         from src.strategies.dow_regime_timing import DowRegimeTimingGateReplayStrategy
@@ -263,7 +248,7 @@ class TestDowReplayAdapter:
         assert result["last_gate_results"]["dow_weight"] == pytest.approx(0.9)
 
     def test_replay_strategy_interface(self):
-        """Verify all required ReplayStrategy methods exist."""
+        # Verify all required ReplayStrategy methods exist.
         from src.strategies.dow_regime_timing import DowRegimeTimingGateReplayStrategy
 
         strategy = DowRegimeTimingGateReplayStrategy({})
@@ -275,13 +260,11 @@ class TestDowReplayAdapter:
         assert hasattr(strategy, "finalize")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 7.4: DSR n_obs uses total_trades (source-level verification)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestDSRnObsFix:
-    """Verify DSR uses total_trades for n_obs and computes actual skew/kurtosis."""
+    # Verify DSR uses total_trades for n_obs and computes actual skew/kurtosis.
 
     def test_n_obs_uses_total_trades_not_bars(self):
         source = _read_source("src/analysis/strategy_evaluator.py")
@@ -304,7 +287,7 @@ class TestDSRnObsFix:
         assert "kurtosis=kurt_val" in source
 
     def test_skew_kurtosis_math(self):
-        """Verify the skew/kurtosis computation is correct for known data."""
+        # Verify the skew/kurtosis computation is correct for known data.
         # Use clearly asymmetric data
         pnls = [50.0, -5.0, -3.0, -4.0, -2.0, -6.0, -1.0, -3.0, -4.0, -2.0, -5.0, -3.0]
         n = len(pnls)
@@ -320,13 +303,11 @@ class TestDSRnObsFix:
         assert isinstance(kurt, float)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 7.7: Reality check wired into ExperimentRunner
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestRealityCheckWiring:
-    """Verify reality_check is computed and injected into manifests."""
+    # Verify reality_check is computed and injected into manifests.
 
     def test_reality_check_import_in_experiment_runner(self):
         source = _read_source("src/analysis/experiment_runner.py")
@@ -343,13 +324,11 @@ class TestRealityCheckWiring:
         assert "trade_pnls" in source and "len(result.trade_pnls)" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 7.7 (continued): Reality check module standalone tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def _load_reality_check():
-    """Load reality_check module directly to avoid src.analysis.__init__ cascade."""
+    # Load reality_check module directly to avoid src.analysis.__init__ cascade.
     import importlib.util
     spec = importlib.util.spec_from_file_location(
         "reality_check", "src/analysis/reality_check.py",
@@ -361,7 +340,7 @@ def _load_reality_check():
 
 
 class TestRealityCheckModule:
-    """Verify the reality check module handles edge cases."""
+    # Verify the reality check module handles edge cases.
 
     def test_empty_strategies(self):
         reality_check = _load_reality_check()
@@ -391,39 +370,33 @@ class TestRealityCheckModule:
             reality_check(strategy_returns={"a": [1, 2, 3], "b": [1, 2]})
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 8.2b: Bybit REST rate-limit retry cap
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestBybitRetryLimit:
-    """Verify rate-limit retries are capped."""
+    # Verify rate-limit retries are capped.
 
     def test_retry_cap_in_source(self):
         source = _read_source("src/connectors/bybit_rest.py")
         assert "attempt >= 4" in source or "rate limited after" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 8.3a: Bybit WS timestamp/zero-quote validation
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestBybitWSValidation:
-    """Verify WS validates timestamps and rejects zero quotes."""
+    # Verify WS validates timestamps and rejects zero quotes.
 
     def test_zero_quote_rejection_in_source(self):
         source = _read_source("src/connectors/bybit_ws.py")
         assert "bid" in source and "ask" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 8.5a: HTTP session leaks — connectors use TCPConnector
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestHTTPSessionLeaks:
-    """Verify connectors create sessions with TCPConnector."""
+    # Verify connectors create sessions with TCPConnector.
 
     def test_coinbase_uses_tcp_connector(self):
         source = _read_source("src/connectors/coinbase_client.py")
@@ -438,20 +411,18 @@ class TestHTTPSessionLeaks:
         assert "TCPConnector" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 9.2a: NaN propagation guard in feature builder
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestFeatureBuilderNaNGuard:
-    """Verify non-finite log returns are rejected."""
+    # Verify non-finite log returns are rejected.
 
     def test_isfinite_guard_in_source(self):
         source = _read_source("src/core/feature_builder.py")
         assert "isfinite" in source
 
     def test_inf_return_filtered_logic(self):
-        """Simulate the guard: inf log returns should be filtered."""
+        # Simulate the guard: inf log returns should be filtered.
         prev, close = 100.0, float("inf")
         log_ret = math.log(close / prev) if (prev > 0 and close > 0) else None
         if log_ret is not None and not math.isfinite(log_ret):
@@ -459,9 +430,7 @@ class TestFeatureBuilderNaNGuard:
         assert log_ret is None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 9.3a: Regime detector hysteresis epsilon
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestRegimeHysteresisEpsilon:
@@ -470,9 +439,7 @@ class TestRegimeHysteresisEpsilon:
         assert "eps" in source.lower() or "1e-" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 9.6a: IV consensus bounded deques
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestIVConsensusBounded:
@@ -481,9 +448,7 @@ class TestIVConsensusBounded:
         assert "deque" in source and "maxlen" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 9.7b: Config hash float normalization
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestConfigHashDeterminism:
@@ -500,9 +465,7 @@ class TestConfigHashDeterminism:
         assert compute_config_hash({"threshold": 0.5}) != compute_config_hash({"threshold": 0.9})
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 9.8a: Spool recovery infinite loop fix
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestSpoolRecoveryFix:
@@ -511,9 +474,7 @@ class TestSpoolRecoveryFix:
         assert "JSONDecodeError" in source or "json.decoder" in source.lower()
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 9.8b: Signal persistence idempotency
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestSignalIdempotency:
@@ -522,9 +483,7 @@ class TestSignalIdempotency:
         assert "INSERT OR IGNORE" in source or "INSERT OR REPLACE" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 10.1a: Position counter race condition fix
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestPositionCounterLock:
@@ -533,9 +492,7 @@ class TestPositionCounterLock:
         assert "asyncio.Lock" in source or "_positions_lock" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 10.2b: Paper trader expiry validation
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestPaperTraderExpiryValidation:
@@ -544,9 +501,7 @@ class TestPaperTraderExpiryValidation:
         assert "past" in source.lower() or "expir" in source.lower()
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 11.1a / 11.3a / 11.4a: Dashboard security fixes
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestDashboardSecurityFixes:
@@ -563,9 +518,7 @@ class TestDashboardSecurityFixes:
         assert "expir" in source.lower() or "600" in source
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # 12.1a: Canonical replay warning fix
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestCanonicalReplayFix:

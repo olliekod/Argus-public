@@ -1,14 +1,14 @@
-"""
-Tests for OvernightSessionStrategy.
+# Created by Oliver Meihls
 
-Covers:
-- Constructor / defaults
-- Entry window detection (equities RTH tail, PRE, crypto transitions)
-- Forward-return signal gating
-- Explicit close intents (horizon-based)
-- Risk-flow gating
-- Determinism (same inputs → same outputs)
-"""
+# Tests for OvernightSessionStrategy.
+#
+# Covers:
+# - Constructor / defaults
+# - Entry window detection (equities RTH tail, PRE, crypto transitions)
+# - Forward-return signal gating
+# - Explicit close intents (horizon-based)
+# - Risk-flow gating
+# - Determinism (same inputs → same outputs)
 
 from __future__ import annotations
 
@@ -20,16 +20,14 @@ from src.core.outcome_engine import BarData, OutcomeResult
 from src.strategies.overnight_session import OvernightSessionStrategy
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _make_bar(
     ts_ms: int,
     close: float = 100.0,
     symbol: str = "SPY",
 ) -> BarData:
-    """Create a minimal BarData with a symbol attribute."""
+    # Create a minimal BarData with a symbol attribute.
     bar = BarData(
         timestamp_ms=ts_ms,
         open=close - 0.10,
@@ -49,7 +47,7 @@ def _make_outcome(
     fwd_return: float = 0.01,
     symbol: str = "SPY",
 ) -> OutcomeResult:
-    """Create a minimal OutcomeResult."""
+    # Create a minimal OutcomeResult.
     return OutcomeResult(
         provider="test",
         symbol=symbol,
@@ -84,7 +82,7 @@ def _make_regimes(
     risk_flow: Optional[float] = None,
     news_sentiment: Optional[Any] = None,
 ) -> Dict[str, Dict[str, Any]]:
-    """Build a visible_regimes dict with optional external metrics."""
+    # Build a visible_regimes dict with optional external metrics.
     metrics = {}
     if risk_flow is not None:
         metrics["global_risk_flow"] = risk_flow
@@ -100,13 +98,11 @@ def _make_regimes(
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestDefaults:
-    """Verify constructor defaults and parameter override."""
+    # Verify constructor defaults and parameter override.
 
     def test_default_params(self):
         s = OvernightSessionStrategy()
@@ -133,10 +129,10 @@ class TestDefaults:
 
 
 class TestEntryWindow:
-    """Verify entry window detection across sessions."""
+    # Verify entry window detection across sessions.
 
     def test_rth_tail_equities_entry(self):
-        """Strategy should signal during end-of-RTH in equities."""
+        # Strategy should signal during end-of-RTH in equities.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -158,7 +154,7 @@ class TestEntryWindow:
         assert intents[-1].tag == "OVERNIGHT_ENTRY"
 
     def test_pre_market_equities_entry(self):
-        """Strategy should signal during PRE session in equities."""
+        # Strategy should signal during PRE session in equities.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -184,7 +180,7 @@ class TestEntryWindow:
         assert open_intents[0].tag == "OVERNIGHT_ENTRY"
 
     def test_no_entry_during_rth_middle(self):
-        """No entry during middle of RTH (not in last N minutes)."""
+        # No entry during middle of RTH (not in last N minutes).
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "entry_window_minutes": 15,
@@ -202,7 +198,7 @@ class TestEntryWindow:
         assert len(intents) == 0
 
     def test_crypto_session_transition(self):
-        """Crypto entry at ASIA → EU transition."""
+        # Crypto entry at ASIA → EU transition.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 3600,
@@ -227,7 +223,7 @@ class TestEntryWindow:
         assert open_intents[0].symbol == "BTCUSD"
 
     def test_no_crypto_entry_within_same_session(self):
-        """No entry when staying in the same crypto session."""
+        # No entry when staying in the same crypto session.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 3600,
@@ -248,10 +244,10 @@ class TestEntryWindow:
 
 
 class TestSignalGating:
-    """Verify forward-return threshold gating."""
+    # Verify forward-return threshold gating.
 
     def test_below_threshold_no_entry(self):
-        """No entry when fwd_return < threshold."""
+        # No entry when fwd_return < threshold.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.010,
             "horizon_seconds": 14400,
@@ -269,7 +265,7 @@ class TestSignalGating:
         assert len(intents) == 0
 
     def test_no_matching_horizon_no_entry(self):
-        """No entry when outcomes exist but at wrong horizon."""
+        # No entry when outcomes exist but at wrong horizon.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 28800,  # strategy wants 8h
@@ -288,10 +284,10 @@ class TestSignalGating:
 
 
 class TestExplicitClose:
-    """Verify explicit close intent after horizon elapsed."""
+    # Verify explicit close intent after horizon elapsed.
 
     def test_close_after_horizon(self):
-        """CLOSE intent emitted when hold time >= horizon_seconds."""
+        # CLOSE intent emitted when hold time >= horizon_seconds.
         horizon_s = 3600  # 1h for faster test
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
@@ -325,7 +321,7 @@ class TestExplicitClose:
         assert s._closes_emitted == 1
 
     def test_no_close_before_horizon(self):
-        """No CLOSE intent before horizon elapsed."""
+        # No CLOSE intent before horizon elapsed.
         horizon_s = 14400
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
@@ -351,10 +347,10 @@ class TestExplicitClose:
 
 
 class TestRiskFlowGating:
-    """Verify global risk flow gating logic."""
+    # Verify global risk flow gating logic.
 
     def test_gated_by_low_risk_flow(self):
-        """No entry when risk_flow < min_global_risk_flow."""
+        # No entry when risk_flow < min_global_risk_flow.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -375,7 +371,7 @@ class TestRiskFlowGating:
         assert len(intents) == 0
 
     def test_not_gated_when_risk_flow_ok(self):
-        """Entry proceeds when risk_flow >= min_global_risk_flow."""
+        # Entry proceeds when risk_flow >= min_global_risk_flow.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -397,7 +393,7 @@ class TestRiskFlowGating:
         assert len(open_intents) == 1
 
     def test_gating_disabled_by_default(self):
-        """With gate_on_risk_flow=False, risk flow is ignored."""
+        # With gate_on_risk_flow=False, risk flow is ignored.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -418,7 +414,7 @@ class TestRiskFlowGating:
         assert len(open_intents) == 1
 
     def test_missing_risk_flow_no_block(self):
-        """When gate_on_risk_flow=True but metric is missing, don't block."""
+        # When gate_on_risk_flow=True but metric is missing, don't block.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -442,10 +438,10 @@ class TestRiskFlowGating:
 
 
 class TestDeterminism:
-    """Replay determinism: same inputs → same outputs."""
+    # Replay determinism: same inputs → same outputs.
 
     def test_deterministic_replay(self):
-        """Two identical replays produce identical intents."""
+        # Two identical replays produce identical intents.
         params = {
             "fwd_return_threshold": 0.003,
             "horizon_seconds": 3600,
@@ -486,7 +482,7 @@ class TestDeterminism:
 
 
 class TestFinalize:
-    """Verify finalize returns correct summary."""
+    # Verify finalize returns correct summary.
 
     def test_finalize_empty(self):
         s = OvernightSessionStrategy()
@@ -518,7 +514,7 @@ class TestFinalize:
 
 
 class TestLongOnlyV1:
-    """V1 is long-only — all entries are BUY side."""
+    # V1 is long-only — all entries are BUY side.
 
     def test_all_entries_are_buy(self):
         s = OvernightSessionStrategy(params={
@@ -540,10 +536,10 @@ class TestLongOnlyV1:
 
 
 class TestNewsSentimentGating:
-    """Verify news sentiment gating logic."""
+    # Verify news sentiment gating logic.
 
     def test_gated_by_stub_news_sentiment(self):
-        """No LONG entries with gate enabled and threshold above stub sentiment."""
+        # No LONG entries with gate enabled and threshold above stub sentiment.
         s = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,

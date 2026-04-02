@@ -1,13 +1,13 @@
-"""
-Tests for Argus coverage diagnostics module (Phase 4A.1+).
+# Created by Oliver Meihls
 
-Tests the pure-function coverage helpers:
-- Uptime computation from heartbeat series
-- Bar continuity / gap analysis
-- Uptime-aware diagnose
-- Equity session heuristic
-- DB round-trip for heartbeats + bar timestamps
-"""
+# Tests for Argus coverage diagnostics module (Phase 4A.1+).
+#
+# Tests the pure-function coverage helpers:
+# - Uptime computation from heartbeat series
+# - Bar continuity / gap analysis
+# - Uptime-aware diagnose
+# - Equity session heuristic
+# - DB round-trip for heartbeats + bar timestamps
 
 from __future__ import annotations
 
@@ -33,43 +33,39 @@ from src.core.coverage import (
 from src.core.database import Database
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Fixtures
-# ═══════════════════════════════════════════════════════════════════════════════
 
 BASE_MS = 1_700_000_000_000  # ~2023-11-14 UTC
 
 
 def _ms(offset_s: int) -> int:
-    """Return BASE_MS + offset in seconds converted to ms."""
+    # Return BASE_MS + offset in seconds converted to ms.
     return BASE_MS + offset_s * 1000
 
 
 @pytest.fixture
 def event_loop():
-    """Provide a fresh event loop for async tests."""
+    # Provide a fresh event loop for async tests.
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
 
 async def _make_db() -> Database:
-    """Create a fresh in-memory database."""
+    # Create a fresh in-memory database.
     db = Database(":memory:")
     await db.connect()
     return db
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  A) Uptime computation tests
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestUptimeComputation:
-    """Test the compute_uptime pure function."""
+    # Test the compute_uptime pure function.
 
     def test_continuous_heartbeats_full_uptime(self):
-        """60s heartbeats over 600s => ~100% uptime."""
+        # 60s heartbeats over 600s => ~100% uptime.
         hbs = [_ms(i * 60) for i in range(11)]  # 0, 60, 120, ..., 600
         result = compute_uptime(hbs, _ms(0), _ms(600), gap_threshold_ms=120_000)
         assert result.heartbeat_count == 11
@@ -78,7 +74,7 @@ class TestUptimeComputation:
         assert result.off_intervals == []
 
     def test_single_large_gap(self):
-        """Heartbeats with a 5-minute gap in the middle."""
+        # Heartbeats with a 5-minute gap in the middle.
         # 0, 60, 120, then gap, then 420, 480, 540, 600
         hbs = [_ms(0), _ms(60), _ms(120),
                _ms(420), _ms(480), _ms(540), _ms(600)]
@@ -97,28 +93,28 @@ class TestUptimeComputation:
         assert result.downtime_s == 180  # 600 - 420
 
     def test_empty_heartbeats(self):
-        """No heartbeats => 100% downtime."""
+        # No heartbeats => 100% downtime.
         result = compute_uptime([], _ms(0), _ms(3600), gap_threshold_ms=120_000)
         assert result.uptime_s == 0
         assert result.downtime_s == 3600
         assert result.heartbeat_count == 0
 
     def test_single_heartbeat(self):
-        """One heartbeat => can't determine uptime."""
+        # One heartbeat => can't determine uptime.
         result = compute_uptime([_ms(100)], _ms(0), _ms(3600),
                                 gap_threshold_ms=120_000)
         assert result.uptime_s == 0
         assert result.downtime_s == 3600
 
     def test_two_heartbeats_within_threshold(self):
-        """Two heartbeats close together => uptime = delta."""
+        # Two heartbeats close together => uptime = delta.
         result = compute_uptime([_ms(0), _ms(60)], _ms(0), _ms(60),
                                 gap_threshold_ms=120_000)
         assert result.uptime_s == 60
         assert result.downtime_s == 0
 
     def test_two_heartbeats_beyond_threshold(self):
-        """Two heartbeats far apart => partial uptime + OFF interval."""
+        # Two heartbeats far apart => partial uptime + OFF interval.
         result = compute_uptime([_ms(0), _ms(500)], _ms(0), _ms(500),
                                 gap_threshold_ms=120_000)
         assert result.uptime_s == 120  # threshold
@@ -126,7 +122,7 @@ class TestUptimeComputation:
         assert len(result.off_intervals) == 1
 
     def test_multiple_off_intervals(self):
-        """Scattered heartbeats => multiple OFF intervals."""
+        # Scattered heartbeats => multiple OFF intervals.
         # ON: 0-60, OFF: 60+120..360, ON: 360-420, OFF: 420+120..720, ON: 720-780
         hbs = [_ms(0), _ms(60), _ms(360), _ms(420), _ms(720), _ms(780)]
         result = compute_uptime(hbs, _ms(0), _ms(780),
@@ -134,7 +130,7 @@ class TestUptimeComputation:
         assert len(result.off_intervals) == 2
 
     def test_threshold_boundary(self):
-        """Gap exactly at threshold => no OFF interval."""
+        # Gap exactly at threshold => no OFF interval.
         hbs = [_ms(0), _ms(120)]  # exactly 120s gap = threshold
         result = compute_uptime(hbs, _ms(0), _ms(120),
                                 gap_threshold_ms=120_000)
@@ -142,7 +138,7 @@ class TestUptimeComputation:
         assert len(result.off_intervals) == 0
 
     def test_threshold_boundary_plus_one(self):
-        """Gap 1ms over threshold => OFF interval."""
+        # Gap 1ms over threshold => OFF interval.
         # 121 seconds gap
         hbs = [BASE_MS, BASE_MS + 121_000]
         result = compute_uptime(hbs, BASE_MS, BASE_MS + 121_000,
@@ -151,16 +147,14 @@ class TestUptimeComputation:
         assert result.uptime_s == 120  # threshold portion
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  B) Bar continuity / gap analysis
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestBarContinuity:
-    """Test analyze_bar_continuity."""
+    # Test analyze_bar_continuity.
 
     def test_perfect_1m_series(self):
-        """No gaps in a perfect 1-minute bar series."""
+        # No gaps in a perfect 1-minute bar series.
         bars = [_ms(i * 60) for i in range(100)]
         result = analyze_bar_continuity(bars, 60, gap_threshold_seconds=300)
         assert result.bar_count == 100
@@ -171,7 +165,7 @@ class TestBarContinuity:
         assert result.top_gaps == []
 
     def test_missing_bars_coverage(self):
-        """50 bars over a span that should have 100 => ~50% coverage."""
+        # 50 bars over a span that should have 100 => ~50% coverage.
         # Create bars at 0, 120, 240, ... (every 2 minutes)
         bars = [_ms(i * 120) for i in range(50)]
         result = analyze_bar_continuity(bars, 60, gap_threshold_seconds=300)
@@ -182,7 +176,7 @@ class TestBarContinuity:
         assert 50 < result.coverage_pct < 51
 
     def test_single_large_gap(self):
-        """One 30-minute gap in otherwise perfect data."""
+        # One 30-minute gap in otherwise perfect data.
         bars = [_ms(i * 60) for i in range(30)]
         # Gap from minute 29 to minute 59
         bars += [_ms((59 + i) * 60) for i in range(30)]
@@ -203,7 +197,7 @@ class TestBarContinuity:
         assert result.coverage_pct == 100.0
 
     def test_top_n_limiting(self):
-        """Verify top_n limits the number of gaps returned."""
+        # Verify top_n limits the number of gaps returned.
         # Create 20 gaps of various sizes
         bars = [_ms(0)]
         for i in range(1, 21):
@@ -213,7 +207,7 @@ class TestBarContinuity:
         assert len(result.top_gaps) == 5
 
     def test_gap_threshold_filtering(self):
-        """Gaps below threshold aren't counted in gap_count_above_threshold."""
+        # Gaps below threshold aren't counted in gap_count_above_threshold.
         # 2-minute gaps (120s) with threshold 300s
         bars = [_ms(i * 120) for i in range(10)]
         result = analyze_bar_continuity(bars, 60, gap_threshold_seconds=300)
@@ -223,16 +217,14 @@ class TestBarContinuity:
         assert result.max_gap_seconds == 120
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  C) Diagnose (uptime-aware coverage)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestDiagnose:
-    """Test diagnose_coverage combining uptime + bar data."""
+    # Test diagnose_coverage combining uptime + bar data.
 
     def test_full_uptime_full_coverage(self):
-        """100% uptime + all bars present."""
+        # 100% uptime + all bars present.
         start, end = _ms(0), _ms(600)
         hbs = [_ms(i * 60) for i in range(11)]
         bars = [_ms(i * 60) for i in range(11)]
@@ -246,7 +238,7 @@ class TestDiagnose:
         assert result.missing_during_uptime == 0
 
     def test_downtime_subtracts_missing(self):
-        """Bars missing during downtime should not count as missing-during-uptime."""
+        # Bars missing during downtime should not count as missing-during-uptime.
         start, end = _ms(0), _ms(600)
         # Heartbeats: ON for 0-120, then OFF 120..420, then ON 420-600
         hbs = [_ms(0), _ms(60), _ms(120), _ms(420), _ms(480), _ms(540), _ms(600)]
@@ -263,7 +255,7 @@ class TestDiagnose:
         assert result.bars_total == 7
 
     def test_equity_flag(self):
-        """Equity diagnosis includes session note."""
+        # Equity diagnosis includes session note.
         start, end = _ms(0), _ms(600)
         hbs = [_ms(i * 60) for i in range(11)]
         bars = [_ms(i * 60) for i in range(11)]
@@ -274,7 +266,7 @@ class TestDiagnose:
         assert "session" in result.equity_session_note.lower()
 
     def test_no_heartbeats_all_downtime(self):
-        """No heartbeats => all bars counted as 'during OFF'."""
+        # No heartbeats => all bars counted as 'during OFF'.
         start, end = _ms(0), _ms(600)
         bars = [_ms(i * 60) for i in range(11)]
         uptime = compute_uptime([], start, end, gap_threshold_ms=120_000)
@@ -285,7 +277,7 @@ class TestDiagnose:
         assert result.expected_bars_during_uptime == 0
 
     def test_gaps_during_uptime_detected(self):
-        """Gaps that occur during uptime are flagged."""
+        # Gaps that occur during uptime are flagged.
         start, end = _ms(0), _ms(1200)
         hbs = [_ms(i * 60) for i in range(21)]  # continuous heartbeats
         # Bars with a 600s gap in the middle (minute 5 to minute 15)
@@ -298,9 +290,7 @@ class TestDiagnose:
         assert result.top_uptime_gaps[0].gap_seconds == 600
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  D) Equity heuristic
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestEquityHeuristic:
@@ -320,13 +310,11 @@ class TestEquityHeuristic:
         assert is_likely_equity("custom", "CUSTOMTOKEN") is False
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  E) DB Integration: heartbeat + bar_timestamps round-trip
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestDBHeartbeat:
-    """Integration tests: write/read heartbeats via Database."""
+    # Integration tests: write/read heartbeats via Database.
 
     @pytest.mark.asyncio
     async def test_write_and_read_heartbeats(self):
@@ -382,7 +370,7 @@ class TestDBHeartbeat:
 
 
 class TestDBBarTimestamps:
-    """Integration tests: get_bar_timestamps via Database."""
+    # Integration tests: get_bar_timestamps via Database.
 
     @pytest.mark.asyncio
     async def test_get_bar_timestamps(self):
@@ -436,18 +424,16 @@ class TestDBBarTimestamps:
             await db.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  F) End-to-end: heartbeat -> uptime -> diagnose pipeline
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestEndToEndPipeline:
-    """Test the full pipeline from DB data through pure functions."""
+    # Test the full pipeline from DB data through pure functions.
 
     @pytest.mark.asyncio
     async def test_e2e_diagnose_with_gap(self):
-        """Simulate Argus running for 20 minutes, OFF for 10, ON for 20 more.
-        Verify diagnose correctly attributes missing bars."""
+        # Simulate Argus running for 20 minutes, OFF for 10, ON for 20 more.
+        # Verify diagnose correctly attributes missing bars.
         db = await _make_db()
         try:
             # Write heartbeats: ON 0..1200, OFF 1200..1800, ON 1800..3000
@@ -503,13 +489,11 @@ class TestEndToEndPipeline:
             await db.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  G) Determinism: same inputs -> same outputs
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestDeterminism:
-    """Pure functions must produce identical results on identical inputs."""
+    # Pure functions must produce identical results on identical inputs.
 
     def test_uptime_determinism(self):
         hbs = [_ms(i * 60) for i in range(100)]
@@ -542,13 +526,11 @@ class TestDeterminism:
         assert r1.missing_during_uptime == r2.missing_during_uptime
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  H) Median cadence in UptimeResult
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestMedianCadence:
-    """Test that UptimeResult includes correct median_cadence_ms."""
+    # Test that UptimeResult includes correct median_cadence_ms.
 
     def test_uniform_60s_cadence(self):
         hbs = [_ms(i * 60) for i in range(11)]
@@ -556,7 +538,7 @@ class TestMedianCadence:
         assert result.median_cadence_ms == 60_000
 
     def test_cadence_ignores_off_gaps(self):
-        """Median cadence uses only normal (within-threshold) deltas."""
+        # Median cadence uses only normal (within-threshold) deltas.
         # 60s cadence with one 500s gap in the middle
         hbs = [_ms(0), _ms(60), _ms(120), _ms(620), _ms(680), _ms(740)]
         result = compute_uptime(hbs, _ms(0), _ms(740), 120_000)
@@ -572,16 +554,14 @@ class TestMedianCadence:
         assert result.median_cadence_ms == 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  I) Missing bars breakdown in DiagnoseResult
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestMissingBarsBreakdown:
-    """Test bars_during_downtime and missing_during_downtime fields."""
+    # Test bars_during_downtime and missing_during_downtime fields.
 
     def test_bars_during_downtime_counted(self):
-        """Bars that fall in OFF intervals are counted as during-downtime."""
+        # Bars that fall in OFF intervals are counted as during-downtime.
         start, end = _ms(0), _ms(600)
         # Heartbeats: ON 0-120, OFF 240-420, ON 420-600
         hbs = [_ms(0), _ms(60), _ms(120), _ms(420), _ms(480), _ms(540), _ms(600)]
@@ -596,7 +576,7 @@ class TestMissingBarsBreakdown:
         assert result.bars_during_uptime + result.bars_during_downtime == result.bars_total
 
     def test_all_bars_during_uptime_no_downtime_missing(self):
-        """When all bars fall within uptime, bars_during_downtime == 0."""
+        # When all bars fall within uptime, bars_during_downtime == 0.
         start, end = _ms(0), _ms(600)
         hbs = [_ms(i * 60) for i in range(11)]  # continuous uptime
         bars = [_ms(i * 60) for i in range(11)]
@@ -607,22 +587,19 @@ class TestMissingBarsBreakdown:
         assert result.bars_during_downtime == 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  J) Regression: bars missing only during downtime => 100% uptime coverage
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestRegressionDowntimeOnly:
-    """Key regression test: if bars are only missing during downtime,
-    uptime coverage should be 100% and missing_during_uptime should be 0."""
+    # Key regression test: if bars are only missing during downtime,
+    # uptime coverage should be 100% and missing_during_uptime should be 0.
 
     def test_perfect_uptime_coverage_with_downtime_gap(self):
-        """Simulate:
-        - ON for 30 minutes (0..1800), OFF for 30 minutes (1800..3600),
-          ON for 30 minutes (3600..5400).
-        - Bars present every 60s during uptime, zero bars during downtime.
-        - Expected: coverage_uptime_pct ~= 100%, missing_during_uptime == 0.
-        """
+        # Simulate:
+        # - ON for 30 minutes (0..1800), OFF for 30 minutes (1800..3600),
+        # ON for 30 minutes (3600..5400).
+        # - Bars present every 60s during uptime, zero bars during downtime.
+        # - Expected: coverage_uptime_pct ~= 100%, missing_during_uptime == 0.
         start = _ms(0)
         end = _ms(5400)
 
@@ -658,7 +635,7 @@ class TestRegressionDowntimeOnly:
 
     @pytest.mark.asyncio
     async def test_perfect_uptime_coverage_e2e_db(self):
-        """Same scenario as above but through the full DB pipeline."""
+        # Same scenario as above but through the full DB pipeline.
         db = await _make_db()
         try:
             # Heartbeats: ON 0..1800, OFF, ON 3600..5400

@@ -1,17 +1,16 @@
-"""
-Regime-Conditional Strategy Router
-==================================
+# Created by Oliver Meihls
 
-Routes to the appropriate sub-strategy based on current regime.
-
-Routing rules:
-- VOL_SPIKE or VOL_HIGH + IV available → HighVolCreditStrategy
-- VRP > min_vrp + vol not VOL_SPIKE + trend not TREND_DOWN → VRPCreditSpreadStrategy
-- Overnight entry window + fwd_return > threshold → OvernightSessionStrategy
-
-Priority: HighVol first (when vol elevated), then VRP (when VRP positive and vol OK),
-then Overnight (when at session transition). Only one strategy emits per bar.
-"""
+# Regime-Conditional Strategy Router
+#
+# Routes to the appropriate sub-strategy based on current regime.
+#
+# Routing rules:
+# - VOL_SPIKE or VOL_HIGH + IV available → HighVolCreditStrategy
+# - VRP > min_vrp + vol not VOL_SPIKE + trend not TREND_DOWN → VRPCreditSpreadStrategy
+# - Overnight entry window + fwd_return > threshold → OvernightSessionStrategy
+#
+# Priority: HighVol first (when vol elevated), then VRP (when VRP positive and vol OK),
+# then Overnight (when at session transition). Only one strategy emits per bar.
 
 from __future__ import annotations
 
@@ -38,7 +37,7 @@ def _resolve_strategy_class(name: str) -> Type[ReplayStrategy]:
 
 
 class RegimeConditionalStrategy(ReplayStrategy):
-    """Routes to VRP, HighVol, or OvernightSession based on regime."""
+    # Routes to VRP, HighVol, or OvernightSession based on regime.
 
     def __init__(self, params: Optional[Dict[str, Any]] = None):
         cfg = params or {}

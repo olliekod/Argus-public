@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from src.connectors.deribit_client import DeribitClient
 
 

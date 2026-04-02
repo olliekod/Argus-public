@@ -1,8 +1,8 @@
-"""
-Tape replay regression for invalid quote filtering.
+# Created by Oliver Meihls
 
-Run with: python -m pytest tests/test_tape_invalid_quotes.py -v
-"""
+# Tape replay regression for invalid quote filtering.
+#
+# Run with: python -m pytest tests/test_tape_invalid_quotes.py -v
 
 import time
 
@@ -13,7 +13,7 @@ from src.soak.tape import _dict_to_event
 
 
 def _drain(bus, timeout=0.5):
-    """Wait until all bus queues are empty or timeout elapses."""
+    # Wait until all bus queues are empty or timeout elapses.
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         depths = bus.get_queue_depths()

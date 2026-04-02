@@ -1,10 +1,9 @@
-"""
-Telegram Bot for Alerts (Two-Way)
-=================================
+# Created by Oliver Meihls
 
-3-tier alert system via Telegram with two-way communication.
-Supports commands: /help, /status, /positions, /pnl
-"""
+# Telegram Bot for Alerts (Two-Way)
+#
+# 3-tier alert system via Telegram with two-way communication.
+# Supports commands: /help, /status, /positions, /pnl
 
 import asyncio
 import random
@@ -24,27 +23,25 @@ logger = get_alert_logger()
 
 
 class _PollingRestart(Exception):
-    """Internal signal to restart the polling loop."""
+    # Internal signal to restart the polling loop.
     def __init__(self, error: Optional[BaseException]) -> None:
         super().__init__()
         self.error = error
 
 
 class TelegramBot:
-    """
-    Telegram notification bot with 3-tier priority system and two-way communication.
-    
-    Tiers:
-    - Tier 1: Immediate (Options IV >80%, Large liquidations)
-    - Tier 2: FYI (Funding extremes, Basis arb opportunities)
-    - Tier 3: Background (Logged only, not sent)
-    
-    Commands:
-    - /help: List all available commands
-    - /status: Current system status and conditions
-    - /positions: Open paper trades
-    - /pnl: Today's P&L summary
-    """
+    # Telegram notification bot with 3-tier priority system and two-way communication.
+    #
+    # Tiers:
+    # - Tier 1: Immediate (Options IV >80%, Large liquidations)
+    # - Tier 2: FYI (Funding extremes, Basis arb opportunities)
+    # - Tier 3: Background (Logged only, not sent)
+    #
+    # Commands:
+    # - /help: List all available commands
+    # - /status: Current system status and conditions
+    # - /positions: Open paper trades
+    # - /pnl: Today's P&L summary
     
     # Emojis for different alert types
     EMOJIS = {
@@ -128,17 +125,15 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         tier_3_enabled: bool = False,
         rate_limit_seconds: int = 10,
     ):
-        """
-        Initialize Telegram bot.
-        
-        Args:
-            bot_token: Telegram bot token from @BotFather
-            chat_id: Chat/group ID to send messages to
-            tier_1_enabled: Send tier 1 alerts
-            tier_2_enabled: Send tier 2 alerts
-            tier_3_enabled: Send tier 3 alerts (usually disabled)
-            rate_limit_seconds: Minimum seconds between same-type alerts
-        """
+        # Initialize Telegram bot.
+        #
+        # Args:
+        # bot_token: Telegram bot token from @BotFather
+        # chat_id: Chat/group ID to send messages to
+        # tier_1_enabled: Send tier 1 alerts
+        # tier_2_enabled: Send tier 2 alerts
+        # tier_3_enabled: Send tier 3 alerts (usually disabled)
+        # rate_limit_seconds: Minimum seconds between same-type alerts
         self.bot_token = bot_token
         self.bot = Bot(token=bot_token)
         self.chat_id = chat_id
@@ -203,7 +198,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         on_trade_confirmation: Optional[Callable] = None,
         get_kalshi_summary: Optional[Callable] = None,
     ):
-        """Set callback functions for data access."""
+        # Set callback functions for data access.
         self._get_conditions = get_conditions
         self._get_positions = get_positions
         self._get_pnl = get_pnl
@@ -219,11 +214,11 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         self._get_kalshi_summary = get_kalshi_summary
 
     def set_chat_callback(self, callback: Callable) -> None:
-        """Set the callback for free-form chat messages routed to the AI agent."""
+        # Set the callback for free-form chat messages routed to the AI agent.
         self._on_chat = callback
 
     async def start_polling(self) -> None:
-        """Start listening for incoming messages."""
+        # Start listening for incoming messages.
         if self._polling_task and not self._polling_task.done():
             logger.debug("Telegram polling already running")
             return
@@ -231,7 +226,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         self._polling_task = asyncio.create_task(self._polling_loop())
     
     async def stop_polling(self) -> None:
-        """Stop listening for incoming messages."""
+        # Stop listening for incoming messages.
         if self._polling_task and not self._polling_task.done():
             self._polling_stop_event.set()
             self._polling_restart_event.set()
@@ -441,18 +436,16 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         key: Optional[str] = None,
         rate_limit_mins: Optional[int] = None
     ) -> bool:
-        """
-        Send a prioritized and potentially rate-limited alert.
-        
-        Args:
-            text: Message text (HTML supported)
-            priority: 1 (Urgent), 2 (Informational), 3 (Background/Log-only)
-            key: Optional deduplication key for rate limiting
-            rate_limit_mins: Optional override for rate limit window
-            
-        Returns:
-            bool: True if message was sent (or Tier 3), False if suppressed
-        """
+        # Send a prioritized and potentially rate-limited alert.
+        #
+        # Args:
+        # text: Message text (HTML supported)
+        # priority: 1 (Urgent), 2 (Informational), 3 (Background/Log-only)
+        # key: Optional deduplication key for rate limiting
+        # rate_limit_mins: Optional override for rate limit window
+        #
+        # Returns:
+        # bool: True if message was sent (or Tier 3), False if suppressed
         # Tier 3 is log-only
         if priority >= 3:
             if not self.tier_3_enabled:
@@ -486,20 +479,18 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             logger.error(f"Failed to send tiered alert: {e}")
             return False
     
-    # -------------------------------------------------------------------------
-    # COMMAND HANDLERS
-    # -------------------------------------------------------------------------
+# COMMAND HANDLERS
     
     async def _cmd_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /help command."""
+        # Handle /help command.
         await update.message.reply_text(self.HELP_TEXT, parse_mode="HTML")
 
     async def _cmd_glossary(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /glossary command."""
+        # Handle /glossary command.
         await update.message.reply_text(self.GLOSSARY_TEXT, parse_mode="HTML")
 
     async def _cmd_sentiment(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /sentiment command."""
+        # Handle /sentiment command.
         try:
             if not self._get_sentiment:
                 await update.message.reply_text("Sentiment summary not available.")
@@ -511,7 +502,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             await update.message.reply_text("Error fetching sentiment summary.")
 
     async def _cmd_mode(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /mode [active|gaming|cpu] command."""
+        # Handle /mode [active|gaming|cpu] command.
         try:
             if not self._set_mode:
                 await update.message.reply_text("Mode control not available.")
@@ -530,7 +521,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             await update.message.reply_text(f"Error: {e}")
 
     async def _cmd_dashboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /dashboard — single view of whether everything is working."""
+        # Handle /dashboard — single view of whether everything is working.
         start = time.perf_counter()
         try:
             if not self._get_dashboard:
@@ -631,7 +622,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             logger.info(f"Telegram /dashboard handled in {duration_ms:.1f}ms")
 
     async def _cmd_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /status command."""
+        # Handle /status command.
         start = time.perf_counter()
         try:
             if self._get_conditions:
@@ -683,7 +674,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             logger.info(f"Telegram /status handled in {duration_ms:.1f}ms")
     
     async def _cmd_positions(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /positions command — grouped by strategy with top unrealized."""
+        # Handle /positions command — grouped by strategy with top unrealized.
         start = time.perf_counter()
         try:
             if not self._get_positions:
@@ -724,7 +715,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             logger.info(f"Telegram /positions handled in {duration_ms:.1f}ms")
     
     async def _cmd_pnl(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /pnl command — statistically sane per-trader metrics."""
+        # Handle /pnl command — statistically sane per-trader metrics.
         start = time.perf_counter()
         try:
             if not self._get_pnl:
@@ -798,7 +789,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             logger.info(f"Telegram /pnl handled in {duration_ms:.1f}ms")
 
     async def _cmd_farm_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /farm_status command."""
+        # Handle /farm_status command.
         try:
             if not self._get_farm_status:
                 await update.message.reply_text(
@@ -836,7 +827,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             await update.message.reply_text(f"❌ Error: {e}")
 
     async def _cmd_signal_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /signal_status command."""
+        # Handle /signal_status command.
         try:
             if not self._get_signal_status:
                 await update.message.reply_text(
@@ -883,7 +874,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             await update.message.reply_text(f"❌ Error: {e}")
 
     async def _cmd_research_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /research_status command."""
+        # Handle /research_status command.
         try:
             if not self._get_research_status:
                 await update.message.reply_text(
@@ -943,7 +934,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             await update.message.reply_text(f"❌ Error: {e}")
     
     async def _cmd_zombies(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /zombies — detect stale/orphaned positions (7-14 DTE aligned)."""
+        # Handle /zombies — detect stale/orphaned positions (7-14 DTE aligned).
         start = time.perf_counter()
         try:
             if not self._get_zombies:
@@ -967,7 +958,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             logger.info(f"Telegram /zombies handled in {duration_ms:.1f}ms")
 
     async def _cmd_zombie_clean(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /zombie_clean — close detected zombie positions."""
+        # Handle /zombie_clean — close detected zombie positions.
         try:
             if not self._get_zombies:
                 await update.message.reply_text("Zombie detection not available.")
@@ -981,7 +972,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             await update.message.reply_text(f"Error: {e}")
 
     async def _cmd_reset_paper(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /reset_paper — start new paper equity epoch."""
+        # Handle /reset_paper — start new paper equity epoch.
         try:
             await update.message.reply_text(
                 "Paper equity reset available via dashboard:\n"
@@ -992,7 +983,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             await update.message.reply_text(f"Error: {e}")
 
     async def _cmd_db_stats(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /db_stats — show database size and table row counts."""
+        # Handle /db_stats — show database size and table row counts.
         start = time.perf_counter()
         try:
             await update.message.reply_text("DB stats available via dashboard: /db_stats")
@@ -1003,7 +994,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             logger.info(f"Telegram /db_stats handled in {duration_ms:.1f}ms")
 
     async def _cmd_kalshi(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /kalshi command."""
+        # Handle /kalshi command.
         try:
             if not self._get_kalshi_summary:
                 await update.message.reply_text("Kalshi data not available.")
@@ -1034,7 +1025,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             await update.message.reply_text(f"❌ Error: {e}")
 
     async def _cmd_follow(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /follow — show followed (best) traders."""
+        # Handle /follow — show followed (best) traders.
         try:
             if not self._get_followed:
                 await update.message.reply_text("Follow list not available.")
@@ -1059,6 +1050,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
                     config = _json.loads(t.get('config_json', '{}') or '{}')
                 except Exception:
                     pass
+
                 score = t.get('score', 0)
                 strategy = config.get('strategy_type', '?')
                 ret = config.get('return_pct', 0)
@@ -1084,7 +1076,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
             await update.message.reply_text(f"❌ Error: {e}")
 
     async def _handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle non-command messages (trade confirmations or AI chat)."""
+        # Handle non-command messages (trade confirmations or AI chat).
         if not update.message or not update.message.text:
             return
 
@@ -1118,7 +1110,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         )
     
     async def _handle_trade_confirmation(self, update: Update, text: str) -> None:
-        """Handle yes/no trade confirmation."""
+        # Handle yes/no trade confirmation.
         # Check if there's a recent signal to confirm
         if not self._last_signal_id or not self._last_signal_time:
             await update.message.reply_text(
@@ -1157,16 +1149,14 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         self._last_signal_time = None
     
     def set_last_signal(self, signal_id: str) -> None:
-        """Set the last signal ID for yes/no confirmation."""
+        # Set the last signal ID for yes/no confirmation.
         self._last_signal_id = signal_id
         self._last_signal_time = datetime.now(timezone.utc)
     
-    # -------------------------------------------------------------------------
-    # EXISTING SENDING METHODS
-    # -------------------------------------------------------------------------
+# EXISTING SENDING METHODS
     
     def _should_send(self, tier: int, alert_type: str) -> bool:
-        """Check if alert should be sent based on tier and rate limiting."""
+        # Check if alert should be sent based on tier and rate limiting.
         # Check tier
         if tier == 1 and not self.tier_1_enabled:
             return False
@@ -1201,17 +1191,15 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         parse_mode: str = "HTML",
         disable_notification: bool = False
     ) -> bool:
-        """
-        Send a message to the configured chat.
-        
-        Args:
-            text: Message text (HTML format supported)
-            parse_mode: 'HTML' or 'Markdown'
-            disable_notification: Send silently
-            
-        Returns:
-            True if sent successfully
-        """
+        # Send a message to the configured chat.
+        #
+        # Args:
+        # text: Message text (HTML format supported)
+        # parse_mode: 'HTML' or 'Markdown'
+        # disable_notification: Send silently
+        #
+        # Returns:
+        # True if sent successfully
         try:
             await self.bot.send_message(
                 chat_id=self.chat_id,
@@ -1234,20 +1222,18 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         action: Optional[str] = None,
         signal_id: Optional[str] = None,
     ) -> bool:
-        """
-        Send a formatted alert message.
-        
-        Args:
-            tier: Alert tier (1, 2, or 3)
-            alert_type: Type of opportunity
-            title: Alert title
-            details: Details to include
-            action: Suggested action (optional)
-            signal_id: If provided, sets for yes/no confirmation
-            
-        Returns:
-            True if sent
-        """
+        # Send a formatted alert message.
+        #
+        # Args:
+        # tier: Alert tier (1, 2, or 3)
+        # alert_type: Type of opportunity
+        # title: Alert title
+        # details: Details to include
+        # action: Suggested action (optional)
+        # signal_id: If provided, sets for yes/no confirmation
+        #
+        # Returns:
+        # True if sent
         if not self._should_send(tier, alert_type):
             logger.debug(f"Alert suppressed: tier={tier}, type={alert_type}")
             return False
@@ -1292,7 +1278,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
 
     @staticmethod
     def _now_et() -> datetime:
-        """Return current time in US/Eastern."""
+        # Return current time in US/Eastern.
         return datetime.now(ZoneInfo("America/New_York"))
     
     async def send_conditions_alert(
@@ -1302,7 +1288,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         details: Dict[str, Any],
         implication: str,
     ) -> bool:
-        """Send a conditions warming/cooling alert."""
+        # Send a conditions warming/cooling alert.
         emoji_map = {
             'cooling': "❄️",
             'neutral': "➖",
@@ -1328,7 +1314,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         return await self.send_message("\n".join(lines))
     
     async def send_iv_alert(self, detection: Dict) -> bool:
-        """Send options IV spike alert (Tier 1 - immediate)."""
+        # Send options IV spike alert (Tier 1 - immediate).
         data = detection.get('detection_data', {})
         
         return await self.send_alert(
@@ -1345,7 +1331,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         )
     
     async def send_daily_summary(self, stats: Dict) -> bool:
-        """Send daily summary report."""
+        # Send daily summary report.
         lines = [
             f"📈 <b>Daily Market Monitor Summary</b>",
             f"<i>{self._now_et().strftime('%Y-%m-%d')}</i>",
@@ -1373,7 +1359,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         return await self.send_message(text)
     
     async def send_system_status(self, status: str, details: str = "") -> bool:
-        """Send system status update."""
+        # Send system status update.
         emoji = self.EMOJIS.get(status, "⚙️")
         text = f"{emoji} <b>System Status: {status.upper()}</b>"
         if details:
@@ -1382,7 +1368,7 @@ Where current IV sits vs recent history (0–100%). High rank = IV is high relat
         return await self.send_message(text)
     
     async def test_connection(self) -> bool:
-        """Test bot connection."""
+        # Test bot connection.
         try:
             me = await self.bot.get_me()
             logger.info(f"Telegram bot connected: @{me.username}")

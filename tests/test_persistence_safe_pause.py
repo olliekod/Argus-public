@@ -1,17 +1,17 @@
-"""
-Tests for safe-pause behavior when bar spool is full and DB is unreachable.
+# Created by Oliver Meihls
 
-Covers:
-- Entering paused state when spool full + DB down
-- Memory stays bounded during pause
-- Bars rejected (not silently dropped) during pause
-- Health/status reflects paused state
-- Automatic recovery when DB comes back and spool drains
-- bars_dropped_total remains 0
-- Guard fires alert for ingestion_paused
-
-Run with:  python -m pytest tests/test_persistence_safe_pause.py -v
-"""
+# Tests for safe-pause behavior when bar spool is full and DB is unreachable.
+#
+# Covers:
+# - Entering paused state when spool full + DB down
+# - Memory stays bounded during pause
+# - Bars rejected (not silently dropped) during pause
+# - Health/status reflects paused state
+# - Automatic recovery when DB comes back and spool drains
+# - bars_dropped_total remains 0
+# - Guard fires alert for ingestion_paused
+#
+# Run with:  python -m pytest tests/test_persistence_safe_pause.py -v
 
 import asyncio
 import json
@@ -30,7 +30,7 @@ from src.core.persistence import PersistenceManager
 
 
 class _DummyDB:
-    """DB stub that can simulate failures and then recover."""
+    # DB stub that can simulate failures and then recover.
 
     def __init__(self, fail_count=0, always_fail=False):
         self.bar_batches = []
@@ -52,7 +52,7 @@ class _DummyDB:
         await asyncio.sleep(0)
 
     def recover(self):
-        """Make DB start succeeding again."""
+        # Make DB start succeeding again.
         self._always_fail = False
         self._fail_count = 0
         self._call_count = 999  # past any fail_count
@@ -80,7 +80,7 @@ def _make_bar(symbol="BTC", ts=None):
 
 
 def _bar_line_bytes():
-    """Approximate byte size of one serialized bar line in the spool."""
+    # Approximate byte size of one serialized bar line in the spool.
     bar = _make_bar(ts=1_700_000_000.0)
     line = json.dumps(asdict(bar), separators=(",", ":")) + "\n"
     return len(line.encode("utf-8"))
@@ -90,10 +90,10 @@ def _bar_line_bytes():
 
 
 class TestEnterPausedState:
-    """When spool is full and DB is unreachable, system must pause."""
+    # When spool is full and DB is unreachable, system must pause.
 
     def test_pause_on_spool_full(self):
-        """Spool fills up → system enters paused state."""
+        # Spool fills up → system enters paused state.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -142,7 +142,7 @@ class TestEnterPausedState:
             thread.join(timeout=2)
 
     def test_subsequent_bars_rejected_when_paused(self):
-        """Once paused, additional bars are rejected immediately."""
+        # Once paused, additional bars are rejected immediately.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -199,7 +199,7 @@ class TestEnterPausedState:
 
 
 class TestMemoryBounded:
-    """Memory buffer must NOT become unbounded during pause."""
+    # Memory buffer must NOT become unbounded during pause.
 
     def test_buffer_does_not_grow_when_paused(self):
         loop = asyncio.new_event_loop()
@@ -252,7 +252,7 @@ class TestMemoryBounded:
 
 
 class TestHealthAndStatus:
-    """Paused state must be visible in health_status and /debug/soak."""
+    # Paused state must be visible in health_status and /debug/soak.
 
     def test_status_shows_paused(self):
         loop = asyncio.new_event_loop()
@@ -329,7 +329,7 @@ class TestHealthAndStatus:
             thread.join(timeout=2)
 
     def test_bars_dropped_total_stays_zero(self):
-        """bars_dropped_total must remain 0 even during pause."""
+        # bars_dropped_total must remain 0 even during pause.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -372,10 +372,10 @@ class TestHealthAndStatus:
 
 
 class TestAutomaticRecovery:
-    """When DB recovers and spool drains, ingestion must auto-resume."""
+    # When DB recovers and spool drains, ingestion must auto-resume.
 
     def test_resume_after_db_recovery(self):
-        """DB comes back → spool drains → pause lifts."""
+        # DB comes back → spool drains → pause lifts.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -423,7 +423,7 @@ class TestAutomaticRecovery:
             thread.join(timeout=2)
 
     def test_resume_respects_threshold(self):
-        """Resume only happens when spool drops below resume_threshold_pct."""
+        # Resume only happens when spool drops below resume_threshold_pct.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -475,10 +475,10 @@ class TestAutomaticRecovery:
 
 
 class TestConfiguration:
-    """Configurable parameters are respected."""
+    # Configurable parameters are respected.
 
     def test_pause_disabled_falls_back_to_unbounded(self):
-        """pause_on_spool_full=False preserves legacy unbounded behavior."""
+        # pause_on_spool_full=False preserves legacy unbounded behavior.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -514,7 +514,7 @@ class TestConfiguration:
             thread.join(timeout=2)
 
     def test_custom_spool_max_bytes(self):
-        """Custom spool_max_bytes is respected."""
+        # Custom spool_max_bytes is respected.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -539,7 +539,7 @@ class TestConfiguration:
             thread.join(timeout=2)
 
     def test_ingestion_paused_property(self):
-        """Thread-safe property works correctly."""
+        # Thread-safe property works correctly.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -561,7 +561,7 @@ class TestConfiguration:
 
 
 class TestGuardIntegration:
-    """SoakGuardian detects and alerts on ingestion_paused."""
+    # SoakGuardian detects and alerts on ingestion_paused.
 
     def test_guard_fires_on_paused(self):
         from src.soak.guards import SoakGuardian
@@ -650,7 +650,7 @@ class TestGuardIntegration:
 
 
 class TestSoakSummary:
-    """Soak summary includes pause metrics."""
+    # Soak summary includes pause metrics.
 
     def test_summary_includes_pause_fields(self):
         loop = asyncio.new_event_loop()
@@ -680,7 +680,7 @@ class TestSoakSummary:
 
 
 class TestEndToEnd:
-    """Full scenario: DB down → spool fills → pause → DB recovers → resume."""
+    # Full scenario: DB down → spool fills → pause → DB recovers → resume.
 
     def test_full_lifecycle(self):
         loop = asyncio.new_event_loop()
@@ -766,18 +766,16 @@ class TestEndToEnd:
 
 
 class TestWindowsSpoolFileRelease:
-    """Regression test: spool file must be renameable/removable immediately.
-    
-    This catches WinError 32 (file in use) issues where a file handle
-    is held open, preventing temp directory cleanup on Windows.
-    """
+    # Regression test: spool file must be renameable/removable immediately.
+    #
+    # This catches WinError 32 (file in use) issues where a file handle
+    # is held open, preventing temp directory cleanup on Windows.
 
     def test_spool_file_not_locked_after_writes(self):
-        """After spooling bars, the spool file handle must be released.
-        
-        Uses os.rename as a proxy for "no open handle" — Windows won't
-        allow renaming a file if another process has it open.
-        """
+        # After spooling bars, the spool file handle must be released.
+        #
+        # Uses os.rename as a proxy for "no open handle" — Windows won't
+        # allow renaming a file if another process has it open.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -820,10 +818,9 @@ class TestWindowsSpoolFileRelease:
             thread.join(timeout=2)
 
     def test_tempdir_cleanup_succeeds_after_spooling(self):
-        """TemporaryDirectory cleanup must succeed after spooling.
-        
-        This is the actual failure scenario from the bug report.
-        """
+        # TemporaryDirectory cleanup must succeed after spooling.
+        #
+        # This is the actual failure scenario from the bug report.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:

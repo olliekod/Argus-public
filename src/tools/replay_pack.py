@@ -1,23 +1,22 @@
-"""
-Daily Replay Pack Tool
-=======================
+# Created by Oliver Meihls
 
-Slices market_bars, bar_outcomes, regimes, and option chain snapshots
-from the database for a specific symbol and time window, and saves them
-to a JSON file for deterministic offline replay.
-
-Supports:
-- Single-symbol mode: ``--symbol SPY``
-- Universe mode: ``--universe`` (loads all liquid ETF symbols)
-
-Provider defaults are read from the ``data_sources`` policy in
-``config/config.yaml``.  No ``--provider`` flag is required for
-normal usage.  Advanced overrides (``--bars-provider``,
-``--options-snapshot-provider``) are available but rarely needed.
-
-Option chain snapshots are included when available.  Symbols without
-options data simply produce packs with an empty ``snapshots`` list.
-"""
+# Daily Replay Pack Tool
+#
+# Slices market_bars, bar_outcomes, regimes, and option chain snapshots
+# from the database for a specific symbol and time window, and saves them
+# to a JSON file for deterministic offline replay.
+#
+# Supports:
+# - Single-symbol mode: ``--symbol SPY``
+# - Universe mode: ``--universe`` (loads all liquid ETF symbols)
+#
+# Provider defaults are read from the ``data_sources`` policy in
+# ``config/config.yaml``.  No ``--provider`` flag is required for
+# normal usage.  Advanced overrides (``--bars-provider``,
+# ``--options-snapshot-provider``) are available but rarely needed.
+#
+# Option chain snapshots are included when available.  Symbols without
+# options data simply produce packs with an empty ``snapshots`` list.
 
 import asyncio
 import json
@@ -42,28 +41,26 @@ from src.core.global_risk_flow import (
 
 
 def get_news_sentiment_for_replay(sim_ts_ms: int) -> Dict[str, Any]:
-    """Deterministic replay helper for news sentiment.
-
-    Current phase uses a constant stub payload. This function is the
-    extension point for future historical sentiment lookup keyed by
-    ``sim_ts_ms``.
-    """
+    # Deterministic replay helper for news sentiment.
+    #
+    # Current phase uses a constant stub payload. This function is the
+    # extension point for future historical sentiment lookup keyed by
+    # ``sim_ts_ms``.
     _ = sim_ts_ms
     return {"score": 0.0, "label": "stub", "n_headlines": 0}
 
 
 
 def _atm_iv_from_quotes_json(quotes_json: str, underlying_price: float) -> Optional[float]:
-    """Fill ATM put IV from quotes_json when snapshot has no atm_iv.
-
-    Provider IV is always preferred; derived IV is used only when provider
-    did not supply it. Order: (1) top-level atm_iv (from connector/provider),
-    (2) ATM put's iv field (provider on the quote), (3) derived from bid/ask
-    via GreeksEngine (Black-Scholes) when neither is present.
-
-    When underlying_price is 0 or missing, tries to use underlying_price from
-    the parsed quotes_json (serialized chain includes it).
-    """
+    # Fill ATM put IV from quotes_json when snapshot has no atm_iv.
+    #
+    # Provider IV is always preferred; derived IV is used only when provider
+    # did not supply it. Order: (1) top-level atm_iv (from connector/provider),
+    # (2) ATM put's iv field (provider on the quote), (3) derived from bid/ask
+    # via GreeksEngine (Black-Scholes) when neither is present.
+    #
+    # When underlying_price is 0 or missing, tries to use underlying_price from
+    # the parsed quotes_json (serialized chain includes it).
     if not quotes_json:
         logger.debug("atm_iv_from_quotes: empty quotes_json")
         return None
@@ -81,6 +78,7 @@ def _atm_iv_from_quotes_json(quotes_json: str, underlying_price: float) -> Optio
                     underlying = float(raw)
                 except (TypeError, ValueError):
                     pass
+
         if underlying <= 0:
             logger.debug("atm_iv_from_quotes: underlying_price missing or 0 (arg=%s)", underlying_price)
             return None
@@ -163,11 +161,13 @@ def _atm_iv_from_quotes_json(quotes_json: str, underlying_price: float) -> Optio
                     mid_or_last = float(put["mid"])
                 except (TypeError, ValueError):
                     pass
+
             if (mid_or_last is None or mid_or_last <= 0) and put.get("last"):
                 try:
                     mid_or_last = float(put["last"])
                 except (TypeError, ValueError):
                     pass
+
             if mid_or_last and mid_or_last > 0:
                 try:
                     from src.analysis.greeks_engine import GreeksEngine
@@ -195,7 +195,7 @@ def _atm_iv_from_quotes_json(quotes_json: str, underlying_price: float) -> Optio
 
 
 def _bar_timestamp_to_ms(ts: Any) -> int:
-    """Convert bar timestamp (ISO str or number) to milliseconds (UTC)."""
+    # Convert bar timestamp (ISO str or number) to milliseconds (UTC).
     if ts is None:
         return 0
     if isinstance(ts, (int, float)):
@@ -223,19 +223,18 @@ async def _fetch_snapshots(
     end_ms: int,
     provider_filter: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Load option chain snapshots for a symbol and date range.
-
-    By default includes all providers (Alpaca + Tastytrade) for cross-validation.
-    Pass provider_filter to restrict to one provider (e.g. "alpaca" or "tastytrade").
-
-    Returns a list of snapshot dicts ordered chronologically by
-    ``recv_ts_ms`` (falling back to ``timestamp_ms`` for legacy rows).
-
-    Each dict includes:
-    - timestamp_ms, recv_ts_ms, provider, underlying_price
-    - atm_iv (if available)
-    - quotes_json payload
-    """
+    # Load option chain snapshots for a symbol and date range.
+    #
+    # By default includes all providers (Alpaca + Tastytrade) for cross-validation.
+    # Pass provider_filter to restrict to one provider (e.g. "alpaca" or "tastytrade").
+    #
+    # Returns a list of snapshot dicts ordered chronologically by
+    # ``recv_ts_ms`` (falling back to ``timestamp_ms`` for legacy rows).
+    #
+    # Each dict includes:
+    # - timestamp_ms, recv_ts_ms, provider, underlying_price
+    # - atm_iv (if available)
+    # - quotes_json payload
     raw = await db.get_option_chain_snapshots(
         symbol=symbol,
         start_ms=start_ms,
@@ -277,7 +276,7 @@ def _merge_snapshots_primary_with_fallback(
     secondary: List[Dict[str, Any]],
     gap_ms: int,
 ) -> tuple[List[Dict[str, Any]], int]:
-    """Prefer primary snapshots and fill long primary gaps from secondary."""
+    # Prefer primary snapshots and fill long primary gaps from secondary.
     if not primary:
         merged = sorted(secondary, key=lambda s: s["recv_ts_ms"])
         return merged, len(merged)
@@ -323,7 +322,7 @@ async def _fetch_snapshots_multi(
     end_ms: int,
     providers: List[str],
 ) -> List[Dict[str, Any]]:
-    """Fetch snapshots for multiple providers and merge chronologically."""
+    # Fetch snapshots for multiple providers and merge chronologically.
     all_snaps: List[Dict[str, Any]] = []
     for prov in providers:
         snaps = await _fetch_snapshots(db, symbol, start_ms, end_ms, provider_filter=prov)
@@ -347,13 +346,12 @@ async def create_replay_pack(
     policy: Optional[DataSourcePolicy] = None,
     benchmark_symbol: str = "BTC-INDEX",
 ) -> Dict[str, Any]:
-    """Create a replay pack for a single symbol.
-
-    Provider defaults come from the data-source policy unless
-    explicitly overridden via *provider* or *snapshot_provider*.
-
-    Returns the pack dict (also written to *output_path*).
-    """
+    # Create a replay pack for a single symbol.
+    #
+    # Provider defaults come from the data-source policy unless
+    # explicitly overridden via *provider* or *snapshot_provider*.
+    #
+    # Returns the pack dict (also written to *output_path*).
     if policy is None:
         policy = get_data_source_policy()
 
@@ -576,12 +574,11 @@ async def create_universe_packs(
     options_snapshot_gap_minutes: int = 3,
     policy: Optional[DataSourcePolicy] = None,
 ) -> List[str]:
-    """Create replay packs for every symbol in the liquid ETF universe.
-
-    Provider defaults come from the data-source policy.
-
-    Returns a list of output file paths that were written.
-    """
+    # Create replay packs for every symbol in the liquid ETF universe.
+    #
+    # Provider defaults come from the data-source policy.
+    #
+    # Returns a list of output file paths that were written.
     if symbols is None:
         symbols = get_liquid_etf_universe()
 
@@ -613,9 +610,7 @@ async def create_universe_packs(
     return written
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # CLI
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(

@@ -1,9 +1,8 @@
-"""
-Test: RiskEngine Monotone Property
-====================================
+# Created by Oliver Meihls
 
-Verify that total exposure never increases after clamping.
-"""
+# Test: RiskEngine Monotone Property
+#
+# Verify that total exposure never increases after clamping.
 
 import pytest
 
@@ -17,7 +16,7 @@ from src.analysis.tail_risk_scenario import TailRiskConfig
 
 
 def _make_allocations(weights=None):
-    """Create test allocations with optional custom weights."""
+    # Create test allocations with optional custom weights.
     weights = weights or [0.07, 0.05, 0.04, 0.03]
     instruments = ["SPY", "IBIT", "QQQ", "SPY"]
     result = []
@@ -60,10 +59,10 @@ def _make_config(**overrides):
 
 
 class TestRiskEngineMonotone:
-    """Total exposure never increases after clamping."""
+    # Total exposure never increases after clamping.
 
     def _assert_monotone(self, original, clamped):
-        """Helper: total abs weight of clamped ≤ original."""
+        # Helper: total abs weight of clamped ≤ original.
         orig_total = sum(abs(a.weight) for a in original)
         clamp_total = sum(abs(a.weight) for a in clamped)
         assert clamp_total <= orig_total + 1e-10, (
@@ -84,7 +83,7 @@ class TestRiskEngineMonotone:
                 )
 
     def test_monotone_no_constraints(self):
-        """No constraints active — weights unchanged."""
+        # No constraints active — weights unchanged.
         engine = RiskEngine()
         allocs = _make_allocations()
         state = _make_state()
@@ -94,7 +93,7 @@ class TestRiskEngineMonotone:
         self._assert_monotone(allocs, clamped)
 
     def test_monotone_aggregate_cap(self):
-        """Aggregate cap reduces total exposure."""
+        # Aggregate cap reduces total exposure.
         engine = RiskEngine()
         allocs = _make_allocations([0.30, 0.25, 0.20, 0.15])
         state = _make_state()
@@ -107,7 +106,7 @@ class TestRiskEngineMonotone:
         assert total <= 0.50 + 1e-8
 
     def test_monotone_drawdown_throttle(self):
-        """Drawdown throttle reduces exposure."""
+        # Drawdown throttle reduces exposure.
         engine = RiskEngine()
         allocs = _make_allocations()
         state = _make_state(current_drawdown_pct=0.20)
@@ -123,7 +122,7 @@ class TestRiskEngineMonotone:
         self._assert_monotone(allocs, clamped)
 
     def test_monotone_underlying_cap(self):
-        """Underlying cap reduces per-underlying exposure."""
+        # Underlying cap reduces per-underlying exposure.
         engine = RiskEngine()
         allocs = _make_allocations()
         state = _make_state()
@@ -137,7 +136,7 @@ class TestRiskEngineMonotone:
         self._assert_monotone(allocs, clamped)
 
     def test_monotone_greek_limits(self):
-        """Greek limits reduce exposure."""
+        # Greek limits reduce exposure.
         engine = RiskEngine()
         allocs = _make_allocations()
         state = _make_state()
@@ -151,7 +150,7 @@ class TestRiskEngineMonotone:
         self._assert_monotone(allocs, clamped)
 
     def test_monotone_all_constraints(self):
-        """All constraints combined still monotone."""
+        # All constraints combined still monotone.
         engine = RiskEngine()
         allocs = _make_allocations([0.20, 0.15, 0.10, 0.08])
         state = _make_state(current_drawdown_pct=0.12)
@@ -174,11 +173,10 @@ class TestRiskEngineMonotone:
         self._assert_monotone(allocs, clamped)
 
     def test_monotone_check_raises_on_violation(self):
-        """Verify the built-in monotone check raises on violation.
-
-        We can't easily create a real violation, so we test that the
-        check mechanism works by verifying it doesn't raise on valid input.
-        """
+        # Verify the built-in monotone check raises on violation.
+        #
+        # We can't easily create a real violation, so we test that the
+        # check mechanism works by verifying it doesn't raise on valid input.
         engine = RiskEngine()
         allocs = _make_allocations()
         state = _make_state()

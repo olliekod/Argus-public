@@ -1,24 +1,22 @@
-"""
-Argus Feature Builder (Stream 4)
-================================
+# Created by Oliver Meihls
 
-Consumes ``market.bars`` and computes rolling metrics:
-
-* **returns** — 1-bar log returns
-* **realized_vol** — rolling realized volatility (annualised)
-* **jump_score** — detects sudden price jumps (|return| / rolling σ)
-
-Publishes computed metrics to ``market.metrics`` and persists via the
-existing MetricEvent pipeline.
-
-Safety constraints
-------------------
-* Downstream-only: subscribes to ``market.bars``, publishes to
-  ``market.metrics``.  Never mutates upstream state.
-* Bounded internal state: rolling windows are capped per symbol.
-* Overload: if the bar queue backs up, old bars are dropped (deque
-  maxlen), never blocking the ingestion path.
-"""
+# Argus Feature Builder (Stream 4)
+#
+# Consumes ``market.bars`` and computes rolling metrics:
+#
+# * **returns** — 1-bar log returns
+# * **realized_vol** — rolling realized volatility (annualised)
+# * **jump_score** — detects sudden price jumps (|return| / rolling σ)
+#
+# Publishes computed metrics to ``market.metrics`` and persists via the
+# existing MetricEvent pipeline.
+#
+# Safety constraints
+# * Downstream-only: subscribes to ``market.bars``, publishes to
+# ``market.metrics``.  Never mutates upstream state.
+# * Bounded internal state: rolling windows are capped per symbol.
+# * Overload: if the bar queue backs up, old bars are dropped (deque
+# maxlen), never blocking the ingestion path.
 
 from __future__ import annotations
 
@@ -49,13 +47,11 @@ _ANNUALISE_FACTOR = math.sqrt(365.25 * 24 * 60)  # for 1-minute bars
 
 
 class FeatureBuilder:
-    """Computes rolling market features from 1-minute bars.
-
-    Parameters
-    ----------
-    bus : EventBus
-        Shared event bus.
-    """
+    # Computes rolling market features from 1-minute bars.
+    #
+    # Parameters
+    # bus : EventBus
+    # Shared event bus.
 
     def __init__(self, bus: EventBus) -> None:
         self._bus = bus
@@ -74,7 +70,7 @@ class FeatureBuilder:
     # ── bar handler ──────────────────────────────────────────
 
     def _on_bar(self, event: BarEvent) -> None:
-        """Compute features from an incoming bar."""
+        # Compute features from an incoming bar.
         symbol = event.symbol
         close = event.close
         ts = event.timestamp
@@ -131,7 +127,7 @@ class FeatureBuilder:
         timestamp: float,
         source: str,
     ) -> None:
-        """Emit a MetricEvent onto the bus."""
+        # Emit a MetricEvent onto the bus.
         evt = MetricEvent(
             symbol=symbol,
             metric=metric,

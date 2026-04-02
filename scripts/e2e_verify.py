@@ -1,28 +1,27 @@
 #!/usr/bin/env python3
-"""
-End-to-End Data Source Verification
-====================================
+# Created by Oliver Meihls
 
-Single-command pipeline that validates the Argus data-source policy
-end-to-end:
-
-1. Confirms bars/outcomes coverage from ``bars_primary`` (e.g. Alpaca).
-2. Confirms option-snapshot coverage + % ``atm_iv`` from
-   ``options_snapshots_primary`` (Tastytrade); secondary (Public) is included
-   when enabled in config. Tastytrade IV comes from DXLink when orchestrator runs.
-3. Probes DXLink greeks/quotes availability.
-4. Builds a replay pack using policy defaults (no provider args).
-5. Runs a smoke experiment (``VRPCreditSpreadStrategy`` on SPY)
-   that must produce trades when prerequisites are satisfied.
-6. Runs the strategy evaluator and writes a summary report.
-
-Artifacts are written to ``logs/e2e/<date>/``.
-
-Usage::
-
-    python scripts/e2e_verify.py
-    python scripts/e2e_verify.py --symbol IBIT --days 5
-"""
+# End-to-End Data Source Verification
+#
+# Single-command pipeline that validates the Argus data-source policy
+# end-to-end:
+#
+# 1. Confirms bars/outcomes coverage from ``bars_primary`` (e.g. Alpaca).
+# 2. Confirms option-snapshot coverage + % ``atm_iv`` from
+# ``options_snapshots_primary`` (Tastytrade); secondary (Public) is included
+# when enabled in config. Tastytrade IV comes from DXLink when orchestrator runs.
+# 3. Probes DXLink greeks/quotes availability.
+# 4. Builds a replay pack using policy defaults (no provider args).
+# 5. Runs a smoke experiment (``VRPCreditSpreadStrategy`` on SPY)
+# that must produce trades when prerequisites are satisfied.
+# 6. Runs the strategy evaluator and writes a summary report.
+#
+# Artifacts are written to ``logs/e2e/<date>/``.
+#
+# Usage::
+#
+# python scripts/e2e_verify.py
+# python scripts/e2e_verify.py --symbol IBIT --days 5
 
 from __future__ import annotations
 
@@ -44,9 +43,7 @@ from src.core.data_sources import get_data_source_policy, DataSourcePolicy
 from src.core.database import Database
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Step 1 — Bars / Outcomes Coverage
-# ═══════════════════════════════════════════════════════════════════════════
 
 async def check_bars_coverage(
     db: Database,
@@ -55,7 +52,7 @@ async def check_bars_coverage(
     start_ms: int,
     end_ms: int,
 ) -> Dict[str, Any]:
-    """Check bar coverage from bars_primary."""
+    # Check bar coverage from bars_primary.
     bars = await db.get_bars_for_outcome_computation(
         source=policy.bars_provider,
         symbol=symbol,
@@ -80,7 +77,7 @@ async def check_outcomes_coverage(
     start_ms: int,
     end_ms: int,
 ) -> Dict[str, Any]:
-    """Check outcome coverage derived from bars_primary."""
+    # Check outcome coverage derived from bars_primary.
     outcomes = await db.get_bar_outcomes(
         provider=policy.bars_provider,
         symbol=symbol,
@@ -98,9 +95,7 @@ async def check_outcomes_coverage(
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Step 2 — Options Snapshot Coverage + atm_iv %
-# ═══════════════════════════════════════════════════════════════════════════
 
 async def check_options_snapshots(
     db: Database,
@@ -109,18 +104,17 @@ async def check_options_snapshots(
     start_ms: int,
     end_ms: int,
 ) -> Dict[str, Any]:
-    """Check snapshot coverage from options_snapshots_primary.
-
-    Reports:
-    - snapshot_count: total snapshots from primary provider
-    - atm_iv_present: count with non-null atm_iv (provider-supplied)
-    - atm_iv_pct: percentage with provider atm_iv
-    - iv_derivable: count where IV could be derived from greeks cache enrichment
-    - iv_derivable_pct: percentage with derived atm_iv
-    - iv_ready_count: total with either provider or derived IV
-    - iv_ready_pct: percentage IV-ready overall
-    - recv_ts_gated: count with valid recv_ts_ms
-    """
+    # Check snapshot coverage from options_snapshots_primary.
+    #
+    # Reports:
+    # - snapshot_count: total snapshots from primary provider
+    # - atm_iv_present: count with non-null atm_iv (provider-supplied)
+    # - atm_iv_pct: percentage with provider atm_iv
+    # - iv_derivable: count where IV could be derived from greeks cache enrichment
+    # - iv_derivable_pct: percentage with derived atm_iv
+    # - iv_ready_count: total with either provider or derived IV
+    # - iv_ready_pct: percentage IV-ready overall
+    # - recv_ts_gated: count with valid recv_ts_ms
     raw = await db.get_option_chain_snapshots(
         symbol=symbol,
         start_ms=start_ms,
@@ -163,12 +157,10 @@ async def check_options_snapshots(
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Step 3 — DXLink Probe
-# ═══════════════════════════════════════════════════════════════════════════
 
 def check_dxlink_availability() -> Dict[str, Any]:
-    """Probe whether DXLink parser module is importable."""
+    # Probe whether DXLink parser module is importable.
     try:
         from src.connectors.tastytrade_dxlink_parser import DXLinkParser  # noqa: F401
         available = True
@@ -184,9 +176,7 @@ def check_dxlink_availability() -> Dict[str, Any]:
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Step 4 — Build Replay Pack (policy defaults)
-# ═══════════════════════════════════════════════════════════════════════════
 
 async def build_smoke_pack(
     symbol: str,
@@ -196,7 +186,7 @@ async def build_smoke_pack(
     db_path: str,
     policy: DataSourcePolicy,
 ) -> Dict[str, Any]:
-    """Build a replay pack using data-source policy defaults."""
+    # Build a replay pack using data-source policy defaults.
     from src.tools.replay_pack import create_replay_pack
 
     pack = await create_replay_pack(
@@ -219,15 +209,12 @@ async def build_smoke_pack(
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Step 5 — Smoke Experiment
-# ═══════════════════════════════════════════════════════════════════════════
 
 def diagnose_zero_trades(pack_path: str) -> List[str]:
-    """Diagnose why a smoke experiment produced zero trades.
-
-    Returns a list of human-readable reason strings.
-    """
+    # Diagnose why a smoke experiment produced zero trades.
+    #
+    # Returns a list of human-readable reason strings.
     reasons: List[str] = []
     try:
         with open(pack_path, "r", encoding="utf-8") as f:
@@ -267,7 +254,7 @@ def run_smoke_experiment(
     pack_path: str,
     output_dir: str,
 ) -> Dict[str, Any]:
-    """Run VRPCreditSpreadStrategy on the smoke pack."""
+    # Run VRPCreditSpreadStrategy on the smoke pack.
     from src.analysis.experiment_runner import ExperimentRunner, ExperimentConfig
     from src.strategies.vrp_credit_spread import VRPCreditSpreadStrategy
 
@@ -300,15 +287,13 @@ def run_smoke_experiment(
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Step 6 — Strategy Evaluator
-# ═══════════════════════════════════════════════════════════════════════════
 
 def run_evaluator(
     experiment_dir: str,
     output_dir: str,
 ) -> Dict[str, Any]:
-    """Run the strategy evaluator on smoke experiment output."""
+    # Run the strategy evaluator on smoke experiment output.
     try:
         from src.analysis.strategy_evaluator import StrategyEvaluator
 
@@ -333,16 +318,14 @@ def run_evaluator(
         }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Orchestrator
-# ═══════════════════════════════════════════════════════════════════════════
 
 async def run_e2e(
     symbol: str = "SPY",
     days: int = 5,
     db_path: str = "data/argus.db",
 ) -> Dict[str, Any]:
-    """Run the full e2e verification pipeline."""
+    # Run the full e2e verification pipeline.
     policy = get_data_source_policy()
     today = datetime.now(timezone.utc).date()
     start_date = (today - timedelta(days=days)).isoformat()

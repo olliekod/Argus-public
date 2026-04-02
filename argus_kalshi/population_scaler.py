@@ -1,4 +1,6 @@
-"""Staged bot population scaling with gate checks for the Kalshi farm."""
+# Created by Oliver Meihls
+
+# Staged bot population scaling with gate checks for the Kalshi farm.
 
 from __future__ import annotations
 

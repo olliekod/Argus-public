@@ -1,8 +1,9 @@
-"""Market-level risk regime scaffold.
+# Created by Oliver Meihls
 
-Disabled by default (empty risk basket). Emits MarketRegimeEvent on
-`regimes.market` only when enabled via `risk_basket_symbols`.
-"""
+# Market-level risk regime scaffold.
+#
+# Disabled by default (empty risk basket). Emits MarketRegimeEvent on
+# `regimes.market` only when enabled via `risk_basket_symbols`.
 
 from __future__ import annotations
 

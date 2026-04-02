@@ -1,4 +1,6 @@
-"""Dump a sample quotes_json from option_chain_snapshots with missing atm_iv."""
+# Created by Oliver Meihls
+
+# Dump a sample quotes_json from option_chain_snapshots with missing atm_iv.
 import sqlite3
 import sys
 from pathlib import Path

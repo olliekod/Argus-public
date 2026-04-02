@@ -1,15 +1,14 @@
-"""
-Tests for Risk Engine Audit Bug Fixes
-=======================================
+# Created by Oliver Meihls
 
-Comprehensive regression tests for all bugs identified in the audit:
-- Critical: gamma/vega sign, dollar_risk overwrite, zero-width spread,
-  DSR formula, Kelly cost subtraction
-- High: drawdown hysteresis, MC drawdown calculation, final_equity,
-  analytical call spread, DSR zero bypass
-- Medium: deterministic sort, moment estimators, python_version,
-  option type detection, threshold naming
-"""
+# Tests for Risk Engine Audit Bug Fixes
+#
+# Comprehensive regression tests for all bugs identified in the audit:
+# - Critical: gamma/vega sign, dollar_risk overwrite, zero-width spread,
+# DSR formula, Kelly cost subtraction
+# - High: drawdown hysteresis, MC drawdown calculation, final_equity,
+# analytical call spread, DSR zero bypass
+# - Medium: deterministic sort, moment estimators, python_version,
+# option type detection, threshold naming
 
 from __future__ import annotations
 
@@ -18,18 +17,16 @@ from unittest.mock import patch
 
 import pytest
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 1: portfolio_state.py — gamma/vega should use abs(qty)
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.portfolio_state import PortfolioState, PositionRecord
 
 
 class TestBug1GammaVegaSignedQty:
-    """Gamma and vega must always be positive regardless of position direction."""
+    # Gamma and vega must always be positive regardless of position direction.
 
     def test_short_position_gamma_vega_positive(self):
-        """Short positions should contribute positive gamma/vega."""
+        # Short positions should contribute positive gamma/vega.
         pos = PositionRecord(
             underlying="SPY",
             instrument_type="option_spread",
@@ -47,7 +44,7 @@ class TestBug1GammaVegaSignedQty:
         assert greeks["vega"] == pytest.approx(1.0)
 
     def test_long_position_gamma_vega_positive(self):
-        """Long positions should also contribute positive gamma/vega."""
+        # Long positions should also contribute positive gamma/vega.
         pos = PositionRecord(
             underlying="SPY",
             instrument_type="option_spread",
@@ -62,7 +59,7 @@ class TestBug1GammaVegaSignedQty:
         assert greeks["vega"] == pytest.approx(1.0)
 
     def test_mixed_positions_gamma_vega_additive(self):
-        """Mixed long/short should have gamma/vega that add (never cancel)."""
+        # Mixed long/short should have gamma/vega that add (never cancel).
         long_pos = PositionRecord(
             underlying="SPY", qty=5,
             greeks={"delta": 0.3, "gamma": 0.05, "vega": 0.10},
@@ -82,19 +79,17 @@ class TestBug1GammaVegaSignedQty:
         assert greeks["vega"] == pytest.approx(1.0)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 2: risk_engine.py — dollar_risk preservation in denormalize
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.risk_engine import RiskEngine, RiskEngineConfig, NormalizedAllocation
 from src.analysis.allocation_engine import Allocation
 
 
 class TestBug2DollarRiskPreservation:
-    """dollar_risk should be proportionally scaled, not overwritten with notional."""
+    # dollar_risk should be proportionally scaled, not overwritten with notional.
 
     def test_denormalize_preserves_dollar_risk(self):
-        """After denormalization, dollar_risk should reflect original risk budget scaled."""
+        # After denormalization, dollar_risk should reflect original risk budget scaled.
         engine = RiskEngine()
         na = NormalizedAllocation(
             allocation_id="strat_a:SPY",
@@ -113,7 +108,7 @@ class TestBug2DollarRiskPreservation:
         assert alloc.dollar_risk == pytest.approx(250.0, abs=0.01)
 
     def test_denormalize_zero_proposed_weight(self):
-        """If proposed weight was 0, dollar_risk should be 0."""
+        # If proposed weight was 0, dollar_risk should be 0.
         engine = RiskEngine()
         na = NormalizedAllocation(
             allocation_id="strat_a:SPY",
@@ -127,9 +122,7 @@ class TestBug2DollarRiskPreservation:
         assert result[0].dollar_risk == 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 3: tail_risk_scenario.py — zero-width spread guard
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.tail_risk_scenario import (
     TailRiskConfig,
@@ -139,10 +132,10 @@ from src.analysis.tail_risk_scenario import (
 
 
 class TestBug3DegenerateSpread:
-    """Degenerate spreads (same strike) must not cause division by zero."""
+    # Degenerate spreads (same strike) must not cause division by zero.
 
     def test_zero_width_spread_returns_zero_contracts(self):
-        """Same short and long strike should return 0 contracts, not crash."""
+        # Same short and long strike should return 0 contracts, not crash.
         config = TailRiskConfig(enabled_for_options=True)
         result = evaluate_tail_risk(
             S=100.0,
@@ -160,9 +153,7 @@ class TestBug3DegenerateSpread:
         assert "degenerate" in result.reason
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 4: deflated_sharpe.py — DSR formula uses observed_sharpe in SE
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.deflated_sharpe import (
     compute_deflated_sharpe_ratio,
@@ -171,10 +162,10 @@ from src.analysis.deflated_sharpe import (
 
 
 class TestBug4DSRFormula:
-    """DSR standard error should use observed_sharpe, not threshold_sr."""
+    # DSR standard error should use observed_sharpe, not threshold_sr.
 
     def test_dsr_uses_observed_sharpe_in_denominator(self):
-        """DSR with skewed returns should differ from normal assumption."""
+        # DSR with skewed returns should differ from normal assumption.
         # With skewness=0, kurtosis=0, the choice of SR doesn't matter
         # because denom_sq = 1 - 0 + 0 = 1 in both cases.
         # With non-zero skewness, the formula uses observed_sharpe.
@@ -193,7 +184,7 @@ class TestBug4DSRFormula:
         assert 0.0 < dsr_skewed < 1.0
 
     def test_dsr_normal_returns_high_for_good_sharpe(self):
-        """With normal returns (skew=0, kurt=0), moderate SR should yield high DSR."""
+        # With normal returns (skew=0, kurt=0), moderate SR should yield high DSR.
         # Use moderate observed_sharpe to avoid denom_sq going non-positive
         # denom_sq = 1 - 0*SR + ((-1)/4)*SR^2 = 1 - 0.25*SR^2
         # For SR=1.0: denom_sq = 0.75 (positive)
@@ -207,24 +198,22 @@ class TestBug4DSRFormula:
         assert dsr > 0.95
 
     def test_dsr_insufficient_obs(self):
-        """With < 2 observations, DSR should be 0."""
+        # With < 2 observations, DSR should be 0.
         assert compute_deflated_sharpe_ratio(
             observed_sharpe=2.0, threshold_sr=0.5, n_obs=1
         ) == 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 5: sizing.py — Kelly formula uses (mu - cost) / sigma^2
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.sizing import Forecast, fractional_kelly_size
 
 
 class TestBug5KellyCostSubtraction:
-    """Kelly f* should be (mu - cost) / sigma^2, not mu / sigma^2."""
+    # Kelly f* should be (mu - cost) / sigma^2, not mu / sigma^2.
 
     def test_kelly_subtracts_cost(self):
-        """Position size should be smaller when cost is subtracted."""
+        # Position size should be smaller when cost is subtracted.
         # Use large sigma so Kelly sizes stay well below the 0.07 per-play cap
         forecast_no_cost = Forecast(
             strategy_id="test", instrument="SPY",
@@ -244,7 +233,7 @@ class TestBug5KellyCostSubtraction:
         assert size_with_cost == pytest.approx(0.015 / 0.25 * 0.25, abs=1e-6)
 
     def test_kelly_rejects_when_mu_equals_cost(self):
-        """If mu == cost, the strategy should be rejected (returns 0)."""
+        # If mu == cost, the strategy should be rejected (returns 0).
         forecast = Forecast(
             strategy_id="test", instrument="SPY",
             mu=0.05, sigma=0.20, cost=0.05,
@@ -253,18 +242,16 @@ class TestBug5KellyCostSubtraction:
         assert size == 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 6: drawdown_containment.py — hysteresis parameter is now passed
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.drawdown_containment import DrawdownConfig, compute_drawdown_throttle
 
 
 class TestBug6DrawdownHysteresis:
-    """Hysteresis should keep throttling until recovery_threshold is reached."""
+    # Hysteresis should keep throttling until recovery_threshold is reached.
 
     def test_hysteresis_stays_throttled(self):
-        """When was_throttled=True and dd > recovery but < threshold, stay throttled."""
+        # When was_throttled=True and dd > recovery but < threshold, stay throttled.
         config = DrawdownConfig(
             threshold_pct=0.10,
             recovery_threshold_pct=0.05,
@@ -277,7 +264,7 @@ class TestBug6DrawdownHysteresis:
         assert throttle == pytest.approx(0.5)
 
     def test_hysteresis_releases_after_recovery(self):
-        """When dd < recovery, throttle should release to 1.0."""
+        # When dd < recovery, throttle should release to 1.0.
         config = DrawdownConfig(
             threshold_pct=0.10,
             recovery_threshold_pct=0.05,
@@ -289,24 +276,22 @@ class TestBug6DrawdownHysteresis:
         assert throttle == 1.0
 
     def test_no_hysteresis_when_not_throttled(self):
-        """When was_throttled=False and dd < threshold, return 1.0."""
+        # When was_throttled=False and dd < threshold, return 1.0.
         config = DrawdownConfig(threshold_pct=0.10, recovery_threshold_pct=0.05)
         throttle = compute_drawdown_throttle(0.07, config, was_throttled=False)
         assert throttle == 1.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 7: mc_bootstrap.py — drawdown % uses peak equity, not starting cash
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.mc_bootstrap import _max_drawdown_pct
 
 
 class TestBug7MCDrawdownCalculation:
-    """Max drawdown % should be computed against peak equity."""
+    # Max drawdown % should be computed against peak equity.
 
     def test_drawdown_against_peak(self):
-        """If equity doubles then drops 50%, drawdown should be 50% not 100%."""
+        # If equity doubles then drops 50%, drawdown should be 50% not 100%.
         path = [100.0, 200.0, 100.0]  # peak=200, drops back to 100
         dd = _max_drawdown_pct(path, starting_cash=100.0)
         # Correct: (200 - 100) / 200 = 0.50
@@ -314,31 +299,29 @@ class TestBug7MCDrawdownCalculation:
         assert dd == pytest.approx(0.50, abs=0.01)
 
     def test_flat_path_no_drawdown(self):
-        """Flat equity path should have 0% drawdown."""
+        # Flat equity path should have 0% drawdown.
         path = [100.0, 100.0, 100.0]
         dd = _max_drawdown_pct(path, starting_cash=100.0)
         assert dd == pytest.approx(0.0)
 
     def test_monotone_decline(self):
-        """Monotone decline from start should show drawdown relative to peak."""
+        # Monotone decline from start should show drawdown relative to peak.
         path = [100.0, 80.0, 60.0]
         dd = _max_drawdown_pct(path, starting_cash=100.0)
         # Peak = 100, worst = 60, dd = (100-60)/100 = 0.40
         assert dd == pytest.approx(0.40, abs=0.01)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 8: replay_harness.py — final_equity includes open positions
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.replay_harness import VirtualPortfolio
 
 
 class TestBug8FinalEquity:
-    """final_equity in summary should include unrealized PnL."""
+    # final_equity in summary should include unrealized PnL.
 
     def test_final_equity_includes_unrealized(self):
-        """With open positions, final_equity should be cash + unrealized."""
+        # With open positions, final_equity should be cash + unrealized.
         portfolio = VirtualPortfolio(starting_cash=10_000.0)
         # Open a long position at $100
         portfolio.open_position(
@@ -358,7 +341,7 @@ class TestBug8FinalEquity:
         assert summary["open_positions"] == 1
 
     def test_total_return_includes_unrealized(self):
-        """total_return_pct should account for unrealized PnL."""
+        # total_return_pct should account for unrealized PnL.
         portfolio = VirtualPortfolio(starting_cash=10_000.0)
         portfolio.open_position(
             symbol="SPY", side="LONG", quantity=1,
@@ -373,56 +356,52 @@ class TestBug8FinalEquity:
         assert summary["total_return_pct"] == pytest.approx(10.0, abs=0.1)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 9: tail_risk_scenario.py — analytical fallback for call spreads
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.tail_risk_scenario import _analytical_prob_touch
 
 
 class TestBug9AnalyticalCallSpread:
-    """Analytical prob_touch should handle both put (downside) and call (upside) barriers."""
+    # Analytical prob_touch should handle both put (downside) and call (upside) barriers.
 
     def test_upside_barrier_gives_nonzero_prob(self):
-        """Call spread with barrier > S should return nonzero probability."""
+        # Call spread with barrier > S should return nonzero probability.
         # S=100, barrier=110 (call spread short strike above spot)
         prob = _analytical_prob_touch(S=100.0, barrier=110.0, T=0.25, sigma=0.30)
         assert prob > 0.0
         assert prob < 1.0
 
     def test_downside_barrier_gives_nonzero_prob(self):
-        """Put spread with barrier < S should return nonzero probability."""
+        # Put spread with barrier < S should return nonzero probability.
         prob = _analytical_prob_touch(S=100.0, barrier=90.0, T=0.25, sigma=0.30)
         assert prob > 0.0
         assert prob < 1.0
 
     def test_barrier_equals_spot_returns_one(self):
-        """When barrier == spot (already touching), return 1.0."""
+        # When barrier == spot (already touching), return 1.0.
         prob = _analytical_prob_touch(S=100.0, barrier=100.0, T=0.25, sigma=0.30)
         assert prob == 1.0
 
     def test_barrier_below_spot_returns_one(self):
-        """When barrier < spot and downside, S <= barrier check should trigger."""
+        # When barrier < spot and downside, S <= barrier check should trigger.
         prob = _analytical_prob_touch(S=90.0, barrier=100.0, T=0.25, sigma=0.30)
         # S=90 < barrier=100 is upside barrier case now; this should give prob > 0
         assert prob > 0.0
 
     def test_far_otm_upside_barrier_low_prob(self):
-        """Very far OTM upside barrier should have low probability."""
+        # Very far OTM upside barrier should have low probability.
         prob = _analytical_prob_touch(S=100.0, barrier=200.0, T=0.05, sigma=0.20)
         assert prob < 0.1
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 10: strategy_evaluator.py — DSR=0 should not bypass kill gate
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestBug10DSRZeroKillGate:
-    """Strategies with DSR=0 should be killed when dsr_min > 0."""
+    # Strategies with DSR=0 should be killed when dsr_min > 0.
 
     def test_dsr_zero_is_killed(self):
-        """A strategy with DSR=0.0 should be flagged when dsr_min=0.95."""
+        # A strategy with DSR=0.0 should be flagged when dsr_min=0.95.
         from src.analysis.strategy_evaluator import StrategyEvaluator
 
         evaluator = StrategyEvaluator(
@@ -441,7 +420,7 @@ class TestBug10DSRZeroKillGate:
         assert dsr_reasons[0]["value"] == 0.0
 
     def test_dsr_above_threshold_not_killed(self):
-        """A strategy with DSR=0.96 should pass when dsr_min=0.95."""
+        # A strategy with DSR=0.96 should pass when dsr_min=0.95.
         from src.analysis.strategy_evaluator import StrategyEvaluator
 
         evaluator = StrategyEvaluator(
@@ -459,16 +438,14 @@ class TestBug10DSRZeroKillGate:
         assert len(dsr_reasons) == 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 11: risk_engine.py — deterministic sort with tiebreaker
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestBug11DeterministicSort:
-    """Sort key should include a tiebreaker for identical strategy+instrument."""
+    # Sort key should include a tiebreaker for identical strategy+instrument.
 
     def test_same_strategy_instrument_sorted_by_weight(self):
-        """Two allocations with same key should have stable ordering via weight."""
+        # Two allocations with same key should have stable ordering via weight.
         alloc1 = Allocation(
             strategy_id="strat_a", instrument="SPY",
             weight=0.03, dollar_risk=300.0,
@@ -486,16 +463,14 @@ class TestBug11DeterministicSort:
         assert sorted_allocs[1].weight == 0.05
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 19: deflated_sharpe.py — consistent moment estimators
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestBug19ConsistentMomentEstimators:
-    """Skewness and kurtosis should use n-1 divisor consistent with variance."""
+    # Skewness and kurtosis should use n-1 divisor consistent with variance.
 
     def test_moment_estimators_use_n_minus_1(self):
-        """The stats should use n-1 for skewness/kurtosis like variance."""
+        # The stats should use n-1 for skewness/kurtosis like variance.
         returns = [0.01, -0.02, 0.03, -0.01, 0.02, 0.04, -0.03, 0.01]
         stats = compute_sharpe_stats(returns)
         n = len(returns)
@@ -509,34 +484,30 @@ class TestBug19ConsistentMomentEstimators:
         assert stats["skew"] == pytest.approx(expected_skew, abs=1e-6)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 24: experiment_runner.py — python_version should use sys.version
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestBug24PythonVersion:
-    """python_version field should report actual Python version, not date."""
+    # python_version field should report actual Python version, not date.
 
     def test_python_version_not_date(self):
-        """Ensure the python_version code uses sys.version."""
+        # Ensure the python_version code uses sys.version.
         import sys
         # The fix replaces `datetime.now().year.month` with `sys.version`
         # We just verify sys.version is a string starting with a version number
         assert sys.version[0].isdigit()
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 29: strategy_registry.py — deterministic sort for tied scores
-# ═══════════════════════════════════════════════════════════════════════════
 
 from src.analysis.strategy_registry import StrategyEntry, StrategyRegistry
 
 
 class TestBug29RegistrySortDeterminism:
-    """Candidates with equal scores should have deterministic ordering."""
+    # Candidates with equal scores should have deterministic ordering.
 
     def test_tied_scores_sorted_by_strategy_id(self):
-        """Strategies with same score should sort by strategy_id."""
+        # Strategies with same score should sort by strategy_id.
         registry = StrategyRegistry()
         registry.register(StrategyEntry(
             strategy_id="b_strategy", strategy_class="B",
@@ -554,16 +525,14 @@ class TestBug29RegistrySortDeterminism:
         assert candidates[1].strategy_id == "b_strategy"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Bug 16: strategy_evaluator.py — threshold naming consistency
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestBug16ThresholdNaming:
-    """mc_p95 metric should match mc_p95 threshold name."""
+    # mc_p95 metric should match mc_p95 threshold name.
 
     def test_p95_drawdown_threshold_lookup(self):
-        """Both old and new threshold names should work."""
+        # Both old and new threshold names should work.
         from src.analysis.strategy_evaluator import StrategyEvaluator
 
         # Using the new name
@@ -582,7 +551,7 @@ class TestBug16ThresholdNaming:
         assert len(dd_reasons) == 1
 
     def test_old_p5_drawdown_threshold_still_works(self):
-        """The old mc_p5_drawdown_max name should still be checked as fallback."""
+        # The old mc_p5_drawdown_max name should still be checked as fallback.
         from src.analysis.strategy_evaluator import StrategyEvaluator
 
         evaluator = StrategyEvaluator(
@@ -600,16 +569,14 @@ class TestBug16ThresholdNaming:
         assert len(dd_reasons) == 1
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Integration: RiskEngine with hysteresis
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestRiskEngineHysteresisIntegration:
-    """Verify the risk engine passes was_throttled to the drawdown function."""
+    # Verify the risk engine passes was_throttled to the drawdown function.
 
     def test_engine_tracks_throttle_state(self):
-        """After throttling, _was_throttled should be True."""
+        # After throttling, _was_throttled should be True.
         engine = RiskEngine()
         assert engine._was_throttled is False
 

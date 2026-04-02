@@ -1,11 +1,11 @@
-"""
-IPC for Kalshi terminal UI in a separate process.
+# Created by Oliver Meihls
 
-When visualizer_process == "separate", the trading process runs an IPC server
-that aggregates bus state and sends JSON snapshots to a connected UI process.
-The UI process connects, receives snapshots, and renders without sharing the
-trading process event loop — avoiding ping spikes from UI/calculations.
-"""
+# IPC for Kalshi terminal UI in a separate process.
+#
+# When visualizer_process == "separate", the trading process runs an IPC server
+# that aggregates bus state and sends JSON snapshots to a connected UI process.
+# The UI process connects, receives snapshots, and renders without sharing the
+# trading process event loop — avoiding ping spikes from UI/calculations.
 
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ def _event_bot_id(event: Any) -> Optional[str]:
 
 
 class StateAggregator:
-    """Subscribes to bus topics and maintains a JSON-serializable UI snapshot."""
+    # Subscribes to bus topics and maintains a JSON-serializable UI snapshot.
 
     def __init__(self, bus: Bus, primary_bot_id: Optional[str] = None) -> None:
         self._bus = bus
@@ -139,10 +139,9 @@ class StateAggregator:
         self._population_overlay_provider: Optional[Any] = None
 
     async def start(self, run_aggregate_loop: bool = True) -> None:
-        """Start aggregator. When run_aggregate_loop=False (separate UI), only subscriptions
-        are set; the IPC loop is the sole consumer and drains via drain_for_snapshot().
-        This avoids two tasks competing for the same queues and keeps UI data path clear.
-        """
+        # Start aggregator. When run_aggregate_loop=False (separate UI), only subscriptions
+        # are set; the IPC loop is the sole consumer and drains via drain_for_snapshot().
+        # This avoids two tasks competing for the same queues and keeps UI data path clear.
         self._running = True
         subs = {
             "btc": await self._bus.subscribe("btc.mid_price"),
@@ -166,11 +165,11 @@ class StateAggregator:
             self._task = None  # IPC loop is sole consumer; drain_for_snapshot() only
 
     def set_bot_stats_overlay_provider(self, provider: Optional[Any]) -> None:
-        """Set callable returning per-bot overlay dict merged into bot_stats."""
+        # Set callable returning per-bot overlay dict merged into bot_stats.
         self._bot_stats_overlay_provider = provider
 
     def set_population_overlay_provider(self, provider: Optional[Any]) -> None:
-        """Set callable returning global population diagnostics for snapshot root."""
+        # Set callable returning global population diagnostics for snapshot root.
         self._population_overlay_provider = provider
 
     def _merge_bot_stats_overlay(self) -> None:
@@ -389,6 +388,7 @@ class StateAggregator:
             exp_ts = datetime.fromisoformat(iso).timestamp()
         except Exception:
             pass
+
         return {
             "ticker": ticker,
             "asset": meta.get("asset", "BTC"),
@@ -417,11 +417,10 @@ class StateAggregator:
         return ticker or None
 
     def _apply_order_bucket_update(self, ou: OrderUpdate) -> None:
-        """Track active open order counts by market bucket.
-
-        We increment on `placed` and decrement when an order reaches a terminal
-        status (`filled`, `partial_fill`, `cancelled`/`canceled`, `error`).
-        """
+        # Track active open order counts by market bucket.
+        #
+        # We increment on `placed` and decrement when an order reaches a terminal
+        # status (`filled`, `partial_fill`, `cancelled`/`canceled`, `error`).
         order_id = (ou.order_id or ou.client_order_id or "").strip()
         status = (ou.status or "").strip().lower()
         if not order_id or not status:
@@ -458,7 +457,7 @@ class StateAggregator:
         primary_best_win: float = 0.0,
         primary_worst_loss: float = 0.0,
     ) -> None:
-        """Seed aggregator from paper_trades.jsonl so PnL is correct after restart (no 0 → inflated jump)."""
+        # Seed aggregator from paper_trades.jsonl so PnL is correct after restart (no 0 → inflated jump).
         self._bot_stats = {k: dict(v) for k, v in bot_stats.items()}
         self._alltime_pnl = primary_pnl
         self._session_pnl = 0.0
@@ -471,7 +470,7 @@ class StateAggregator:
         self._worst_loss = primary_worst_loss
 
     def ensure_bot_stats_entries(self, bot_ids: List[str]) -> None:
-        """Pre-seed empty stats for all known bot_ids so leaderboard shows dwarf names before they trade."""
+        # Pre-seed empty stats for all known bot_ids so leaderboard shows dwarf names before they trade.
         for bid in bot_ids:
             if bid and bid not in self._bot_stats:
                 self._bot_stats[bid] = dict(self._empty_bot_stats)
@@ -521,11 +520,10 @@ class StateAggregator:
         max_bot_stats: Optional[int] = None,
         max_states: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """Return a JSON-serializable snapshot for the UI process.
-
-        When max_bot_stats / max_states are set (e.g. for IPC), trim to avoid
-        huge payloads that can crash the UI (OOM or stream limit).
-        """
+        # Return a JSON-serializable snapshot for the UI process.
+        #
+        # When max_bot_stats / max_states are set (e.g. for IPC), trim to avoid
+        # huge payloads that can crash the UI (OOM or stream limit).
         self._merge_bot_stats_overlay()
         states_items = list(self._states.items())
         total_states = len(states_items)
@@ -650,13 +648,12 @@ class StateAggregator:
         max_ob: int = IPC_DRAIN_MAX_OB,
         max_prob: int = IPC_DRAIN_MAX_PROB,
     ) -> None:
-        """Drain control, prices, metadata, and ob/prob so the next get_snapshot()
-        is fresh. Call from the IPC send loop every interval so the separate UI gets updates
-        even when the aggregator task is starved by the farm.
-        In separate-UI mode we do NOT run _aggregate_loop, so we must drain metadata here
-        or states have no asset/window (BTC/ETH/SOL rows never appear). Drain limits must
-        be high enough to cover all subscribed tickers (~60+) and catch up when the bus is busy.
-        """
+        # Drain control, prices, metadata, and ob/prob so the next get_snapshot()
+        # is fresh. Call from the IPC send loop every interval so the separate UI gets updates
+        # even when the aggregator task is starved by the farm.
+        # In separate-UI mode we do NOT run _aggregate_loop, so we must drain metadata here
+        # or states have no asset/window (BTC/ETH/SOL rows never appear). Drain limits must
+        # be high enough to cover all subscribed tickers (~60+) and catch up when the bus is busy.
         subs = self._subs
         if not subs:
             return
@@ -736,6 +733,7 @@ class StateAggregator:
                             s["exp_ts"] = datetime.fromisoformat(iso).timestamp()
                         except Exception:
                             pass
+
                     s["_last_update_ts"] = time.time()
         # Ob/prob: drain enough to cover all subscribed tickers and keep ob_valid/ask/edge fresh.
         for _ in range(ob_budget):
@@ -913,7 +911,7 @@ async def _broadcast_loop(
     interval: float,
     on_snapshot: Optional[Any],
 ) -> None:
-    """Single producer: drain once per interval, get snapshot, send to IPC client(s) and optional callback."""
+    # Single producer: drain once per interval, get snapshot, send to IPC client(s) and optional callback.
     log.info("IPC broadcast loop started (snapshots every %.1fs)", interval)
     send_count = 0
     last_diag_ts = time.time()
@@ -932,6 +930,7 @@ async def _broadcast_loop(
                     on_snapshot(snapshot)
                 except Exception:
                     pass
+
             writer = client_writer_ref[0] if client_writer_ref else None
             if writer is not None:
                 line = json.dumps(snapshot, separators=(",", ":")) + "\n"
@@ -944,6 +943,7 @@ async def _broadcast_loop(
                         await writer.wait_closed()
                     except Exception:
                         pass
+
                     client_writer_ref[0] = None
             send_count += 1
             if not first_sent_logged:
@@ -978,7 +978,7 @@ async def ipc_server_start(
     port: int,
     on_snapshot: Optional[Any] = None,
 ) -> asyncio.Server:
-    """Start TCP server and single broadcast loop. One snapshot producer feeds IPC client(s) and on_snapshot callback."""
+    # Start TCP server and single broadcast loop. One snapshot producer feeds IPC client(s) and on_snapshot callback.
     client_writer_ref: List[Optional[asyncio.StreamWriter]] = [None]
 
     def accept_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
@@ -989,6 +989,7 @@ async def ipc_server_start(
                 client_writer_ref[0].close()
             except Exception:
                 pass
+
         client_writer_ref[0] = writer
 
     server = await asyncio.start_server(accept_handler, host, port)
@@ -1005,7 +1006,7 @@ async def ipc_server_start(
 
 
 async def ipc_client_recv_line_async(reader: asyncio.StreamReader) -> Optional[Dict[str, Any]]:
-    """Read one newline-delimited JSON line; return parsed dict or None on EOF."""
+    # Read one newline-delimited JSON line; return parsed dict or None on EOF.
     try:
         data = await reader.readuntil(b"\n")
     except asyncio.IncompleteReadError:

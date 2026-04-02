@@ -1,10 +1,9 @@
-"""
-Parameter Optimizer v2
-======================
+# Created by Oliver Meihls
 
-Optimizes strategy parameters for MAXIMUM PROFIT.
-Uses $5,000 account size, shows % returns.
-"""
+# Parameter Optimizer v2
+#
+# Optimizes strategy parameters for MAXIMUM PROFIT.
+# Uses $5,000 account size, shows % returns.
 
 import logging
 from datetime import datetime, timedelta
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class OptimizationResult:
-    """Result of parameter optimization."""
+    # Result of parameter optimization.
     best_params: Dict
     best_metric: float
     best_result: BacktestResult
@@ -28,13 +27,11 @@ class OptimizationResult:
 
 
 class ParameterOptimizer:
-    """
-    Optimizes strategy parameters for PROFIT.
-    
-    Focuses on:
-    - Total Return % (not dollars, not win rate)
-    - More trades = more compounding opportunity
-    """
+    # Optimizes strategy parameters for PROFIT.
+    #
+    # Focuses on:
+    # - Total Return % (not dollars, not win rate)
+    # - More trades = more compounding opportunity
     
     # Parameter ranges
     PARAM_GRID = {
@@ -46,13 +43,13 @@ class ParameterOptimizer:
     }
     
     def __init__(self, symbol: str = "BITO", account_size: float = 5000.0):
-        """Initialize optimizer."""
+        # Initialize optimizer.
         self.symbol = symbol
         self.account_size = account_size
         logger.info(f"Optimizer: {symbol}, ${account_size:,.0f} account")
     
     def _generate_combinations(self, grid: Dict = None) -> List[Dict]:
-        """Generate all parameter combinations."""
+        # Generate all parameter combinations.
         grid = grid or self.PARAM_GRID
         keys = list(grid.keys())
         values = list(grid.values())
@@ -65,18 +62,16 @@ class ParameterOptimizer:
         metric: str = 'total_return_pct',
         min_trades: int = 15,
     ) -> OptimizationResult:
-        """
-        Run optimization for PROFIT.
-        
-        Args:
-            start_date: Backtest start date
-            end_date: Backtest end date
-            metric: 'total_return_pct' (default) or 'avg_return_pct'
-            min_trades: Minimum trades required for valid result
-            
-        Returns:
-            OptimizationResult with best parameters
-        """
+        # Run optimization for PROFIT.
+        #
+        # Args:
+        # start_date: Backtest start date
+        # end_date: Backtest end date
+        # metric: 'total_return_pct' (default) or 'avg_return_pct'
+        # min_trades: Minimum trades required for valid result
+        #
+        # Returns:
+        # OptimizationResult with best parameters
         combinations = self._generate_combinations()
         logger.info(f"Testing {len(combinations)} parameter combinations...")
         
@@ -135,7 +130,7 @@ class ParameterOptimizer:
         )
     
     def format_report(self, opt_result: OptimizationResult) -> str:
-        """Format optimization results."""
+        # Format optimization results.
         lines = [
             "=" * 60,
             "🔧 PARAMETER OPTIMIZATION RESULTS",
@@ -190,7 +185,7 @@ class ParameterOptimizer:
 
 
 def run_optimization_cli():
-    """Run optimization from command line."""
+    # Run optimization from command line.
     print("=" * 60)
     print("🔧 STRATEGY PARAMETER OPTIMIZATION")
     print("    Optimizing for PROFIT")

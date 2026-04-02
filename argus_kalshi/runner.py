@@ -1,19 +1,19 @@
-"""
-Entrypoint runner for the Argus Kalshi trading system.
+# Created by Oliver Meihls
 
-Wires together all modules — market discovery, BTC window engine,
-probability engine, strategy engine, execution engine, and optionally
-the WebSocket feed — then runs the asyncio event loop with structured
-shutdown handling.
-
-Usage (programmatic)::
-
-    import asyncio
-    from argus_kalshi.runner import run
-    asyncio.run(run("config/settings.yaml", "config/secrets.yaml"))
-
-See ``__main__.py`` for the CLI wrapper.
-"""
+# Entrypoint runner for the Argus Kalshi trading system.
+#
+# Wires together all modules — market discovery, BTC window engine,
+# probability engine, strategy engine, execution engine, and optionally
+# the WebSocket feed — then runs the asyncio event loop with structured
+# shutdown handling.
+#
+# Usage (programmatic)::
+#
+# import asyncio
+# from argus_kalshi.runner import run
+# asyncio.run(run("config/settings.yaml", "config/secrets.yaml"))
+#
+# See ``__main__.py`` for the CLI wrapper.
 
 from __future__ import annotations
 
@@ -106,7 +106,7 @@ RESET   = "\033[0m"
 
 
 def _launch_terminal_ui_client(connect_arg: str) -> subprocess.Popen[Any]:
-    """Launch the separate terminal UI in a new console window."""
+    # Launch the separate terminal UI in a new console window.
     cwd = os.getcwd()
     if os.name == "nt":
         ui_cols = 112
@@ -150,7 +150,7 @@ def _infer_asset_from_ticker(
     ticker: str,
     metadata: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Best-effort asset extraction for Kalshi market tickers."""
+    # Best-effort asset extraction for Kalshi market tickers.
     if metadata:
         meta = metadata.get(ticker)
         asset = getattr(meta, "asset", "") if meta is not None else ""
@@ -188,7 +188,7 @@ def _standalone_classify_vol(
     vol_baseline_ema: float,
     last_jump_pct: float,
 ) -> str:
-    """Volatility regime classifier tuned to avoid blind over-filtering."""
+    # Volatility regime classifier tuned to avoid blind over-filtering.
     base = max(vol_baseline_ema, 1e-6)
     rel = abs_ret_ema / base
     if last_jump_pct >= 0.0035 or (abs_ret_ema >= 0.0018 and rel >= 2.8):
@@ -205,7 +205,7 @@ def _standalone_classify_liq(
     depth_ema: float,
     ob_idle_s: float,
 ) -> str:
-    """Liquidity regime classifier from top-of-book quality."""
+    # Liquidity regime classifier from top-of-book quality.
     if ob_idle_s >= 12.0 or (spread_ema >= 7.0 and depth_ema < 120.0):
         return "LIQ_DRIED"
     if ob_idle_s >= 6.0 or spread_ema >= 4.0 or depth_ema < 260.0:
@@ -216,7 +216,7 @@ def _standalone_classify_liq(
 
 
 def _standalone_risk_regime(vol_by_asset: Dict[str, str], liq_by_asset: Dict[str, str]) -> str:
-    """Market-wide risk regime for gating size caps."""
+    # Market-wide risk regime for gating size caps.
     spike_assets = [a for a, v in vol_by_asset.items() if v == "VOL_SPIKE"]
     low_liq_assets = [a for a, l in liq_by_asset.items() if l in ("LIQ_LOW", "LIQ_DRIED")]
     if spike_assets and low_liq_assets:
@@ -226,12 +226,10 @@ def _standalone_risk_regime(vol_by_asset: Dict[str, str], liq_by_asset: Dict[str
     return "NEUTRAL"
 
 
-# ---------------------------------------------------------------------------
 #  YAML / config helpers
-# ---------------------------------------------------------------------------
 
 def _load_yaml(path: str) -> Dict[str, Any]:
-    """Load a YAML file, returning an empty dict if the file is empty."""
+    # Load a YAML file, returning an empty dict if the file is empty.
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(f"Config file not found: {path}")
@@ -247,7 +245,7 @@ def _build_configs(
     secrets: Dict[str, Any],
     settings_path: Optional[str] = None,
 ) -> List[KalshiConfig]:
-    """Merge Kalshi secrets into all loaded configurations."""
+    # Merge Kalshi secrets into all loaded configurations.
     configs = load_farm_configs(settings, settings_path=settings_path)
     
     kalshi_secrets = secrets.get("kalshi", {})
@@ -271,17 +269,14 @@ def _resolve_truth_feeds(cfg: KalshiConfig) -> List[TruthFeedConfig]:
     return [TruthFeedConfig(asset="BTC", topic=cfg.truth_feed_topic, coinbase_symbol="BTC/USDT", publish_to_core_bus=True)]
 
 
-# ---------------------------------------------------------------------------
 #  Mock BTC price feed (dry-run / test only)
-# ---------------------------------------------------------------------------
 
 class MockBtcFeed:
-    """Emits constant ``BtcMidPrice`` messages at 1 Hz.
-
-    **Only** used when ``dry_run=True`` and no external truth feed is
-    configured.  This lets the window / probability / strategy engines
-    exercise their code paths without a real exchange connection.
-    """
+    # Emits constant ``BtcMidPrice`` messages at 1 Hz.
+    #
+    # **Only** used when ``dry_run=True`` and no external truth feed is
+    # configured.  This lets the window / probability / strategy engines
+    # exercise their code paths without a real exchange connection.
 
     def __init__(
         self,
@@ -323,12 +318,11 @@ async def _standalone_regime_publisher(
     cfg: KalshiConfig,
     discovery: Optional[MarketDiscovery],
 ) -> None:
-    """Publish synthetic regime events in standalone Kalshi mode.
-
-    Uses truth-feed returns (volatility) + top-of-book quality (liquidity) and
-    emits ``kalshi.regime`` events with lightweight hysteresis so regime gates
-    influence sizing/entries without excessive chattering.
-    """
+    # Publish synthetic regime events in standalone Kalshi mode.
+    #
+    # Uses truth-feed returns (volatility) + top-of-book quality (liquidity) and
+    # emits ``kalshi.regime`` events with lightweight hysteresis so regime gates
+    # influence sizing/entries without excessive chattering.
     topics = _asset_topics_for_cfg(cfg)
     if not topics:
         return
@@ -488,9 +482,7 @@ async def _standalone_regime_publisher(
         pass
 
 
-# ---------------------------------------------------------------------------
 #  WS ticker-change monitor
-# ---------------------------------------------------------------------------
 
 def _rank_near_money(
     tickers: Set[str],
@@ -498,7 +490,7 @@ def _rank_near_money(
     probability: ProbabilityEngine,
     max_count: int,
 ) -> List[str]:
-    """Rank tickers by proximity to current price, return top N."""
+    # Rank tickers by proximity to current price, return top N.
     now_ts = time.time()
     scored: List[tuple[tuple[float, float], str, tuple[str, int, bool]]] = []
     bucket_best: Dict[tuple[str, int, bool], tuple[tuple[float, float], str]] = {}
@@ -526,7 +518,7 @@ def _rank_active_near_money(
     probability: ProbabilityEngine,
     max_count: int,
 ) -> List[str]:
-    """Rank tickers by current expiry horizon first, then near-money distance."""
+    # Rank tickers by current expiry horizon first, then near-money distance.
     now_ts = time.time()
     scored: List[tuple[tuple[float, float], str, tuple[str, int, bool]]] = []
     bucket_best: Dict[tuple[str, int, bool], tuple[tuple[float, float], str]] = {}
@@ -590,11 +582,10 @@ async def _monitor_ticker_changes(
     current_tickers: Set[str],
     max_ws_markets: int = 120,
 ) -> None:
-    """Watch ``kalshi.selected_markets`` for changes and update components.
-
-    Only subscribes the top *max_ws_markets* near-money tickers on the WS
-    and strategy to prevent event loop starvation from 1,700+ concurrent tasks.
-    """
+    # Watch ``kalshi.selected_markets`` for changes and update components.
+    #
+    # Only subscribes the top *max_ws_markets* near-money tickers on the WS
+    # and strategy to prevent event loop starvation from 1,700+ concurrent tasks.
     q = await bus.subscribe("kalshi.selected_markets")
     try:
         while True:
@@ -669,15 +660,13 @@ async def _monitor_ticker_changes(
         pass
 
 
-# ---------------------------------------------------------------------------
 #  Database Logging Monitors
-# ---------------------------------------------------------------------------
 
 async def _monitor_database_events(
     bus: Bus,
     db: Optional[Database],
 ) -> None:
-    """Watch for TerminalEvents and StrategyDecisions and persist them."""
+    # Watch for TerminalEvents and StrategyDecisions and persist them.
     if not db:
         return
 
@@ -714,21 +703,18 @@ async def _monitor_database_events(
     except asyncio.CancelledError:
         pass
 
-# ---------------------------------------------------------------------------
 #  Persistent running bankroll
-# ---------------------------------------------------------------------------
 
 def _load_running_bankroll(
     initial_usd: float,
     log_path: str = "logs/paper_trades.jsonl",
     bot_id: str = "default",
 ) -> float:
-    """Return initial_usd + all historical settled PnL from the JSONL log.
-
-    This makes position sizing and the drawdown kill-switch aware of
-    accumulated paper gains/losses across restarts.  Falls back to
-    ``initial_usd`` if the log doesn't exist yet.
-    """
+    # Return initial_usd + all historical settled PnL from the JSONL log.
+    #
+    # This makes position sizing and the drawdown kill-switch aware of
+    # accumulated paper gains/losses across restarts.  Falls back to
+    # ``initial_usd`` if the log doesn't exist yet.
     p = Path(log_path)
     if not p.exists():
         return initial_usd
@@ -765,15 +751,14 @@ def _load_ui_stats_from_jsonl(
     log_path: str = "logs/paper_trades.jsonl",
     bot_id: Optional[str] = None,
 ) -> tuple[float, int, int, float]:
-    """Read all-time PnL / win-rate from the JSONL log for the UI.
-
-    Returns (total_pnl, wins, total_settlements, first_entry_ts).
-    first_entry_ts is the Unix timestamp of the very first JSONL record —
-    used as the bot's "origin time" so uptime and rate stats reflect total
-    historical runtime across all sessions, not just the current one.
-    The JSONL is the canonical ground truth; the DB can miss records on
-    write errors so it must not be used as the authoritative stats source.
-    """
+    # Read all-time PnL / win-rate from the JSONL log for the UI.
+    #
+    # Returns (total_pnl, wins, total_settlements, first_entry_ts).
+    # first_entry_ts is the Unix timestamp of the very first JSONL record —
+    # used as the bot's "origin time" so uptime and rate stats reflect total
+    # historical runtime across all sessions, not just the current one.
+    # The JSONL is the canonical ground truth; the DB can miss records on
+    # write errors so it must not be used as the authoritative stats source.
     p = Path(log_path)
     if not p.exists() or p.stat().st_size == 0:
         return 0.0, 0, 0, time.time()
@@ -810,12 +795,11 @@ def _load_bot_stats_from_jsonl(
     log_path: str = "logs/paper_trades.jsonl",
     primary_bot_id: Optional[str] = None,
 ) -> tuple[Dict[str, Dict[str, Any]], float, int, int, float, float, float, float, float]:
-    """Build per-bot stats from settlement and paper_fill records so UI shows correct PnL and fill counts after restart.
-
-    Returns (bot_stats, primary_pnl, primary_wins, primary_losses, win_pnl_total, loss_pnl_total,
-    best_win, worst_loss, first_entry_ts) for the given promoted bot id.
-    first_entry_ts is the first settlement timestamp for that bot (for uptime).
-    """
+    # Build per-bot stats from settlement and paper_fill records so UI shows correct PnL and fill counts after restart.
+    #
+    # Returns (bot_stats, primary_pnl, primary_wins, primary_losses, win_pnl_total, loss_pnl_total,
+    # best_win, worst_loss, first_entry_ts) for the given promoted bot id.
+    # first_entry_ts is the first settlement timestamp for that bot (for uptime).
     empty = {
         "pnl": 0.0, "pnl_e": 0.0, "pnl_s": 0.0,
         "wins": 0, "losses": 0, "fills": 0, "orders": 0,
@@ -897,16 +881,14 @@ def _load_bot_stats_from_jsonl(
     return bot_stats, primary_pnl, primary_wins, primary_losses, primary_win_pnl, primary_loss_pnl, primary_best_win, primary_worst_loss, first_entry_ts
 
 
-# ---------------------------------------------------------------------------
 #  Account balance poller
-# ---------------------------------------------------------------------------
 
 async def _poll_balance(
     bus: Bus,
     rest: "KalshiRestClient",
     interval_s: float = 60.0,
 ) -> None:
-    """Fetch Kalshi portfolio balance every *interval_s* seconds and publish it."""
+    # Fetch Kalshi portfolio balance every *interval_s* seconds and publish it.
     try:
         while True:
             try:
@@ -923,7 +905,7 @@ async def _poll_balance(
 
 
 def _measure_rtt_sync(base_url: str, samples: int = 5) -> float:
-    """Measure REST RTT from a thread (sync) so event-loop load does not inflate the value."""
+    # Measure REST RTT from a thread (sync) so event-loop load does not inflate the value.
     import urllib.request
     url = f"{base_url.rstrip('/')}/exchange/status"
     times: List[float] = []
@@ -936,6 +918,7 @@ def _measure_rtt_sync(base_url: str, samples: int = 5) -> float:
             times.append((time.monotonic() - t0) * 1000)
         except Exception:
             pass
+
     if not times:
         return 200.0
     times.sort()
@@ -948,11 +931,10 @@ async def _poll_kalshi_rtt(
     interval_s: float = 30.0,
     run_in_thread: bool = True,
 ) -> None:
-    """Re-measure Kalshi REST RTT every *interval_s* seconds and publish for the UI.
-
-    When run_in_thread is True, the HTTP GETs run in a thread so the reported
-    RTT reflects actual network latency, not event-loop delay.
-    """
+    # Re-measure Kalshi REST RTT every *interval_s* seconds and publish for the UI.
+    #
+    # When run_in_thread is True, the HTTP GETs run in a thread so the reported
+    # RTT reflects actual network latency, not event-loop delay.
     try:
         while True:
             await asyncio.sleep(interval_s)
@@ -978,21 +960,17 @@ async def _poll_kalshi_rtt(
         pass
 
 
-# ---------------------------------------------------------------------------
 #  Main entrypoint
-# ---------------------------------------------------------------------------
 
 async def run(settings_path: str, secrets_path: str) -> None:
-    """Load config, build all components, and run until shutdown.
-
-    Parameters
-    ----------
-    settings_path :
-        Path to the settings YAML (must contain an ``argus_kalshi`` key).
-    secrets_path :
-        Path to the secrets YAML (must contain a ``kalshi`` key with
-        ``key_id`` and ``private_key_path``).
-    """
+    # Load config, build all components, and run until shutdown.
+    #
+    # Parameters
+    # settings_path :
+    # Path to the settings YAML (must contain an ``argus_kalshi`` key).
+    # secrets_path :
+    # Path to the secrets YAML (must contain a ``kalshi`` key with
+    # ``key_id`` and ``private_key_path``).
     setup_logging()
     runner_start_mono = time.monotonic()
     log.info(
@@ -1533,7 +1511,7 @@ async def run(settings_path: str, secrets_path: str) -> None:
         log.info("Kalshi Market Data WebSocket started")
 
         async def _ws_orderbook_diagnostic(bus: Bus, ws_client: KalshiWebSocket, interval_s: float = 30.0) -> None:
-            """Periodic WS/orderbook health log to diagnose stale books."""
+            # Periodic WS/orderbook health log to diagnose stale books.
             try:
                 while True:
                     await asyncio.sleep(interval_s)

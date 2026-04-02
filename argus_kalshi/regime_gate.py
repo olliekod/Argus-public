@@ -1,24 +1,23 @@
-"""
-Regime Gate for Kalshi Trading
-==============================
+# Created by Oliver Meihls
 
-Lightweight regime-aware gating that reads cached regime state from
-SharedFarmState and decides whether scalp/hold entries are allowed.
-
-Regime data originates from the core Argus RegimeDetector (topics
-``regimes.symbol`` / ``regimes.market``).  A bus bridge in runner.py
-mirrors those events into the Kalshi bus so they flow into the
-FarmDispatcher's single subscriber, which updates SharedFarmState.
-
-If regime data is unavailable (bridge down, standalone Kalshi mode),
-the fallback mode applies:
-  - "conservative" (default): treat as VOL_SPIKE + LIQ_LOW
-  - "permissive": allow all (effective disable)
-
-This module has NO direct bus subscriptions.  It reads regime state
-from SharedFarmState only, consistent with the shared-state farm
-architecture (no per-bot subscriptions).
-"""
+# Regime Gate for Kalshi Trading
+#
+# Lightweight regime-aware gating that reads cached regime state from
+# SharedFarmState and decides whether scalp/hold entries are allowed.
+#
+# Regime data originates from the core Argus RegimeDetector (topics
+# ``regimes.symbol`` / ``regimes.market``).  A bus bridge in runner.py
+# mirrors those events into the Kalshi bus so they flow into the
+# FarmDispatcher's single subscriber, which updates SharedFarmState.
+#
+# If regime data is unavailable (bridge down, standalone Kalshi mode),
+# the fallback mode applies:
+# - "conservative" (default): treat as VOL_SPIKE + LIQ_LOW
+# - "permissive": allow all (effective disable)
+#
+# This module has NO direct bus subscriptions.  It reads regime state
+# from SharedFarmState only, consistent with the shared-state farm
+# architecture (no per-bot subscriptions).
 
 from __future__ import annotations
 
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class GateResult:
-    """Result of a regime gate check."""
+    # Result of a regime gate check.
     allowed: bool
     reason: str
     qty_multiplier: float = 1.0
@@ -40,11 +39,10 @@ class GateResult:
 
 
 class RegimeGate:
-    """Regime-aware entry gate for scalp and hold strategies.
-
-    All decisions are based on pre-cached regime strings in SharedFarmState.
-    No bus subscriptions are created here.
-    """
+    # Regime-aware entry gate for scalp and hold strategies.
+    #
+    # All decisions are based on pre-cached regime strings in SharedFarmState.
+    # No bus subscriptions are created here.
 
     def __init__(self, cfg: KalshiConfig, shared: SharedFarmState) -> None:
         self._cfg = cfg
@@ -64,10 +62,9 @@ class RegimeGate:
         self.counters[key] = self.counters.get(key, 0) + 1
 
     def _get_regime(self, asset: str) -> tuple:
-        """Return (vol_regime, liq_regime, risk_regime) strings for asset.
-
-        If missing, returns fallback values based on config.
-        """
+        # Return (vol_regime, liq_regime, risk_regime) strings for asset.
+        #
+        # If missing, returns fallback values based on config.
         vol = self._shared.regime_vol.get(asset, "")
         liq = self._shared.regime_liq.get(asset, "")
         risk = self._shared.regime_risk
@@ -90,18 +87,17 @@ class RegimeGate:
         reprice_move_cents: int = 0,
         projected_net_edge_cents: int = 0,
     ) -> GateResult:
-        """Check whether a scalp entry is allowed under current regime.
-
-        Args:
-            asset: Asset symbol (e.g. "BTC").
-            spread_cents: Current orderbook spread in cents.
-            depth: Current best-level depth.
-            reprice_move_cents: Recent repricing impulse magnitude.
-            projected_net_edge_cents: Projected net profit after fees.
-
-        Returns:
-            GateResult indicating whether scalp is allowed.
-        """
+        # Check whether a scalp entry is allowed under current regime.
+        #
+        # Args:
+        # asset: Asset symbol (e.g. "BTC").
+        # spread_cents: Current orderbook spread in cents.
+        # depth: Current best-level depth.
+        # reprice_move_cents: Recent repricing impulse magnitude.
+        # projected_net_edge_cents: Projected net profit after fees.
+        #
+        # Returns:
+        # GateResult indicating whether scalp is allowed.
         if not self._cfg.enable_regime_gating:
             self._count("regime_allowed")
             return GateResult(allowed=True, reason="gating_disabled")
@@ -152,16 +148,15 @@ class RegimeGate:
         time_to_settle_s: float,
         edge: float,
     ) -> GateResult:
-        """Check whether a hold entry is allowed under current regime.
-
-        Args:
-            asset: Asset symbol (e.g. "BTC").
-            time_to_settle_s: Seconds until contract settlement.
-            edge: Current entry edge (fraction, e.g. 0.05 = 5%).
-
-        Returns:
-            GateResult indicating whether hold is allowed.
-        """
+        # Check whether a hold entry is allowed under current regime.
+        #
+        # Args:
+        # asset: Asset symbol (e.g. "BTC").
+        # time_to_settle_s: Seconds until contract settlement.
+        # edge: Current entry edge (fraction, e.g. 0.05 = 5%).
+        #
+        # Returns:
+        # GateResult indicating whether hold is allowed.
         if not self._cfg.enable_regime_gating:
             self._count("regime_allowed")
             return GateResult(allowed=True, reason="gating_disabled")
@@ -210,7 +205,7 @@ class RegimeGate:
         return GateResult(allowed=True, reason="regime_ok")
 
     def get_diagnostics(self) -> Dict[str, object]:
-        """Return gate counters and current regime snapshot for diagnostics."""
+        # Return gate counters and current regime snapshot for diagnostics.
         regime_snapshot = {}
         for asset in sorted(set(self._shared.regime_vol) | set(self._shared.regime_liq)):
             regime_snapshot[asset] = {

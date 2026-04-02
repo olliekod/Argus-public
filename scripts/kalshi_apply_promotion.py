@@ -1,12 +1,12 @@
-"""
-Apply promotion gate: read paper trade settlements, classify context keys
-into core/explore/unknown lanes, and write a versioned policy JSON file.
+# Created by Oliver Meihls
 
-Usage:
-    python scripts/kalshi_apply_promotion.py
-    python scripts/kalshi_apply_promotion.py --log logs/paper_trades.jsonl --hours 8
-    python scripts/kalshi_apply_promotion.py --output config/kalshi_context_policy.json
-"""
+# Apply promotion gate: read paper trade settlements, classify context keys
+# into core/explore/unknown lanes, and write a versioned policy JSON file.
+#
+# Usage:
+# python scripts/kalshi_apply_promotion.py
+# python scripts/kalshi_apply_promotion.py --log logs/paper_trades.jsonl --hours 8
+# python scripts/kalshi_apply_promotion.py --output config/kalshi_context_policy.json
 
 from __future__ import annotations
 
@@ -44,12 +44,11 @@ def _continuous_weight(
     promote_threshold: float,
     demote_threshold: float,
 ) -> float:
-    """Compute a continuous weight within the lane's range based on avg_pnl.
-
-    Core:    [1.3, 1.5]  — extra boost for strong positive expectancy
-    Explore: [0.1, 0.5]  — deeper cuts for worse performers
-    Unknown: 1.0          — unchanged
-    """
+    # Compute a continuous weight within the lane's range based on avg_pnl.
+    #
+    # Core:    [1.3, 1.5]  — extra boost for strong positive expectancy
+    # Explore: [0.1, 0.5]  — deeper cuts for worse performers
+    # Unknown: 1.0          — unchanged
     if lane == LANE_CORE:
         # At promote_threshold: 1.3. Each +1.0 of avg_pnl adds ~0.05 up to 1.5.
         bonus = min(0.2, max(0.0, (avg_pnl - promote_threshold) * 0.05))
@@ -70,7 +69,7 @@ def _ctx_get(rec: Dict[str, Any], key: str, default: str = "na") -> str:
 
 
 def _momentum_bucket(drift: float, scale: float = 1e-4) -> str:
-    """Match momentum_bucket() in context_policy.py — must stay in sync."""
+    # Match momentum_bucket() in context_policy.py — must stay in sync.
     if drift > scale:
         return "up"
     if drift < -scale:
@@ -79,7 +78,7 @@ def _momentum_bucket(drift: float, scale: float = 1e-4) -> str:
 
 
 def _context_key(rec: Dict[str, Any]) -> str:
-    """Build context key: family|side|edge_bucket|price_bucket|strike_distance_bucket|near_money|momentum."""
+    # Build context key: family|side|edge_bucket|price_bucket|strike_distance_bucket|near_money|momentum.
     family = str(rec.get("family") or "UNK")
     side_code = _ctx_get(rec, "sd", "na")
     side = "yes" if side_code == "y" else ("no" if side_code == "n" else side_code)
@@ -104,10 +103,9 @@ def _load_settlements(
     log_path: Path,
     hours: float,
 ) -> Tuple[List[Dict[str, Any]], float]:
-    """Load settlement records from JSONL within the lookback window.
-
-    Returns (records, max_ts).
-    """
+    # Load settlement records from JSONL within the lookback window.
+    #
+    # Returns (records, max_ts).
     max_ts: Optional[float] = None
     with log_path.open("r", encoding="utf-8", errors="ignore") as fh:
         for raw in fh:
@@ -148,7 +146,7 @@ def _classify(
     promote_threshold: float,
     demote_threshold: float,
 ) -> Dict[str, Dict[str, Any]]:
-    """Group settlements by context key and classify each."""
+    # Group settlements by context key and classify each.
     agg: Dict[str, Dict[str, Any]] = defaultdict(
         lambda: {"count": 0, "total_pnl": 0.0, "wins": 0}
     )
@@ -195,7 +193,7 @@ def _write_policy(
     keys: Dict[str, Dict[str, Any]],
     total_settlements: int,
 ) -> Dict[str, Any]:
-    """Write the policy JSON and return the document."""
+    # Write the policy JSON and return the document.
     core_count = sum(1 for v in keys.values() if v["lane"] == LANE_CORE)
     explore_count = sum(1 for v in keys.values() if v["lane"] == LANE_EXPLORE)
     unknown_count = sum(1 for v in keys.values() if v["lane"] == LANE_UNKNOWN)
@@ -221,7 +219,7 @@ def _write_policy(
 
 
 def _write_summary_txt(txt_path: Path, doc: Dict[str, Any]) -> None:
-    """Write a human-readable .txt summary next to the JSON."""
+    # Write a human-readable .txt summary next to the JSON.
     lines: List[str] = []
     lines.append("Kalshi Context Policy Summary")
     lines.append("=" * 50)
@@ -261,7 +259,7 @@ def _write_summary_txt(txt_path: Path, doc: Dict[str, Any]) -> None:
 
 
 def _print_summary(doc: Dict[str, Any]) -> None:
-    """Print a concise summary to stdout."""
+    # Print a concise summary to stdout.
     s = doc["summary"]
     print(f"Kalshi Context Policy (v{doc['version']})")
     print(f"  timestamp:        {doc['timestamp']}")
@@ -302,7 +300,7 @@ def _merge_policy_keys(
     promote_threshold: float,
     demote_threshold: float,
 ) -> Dict[str, Dict[str, Any]]:
-    """Merge current and prior context-key stats using additive counts and PnL."""
+    # Merge current and prior context-key stats using additive counts and PnL.
     merged: Dict[str, Dict[str, Any]] = {}
 
     for key in set(current_keys) | set(prior_keys):
@@ -350,7 +348,7 @@ def _merge_policy_keys(
 
 
 def _load_bot_params_lookup(dwarf_names_file: str) -> Dict[str, Dict[str, Any]]:
-    """Map bot_id to its static grid parameters."""
+    # Map bot_id to its static grid parameters.
     try:
         names = Path(dwarf_names_file).read_text(encoding="utf-8").split()
     except Exception:
@@ -658,10 +656,9 @@ def _extract_bot_performance(
     dwarf_names_file: str,
     top_n: int = 50,
 ) -> Dict[str, Any]:
-    """Build per-bot performance stats and map top/bottom bots to their grid parameters.
-
-    Returns a dict ready to be written as JSON (genetic pressure output).
-    """
+    # Build per-bot performance stats and map top/bottom bots to their grid parameters.
+    #
+    # Returns a dict ready to be written as JSON (genetic pressure output).
     # Aggregate per bot
     bot_stats: Dict[str, Dict[str, Any]] = defaultdict(
         lambda: {"count": 0, "total_pnl": 0.0, "wins": 0}

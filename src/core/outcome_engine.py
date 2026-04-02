@@ -1,12 +1,11 @@
-"""
-Argus Outcome Engine
-====================
+# Created by Oliver Meihls
 
-Compute bar-level forward outcomes from persisted bars.
-Produces deterministic, idempotent ground truth for backtesting.
-
-Phase 4A.1: Bar Outcomes Foundation
-"""
+# Argus Outcome Engine
+#
+# Compute bar-level forward outcomes from persisted bars.
+# Produces deterministic, idempotent ground truth for backtesting.
+#
+# Phase 4A.1: Bar Outcomes Foundation
 
 from __future__ import annotations
 
@@ -31,7 +30,7 @@ STATUS_GAP = "GAP"
 
 @dataclass(frozen=True)
 class BarData:
-    """Lightweight bar representation for outcome computation."""
+    # Lightweight bar representation for outcome computation.
     timestamp_ms: int
     open: float
     high: float
@@ -42,7 +41,7 @@ class BarData:
 
 @dataclass
 class OutcomeResult:
-    """Result of outcome computation for a single bar+horizon."""
+    # Result of outcome computation for a single bar+horizon.
     provider: str
     symbol: str
     bar_duration_seconds: int
@@ -80,7 +79,7 @@ class OutcomeResult:
     session_regime: str = ""
     
     def to_tuple(self) -> tuple:
-        """Convert to tuple for batch DB insert."""
+        # Convert to tuple for batch DB insert.
         return (
             self.provider, self.symbol, self.bar_duration_seconds, self.timestamp_ms,
             self.horizon_seconds, self.outcome_version,
@@ -95,18 +94,17 @@ class OutcomeResult:
 
 
 def _quantize(value: Optional[float], decimals: int) -> Optional[float]:
-    """Quantize a float to fixed decimal precision for determinism."""
+    # Quantize a float to fixed decimal precision for determinism.
     if value is None or math.isnan(value) or math.isinf(value):
         return None
     return round(value, decimals)
 
 
 def _timestamp_to_ms(ts_str: str) -> int:
-    """Convert ISO timestamp string to milliseconds (always UTC).
-
-    Naive timestamps (no timezone info) are treated as UTC to ensure
-    determinism regardless of the machine's local timezone.
-    """
+    # Convert ISO timestamp string to milliseconds (always UTC).
+    #
+    # Naive timestamps (no timezone info) are treated as UTC to ensure
+    # determinism regardless of the machine's local timezone.
     from datetime import timezone as _tz
 
     try:
@@ -127,32 +125,30 @@ def _timestamp_to_ms(ts_str: str) -> int:
 
 
 class OutcomeEngine:
-    """Compute bar-level forward outcomes from persisted bars (DB source of truth).
-    
-    Produces deterministic, idempotent outcome records for backtesting.
-    
-    Key properties:
-    - Determinism: same bars → same outcomes (no wall-clock dependency in metrics)
-    - Idempotency: reruns don't duplicate or drift values
-    - Explicit status: OK, INCOMPLETE, or GAP
-    - Quantized metrics for exact equality in tests
-    """
+    # Compute bar-level forward outcomes from persisted bars (DB source of truth).
+    #
+    # Produces deterministic, idempotent outcome records for backtesting.
+    #
+    # Key properties:
+    # - Determinism: same bars → same outcomes (no wall-clock dependency in metrics)
+    # - Idempotency: reruns don't duplicate or drift values
+    # - Explicit status: OK, INCOMPLETE, or GAP
+    # - Quantized metrics for exact equality in tests
     
     def __init__(
         self,
         db: Any,  # Database instance
         config: Optional[Dict[str, Any]] = None,
     ):
-        """Initialize the outcome engine.
-        
-        Args:
-            db: Database instance for reading bars and writing outcomes.
-            config: Outcome configuration dict with keys:
-                - outcome_version: Version string for outcomes
-                - gap_tolerance_bars: Max missing bars for OK status
-                - quantize_decimals: Decimal precision for metrics
-                - horizons_seconds_by_bar: Dict mapping bar_duration to horizon list
-        """
+        # Initialize the outcome engine.
+        #
+        # Args:
+        # db: Database instance for reading bars and writing outcomes.
+        # config: Outcome configuration dict with keys:
+        # - outcome_version: Version string for outcomes
+        # - gap_tolerance_bars: Max missing bars for OK status
+        # - quantize_decimals: Decimal precision for metrics
+        # - horizons_seconds_by_bar: Dict mapping bar_duration to horizon list
         self.db = db
         config = config or {}
         
@@ -182,19 +178,18 @@ class OutcomeEngine:
         end_ms: int,
         batch_size: int = 1000,
     ) -> Tuple[int, int, int]:
-        """Compute outcomes for bars in [start_ms, end_ms].
-        
-        Args:
-            provider: Data provider (maps to source in market_bars)
-            symbol: Symbol to process
-            bar_duration_seconds: Bar duration in seconds
-            start_ms: Start of range (inclusive)
-            end_ms: End of range (inclusive)
-            batch_size: Batch size for DB writes
-            
-        Returns:
-            Tuple of (bars_processed, outcomes_computed, outcomes_upserted)
-        """
+        # Compute outcomes for bars in [start_ms, end_ms].
+        #
+        # Args:
+        # provider: Data provider (maps to source in market_bars)
+        # symbol: Symbol to process
+        # bar_duration_seconds: Bar duration in seconds
+        # start_ms: Start of range (inclusive)
+        # end_ms: End of range (inclusive)
+        # batch_size: Batch size for DB writes
+        #
+        # Returns:
+        # Tuple of (bars_processed, outcomes_computed, outcomes_upserted)
         horizons = self.horizons_by_bar.get(bar_duration_seconds, [])
         if not horizons:
             logger.warning(
@@ -276,7 +271,7 @@ class OutcomeEngine:
         bars_raw: List[Dict[str, Any]],
         bar_duration_seconds: int,
     ) -> List[BarData]:
-        """Convert raw DB rows to BarData objects."""
+        # Convert raw DB rows to BarData objects.
         result = []
         for row in bars_raw:
             ts = row.get("timestamp")
@@ -314,7 +309,7 @@ class OutcomeEngine:
         bar_duration_seconds: int,
         horizon_seconds: int,
     ) -> OutcomeResult:
-        """Compute outcome for a single bar and horizon."""
+        # Compute outcome for a single bar and horizon.
         bar_duration_ms = bar_duration_seconds * 1000
         horizon_ms = horizon_seconds * 1000
         
@@ -441,10 +436,9 @@ class OutcomeEngine:
     def _compute_realized_vol(
         self, bars: List[BarData], bar_duration_seconds: int
     ) -> Optional[float]:
-        """Compute annualized realized volatility as stddev of log returns.
-
-        Returns volatility in same units as IV (annualized decimal, e.g. 0.15 = 15%).
-        """
+        # Compute annualized realized volatility as stddev of log returns.
+        #
+        # Returns volatility in same units as IV (annualized decimal, e.g. 0.15 = 15%).
         if len(bars) < 2:
             return None
         
@@ -478,10 +472,9 @@ class OutcomeEngine:
         bar_duration_seconds: int,
         horizons: List[int],
     ) -> List[OutcomeResult]:
-        """Synchronous version for testing - compute outcomes from bar list.
-        
-        This is useful for unit tests where we don't need DB access.
-        """
+        # Synchronous version for testing - compute outcomes from bar list.
+        #
+        # This is useful for unit tests where we don't need DB access.
         bars_by_ts = {b.timestamp_ms: b for b in bars}
         results = []
         

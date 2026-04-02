@@ -1,14 +1,14 @@
-"""
-Tests for Tape Ordering and Replay.
+# Created by Oliver Meihls
 
-Verifies:
-1. Faithful replay: sequence_id order preserved exactly
-2. Canonical replay: stable ordering independent of arrival
-3. Sequence_id monotonicity
-4. Replay determinism
-
-Run with: pytest tests/test_tape_ordering.py -v
-"""
+# Tests for Tape Ordering and Replay.
+#
+# Verifies:
+# 1. Faithful replay: sequence_id order preserved exactly
+# 2. Canonical replay: stable ordering independent of arrival
+# 3. Sequence_id monotonicity
+# 4. Replay determinism
+#
+# Run with: pytest tests/test_tape_ordering.py -v
 
 import pytest
 from typing import List, Dict, Any
@@ -27,12 +27,10 @@ from src.soak.tape import (
 from src.core.events import QuoteEvent, BarEvent, MinuteTickEvent
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Fixture Data
-# ═══════════════════════════════════════════════════════════════════════════
 
 def create_quote(symbol: str, price: float, source: str, ts: float) -> QuoteEvent:
-    """Create a test QuoteEvent."""
+    # Create a test QuoteEvent.
     return QuoteEvent(
         symbol=symbol,
         bid=price - 0.01,
@@ -49,7 +47,7 @@ def create_quote(symbol: str, price: float, source: str, ts: float) -> QuoteEven
 
 
 def create_bar(symbol: str, close: float, source: str, ts: float) -> BarEvent:
-    """Create a test BarEvent."""
+    # Create a test BarEvent.
     return BarEvent(
         symbol=symbol,
         open=close - 0.1,
@@ -68,17 +66,15 @@ def create_bar(symbol: str, close: float, source: str, ts: float) -> BarEvent:
 
 
 def create_minute_tick(ts: float) -> MinuteTickEvent:
-    """Create a test MinuteTickEvent."""
+    # Create a test MinuteTickEvent.
     return MinuteTickEvent(timestamp=ts)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Sequence ID Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSequenceId:
     def test_monotonic_sequence_id(self):
-        """Sequence IDs should be strictly increasing."""
+        # Sequence IDs should be strictly increasing.
         recorder = TapeRecorder(enabled=True, maxlen=100)
         
         # Simulate events by calling serialization with incrementing seq_id
@@ -92,7 +88,7 @@ class TestSequenceId:
             assert seq_ids[i] > seq_ids[i - 1], f"seq_id[{i}] not monotonic"
     
     def test_sequence_id_in_serialized_event(self):
-        """Serialized events must include sequence_id."""
+        # Serialized events must include sequence_id.
         seq_id = 42
         
         quote = create_quote("IBIT", 100.0, "alpaca", 1700000000.0)
@@ -108,13 +104,11 @@ class TestSequenceId:
         assert d["sequence_id"] == seq_id
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Faithful Replay Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestFaithfulReplay:
     def test_faithful_replay_preserves_order(self):
-        """Faithful replay outputs events in exact sequence_id order."""
+        # Faithful replay outputs events in exact sequence_id order.
         # Create tape entries with out-of-order sequence_ids
         tape = [
             {"sequence_id": 5, "event_ts": 1700000000000, "provider": "alpaca", "event_type": "quote", "symbol": "IBIT", "timestamp": 1700000000000, "bid": 99, "ask": 101, "mid": 100, "last": 100, "source": "alpaca", "volume_24h": 1000, "source_ts": 1700000000000, "receive_time": 1700000000000, "timeframe": 0},
@@ -130,7 +124,7 @@ class TestFaithfulReplay:
         assert sorted_tape[2]["sequence_id"] == 8
     
     def test_faithful_replay_identical_twice(self):
-        """Replaying same tape faithfully twice yields identical order."""
+        # Replaying same tape faithfully twice yields identical order.
         tape = [
             {"sequence_id": 3, "event_ts": 1700000000000, "provider": "alpaca", "event_type": "quote", "symbol": "IBIT", "timestamp": 1700000000000, "bid": 99, "ask": 101, "mid": 100, "last": 100, "source": "alpaca", "volume_24h": 1000, "source_ts": 1700000000000, "receive_time": 1700000000000, "timeframe": 0},
             {"sequence_id": 1, "event_ts": 1699999900000, "provider": "yahoo", "event_type": "quote", "symbol": "BITO", "timestamp": 1699999900000, "bid": 49, "ask": 51, "mid": 50, "last": 50, "source": "yahoo", "volume_24h": 500, "source_ts": 1699999900000, "receive_time": 1699999900000, "timeframe": 0},
@@ -144,13 +138,11 @@ class TestFaithfulReplay:
             assert e1["sequence_id"] == e2["sequence_id"], f"Mismatch at {i}"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Canonical Replay Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestCanonicalReplay:
     def test_canonical_sort_key_order(self):
-        """Canonical sort: (event_ts, provider_priority, event_type_priority, symbol, sequence_id)."""
+        # Canonical sort: (event_ts, provider_priority, event_type_priority, symbol, sequence_id).
         # Same event_ts, different providers
         tape = [
             {"sequence_id": 1, "event_ts": 1700000000000, "provider": "bybit", "event_type": "quote", "symbol": "BTCUSDT", "timeframe": 0},
@@ -164,7 +156,7 @@ class TestCanonicalReplay:
         assert sorted_tape[1]["provider"] == "bybit"
     
     def test_canonical_stable_across_runs(self):
-        """Canonical ordering must be stable across multiple runs."""
+        # Canonical ordering must be stable across multiple runs.
         tape = [
             {"sequence_id": 5, "event_ts": 1700000000000, "provider": "yahoo", "event_type": "bar", "symbol": "IBIT", "timeframe": 60},
             {"sequence_id": 1, "event_ts": 1700000000000, "provider": "alpaca", "event_type": "bar", "symbol": "IBIT", "timeframe": 60},
@@ -181,7 +173,7 @@ class TestCanonicalReplay:
             assert sorted1[i] == sorted2[i] == sorted3[i], f"Not stable at {i}"
     
     def test_canonical_event_type_priority(self):
-        """Canonical sort should order by event_type_priority within same timestamp/provider."""
+        # Canonical sort should order by event_type_priority within same timestamp/provider.
         tape = [
             {"sequence_id": 1, "event_ts": 1700000000000, "provider": "alpaca", "event_type": "quote", "symbol": "IBIT", "timeframe": 0},
             {"sequence_id": 2, "event_ts": 1700000000000, "provider": "alpaca", "event_type": "bar", "symbol": "IBIT", "timeframe": 60},
@@ -194,7 +186,7 @@ class TestCanonicalReplay:
         assert sorted_tape[1]["event_type"] == "quote"
     
     def test_canonical_sequence_id_tiebreaker(self):
-        """sequence_id is the final tiebreaker in canonical sort."""
+        # sequence_id is the final tiebreaker in canonical sort.
         tape = [
             {"sequence_id": 10, "event_ts": 1700000000000, "provider": "alpaca", "event_type": "bar", "symbol": "IBIT", "timeframe": 60},
             {"sequence_id": 5, "event_ts": 1700000000000, "provider": "alpaca", "event_type": "bar", "symbol": "IBIT", "timeframe": 60},
@@ -207,13 +199,11 @@ class TestCanonicalReplay:
         assert sorted_tape[1]["sequence_id"] == 10
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Priority Table Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestPriorityTables:
     def test_provider_priority_values(self):
-        """Verify provider priority table values."""
+        # Verify provider priority table values.
         # Code is source of truth - updated to match actual tape.py
         assert PROVIDER_PRIORITY["alpaca"] == 1
         assert PROVIDER_PRIORITY["tradier"] == 2
@@ -225,7 +215,7 @@ class TestPriorityTables:
         assert PROVIDER_PRIORITY["unknown"] == 99
     
     def test_event_type_priority_values(self):
-        """Verify event type priority table values."""
+        # Verify event type priority table values.
         # Code is source of truth - updated to match actual tape.py
         # Options events ordered by data dependency: contract → quote → chain
         assert EVENT_TYPE_PRIORITY["bar"] == 1
@@ -239,13 +229,11 @@ class TestPriorityTables:
         assert EVENT_TYPE_PRIORITY["heartbeat"] == 9
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Envelope Schema Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestEnvelopeSchema:
     def test_quote_envelope_fields(self):
-        """Quote envelope must include all required fields."""
+        # Quote envelope must include all required fields.
         quote = create_quote("IBIT", 100.0, "alpaca", 1700000000.0)
         d = _quote_to_dict(quote, 42)
         
@@ -257,7 +245,7 @@ class TestEnvelopeSchema:
         assert d["timeframe"] == 0  # N/A for quotes
     
     def test_bar_envelope_fields(self):
-        """Bar envelope must include all required fields including timeframe."""
+        # Bar envelope must include all required fields including timeframe.
         bar = create_bar("IBIT", 100.0, "alpaca", 1700000000.0)
         d = _bar_to_dict(bar, 42)
         
@@ -269,7 +257,7 @@ class TestEnvelopeSchema:
         assert d["timeframe"] == 60  # bar_duration
     
     def test_minute_tick_envelope_fields(self):
-        """Minute tick envelope must include all required fields."""
+        # Minute tick envelope must include all required fields.
         tick = create_minute_tick(1700000000.0)
         d = _tick_to_dict(tick, 42)
         
@@ -281,13 +269,11 @@ class TestEnvelopeSchema:
         assert d["provider"] == "system"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Timestamp Conversion Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestTimestampConversion:
     def test_timestamps_are_int_ms(self):
-        """Serialized timestamps should be int milliseconds."""
+        # Serialized timestamps should be int milliseconds.
         quote = create_quote("IBIT", 100.0, "alpaca", 1700000000.0)
         d = _quote_to_dict(quote, 42)
         
@@ -299,7 +285,7 @@ class TestTimestampConversion:
         assert d["event_ts"] > 1e12
     
     def test_deserialize_preserves_event(self):
-        """Deserialize should reconstruct the event correctly."""
+        # Deserialize should reconstruct the event correctly.
         original_quote = create_quote("IBIT", 100.0, "alpaca", 1700000000.0)
         d = _quote_to_dict(original_quote, 42)
         

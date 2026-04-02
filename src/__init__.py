@@ -1,9 +1,8 @@
-"""
-Argus - Crypto Market Monitor
-=============================
+# Created by Oliver Meihls
 
-24/7 market monitoring system for detecting trading opportunities.
-"""
+# Argus - Crypto Market Monitor
+#
+# 24/7 market monitoring system for detecting trading opportunities.
 
 __version__ = "0.1.0"
 __author__ = "Argus"

@@ -1,18 +1,17 @@
-"""
-Tests for Greeks Cache and Snapshot IV Enrichment
-==================================================
+# Created by Oliver Meihls
 
-Validates:
-- GreeksCache stores and retrieves Greeks events correctly
-- Time-gating (as_of_ms) prevents future data leakage
-- Staleness eviction removes old entries
-- ATM IV selection uses nearest strike to underlying price
-- enrich_snapshot_iv enriches snapshots with cached provider IV
-- Derived IV fallback works when provider IV unavailable
-- Replay harness receives IV from enriched snapshots
-- VRP strategy produces trades when IV exists
-- Determinism is preserved across multiple replay runs
-"""
+# Tests for Greeks Cache and Snapshot IV Enrichment
+#
+# Validates:
+# - GreeksCache stores and retrieves Greeks events correctly
+# - Time-gating (as_of_ms) prevents future data leakage
+# - Staleness eviction removes old entries
+# - ATM IV selection uses nearest strike to underlying price
+# - enrich_snapshot_iv enriches snapshots with cached provider IV
+# - Derived IV fallback works when provider IV unavailable
+# - Replay harness receives IV from enriched snapshots
+# - VRP strategy produces trades when IV exists
+# - Determinism is preserved across multiple replay runs
 
 from __future__ import annotations
 
@@ -35,9 +34,7 @@ from src.core.option_events import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _make_snapshot(
     symbol: str = "SPY",
@@ -48,11 +45,10 @@ def _make_snapshot(
     calls: tuple = (),
     provider: str = "tastytrade",
 ) -> OptionChainSnapshotEvent:
-    """Create a minimal OptionChainSnapshotEvent for testing.
-
-    Default expiration_ms corresponds to 2025-03-21 midnight UTC to
-    align with the ``.SPY250321P*`` symbols used throughout the tests.
-    """
+    # Create a minimal OptionChainSnapshotEvent for testing.
+    #
+    # Default expiration_ms corresponds to 2025-03-21 midnight UTC to
+    # align with the ``.SPY250321P*`` symbols used throughout the tests.
     from datetime import datetime, timezone as _tz
     # 2025-03-21 00:00 UTC in epoch ms
     _default_exp_ms = int(datetime(2025, 3, 21, tzinfo=_tz.utc).timestamp() * 1000)
@@ -71,9 +67,7 @@ def _make_snapshot(
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: _parse_option_symbol
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestParseOptionSymbol:
     def test_put_symbol(self):
@@ -85,7 +79,7 @@ class TestParseOptionSymbol:
         assert result == ("SPY", "CALL", 595.0, "250321")
 
     def test_without_leading_dot(self):
-        """Some formats omit the leading dot."""
+        # Some formats omit the leading dot.
         result = _parse_option_symbol("SPY250321P590")
         assert result == ("SPY", "PUT", 590.0, "250321")
 
@@ -103,9 +97,7 @@ class TestParseOptionSymbol:
         assert _parse_option_symbol("123") is None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: GreeksCache
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestGreeksCache:
     def test_basic_update_and_retrieve(self):
@@ -132,7 +124,7 @@ class TestGreeksCache:
         assert iv == 0.20
 
     def test_time_gating(self):
-        """Greeks received AFTER as_of_ms must NOT be used."""
+        # Greeks received AFTER as_of_ms must NOT be used.
         cache = GreeksCache()
         cache.update(".SPY250321P595", volatility=0.22, recv_ts_ms=5000)
 
@@ -244,7 +236,7 @@ class TestGreeksCache:
         assert greek.delta == -0.45
 
     def test_cross_expiration_filtering(self):
-        """ATM IV must not mix expirations when expiration_ms is supplied."""
+        # ATM IV must not mix expirations when expiration_ms is supplied.
         from datetime import datetime, timezone
 
         cache = GreeksCache()
@@ -272,7 +264,7 @@ class TestGreeksCache:
         assert iv == 0.30
 
     def test_no_expiration_filter_matches_all(self):
-        """Without expiration_ms, get_atm_iv still matches all expirations."""
+        # Without expiration_ms, get_atm_iv still matches all expirations.
         cache = GreeksCache()
         cache.update(".SPY250321P590", volatility=0.22, recv_ts_ms=1000)
         cache.update(".SPY250418P595", volatility=0.30, recv_ts_ms=1000)
@@ -282,9 +274,7 @@ class TestGreeksCache:
         assert iv == 0.30  # 595 is closer to 593 (dist=2 vs dist=3)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: enrich_snapshot_iv
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestEnrichSnapshotIV:
     def test_enriches_when_atm_iv_missing(self):
@@ -309,7 +299,7 @@ class TestEnrichSnapshotIV:
         assert enriched.atm_iv == 0.18
 
     def test_time_gating_respected(self):
-        """Greeks received after snapshot recv_ts must not be used."""
+        # Greeks received after snapshot recv_ts must not be used.
         cache = GreeksCache()
         cache.update(".SPY250321P595", volatility=0.22, recv_ts_ms=1_700_000_070_000)
 
@@ -326,7 +316,7 @@ class TestEnrichSnapshotIV:
         assert enriched is snapshot  # Same object, no enrichment
 
     def test_falls_back_to_call_iv(self):
-        """If no put IV, should try call IV."""
+        # If no put IV, should try call IV.
         cache = GreeksCache()
         cache.update(".SPY250321C595", volatility=0.23, recv_ts_ms=1_700_000_050_000)
 
@@ -336,7 +326,7 @@ class TestEnrichSnapshotIV:
         assert enriched.atm_iv == 0.23
 
     def test_snapshot_fields_preserved(self):
-        """All other snapshot fields must be preserved during enrichment."""
+        # All other snapshot fields must be preserved during enrichment.
         cache = GreeksCache()
         cache.update(".SPY250321P595", volatility=0.22, recv_ts_ms=1_700_000_050_000)
 
@@ -366,7 +356,7 @@ class TestEnrichSnapshotIV:
         assert enriched is snapshot
 
     def test_enrichment_respects_expiration(self):
-        """Enrichment must not use IV from a different expiration."""
+        # Enrichment must not use IV from a different expiration.
         from datetime import datetime, timezone
 
         cache = GreeksCache()
@@ -394,7 +384,7 @@ class TestEnrichSnapshotIV:
         assert enriched.atm_iv is None
 
     def test_consensus_engine_with_no_iv_returns_snapshot_no_attribute_error(self):
-        """When greeks_cache is IVConsensusEngine and consensus has no data, must not call get_atm_iv (engine has no such method)."""
+        # When greeks_cache is IVConsensusEngine and consensus has no data, must not call get_atm_iv (engine has no such method).
         engine = IVConsensusEngine()
         snapshot = _make_snapshot(atm_iv=None, recv_ts_ms=1_700_000_060_000)
         enriched = enrich_snapshot_iv(snapshot, engine)
@@ -402,15 +392,13 @@ class TestEnrichSnapshotIV:
         assert enriched.atm_iv is None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Replay Harness Integration
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestReplayHarnessIVIntegration:
-    """Verify that enriched snapshots flow through to strategies via replay."""
+    # Verify that enriched snapshots flow through to strategies via replay.
 
     def test_snapshot_with_atm_iv_reaches_strategy(self):
-        """MarketDataSnapshot with atm_iv is visible to strategy."""
+        # MarketDataSnapshot with atm_iv is visible to strategy.
         from src.analysis.execution_model import ExecutionModel
         from src.analysis.replay_harness import (
             MarketDataSnapshot,
@@ -474,7 +462,7 @@ class TestReplayHarnessIVIntegration:
         assert 0.24 in observed_ivs
 
     def test_snapshot_gating_prevents_future_iv(self):
-        """Snapshot with recv_ts_ms > sim_ts_ms must not be visible."""
+        # Snapshot with recv_ts_ms > sim_ts_ms must not be visible.
         from src.analysis.execution_model import ExecutionModel
         from src.analysis.replay_harness import (
             MarketDataSnapshot,
@@ -524,7 +512,7 @@ class TestReplayHarnessIVIntegration:
         assert len(future_iv_seen) == 0
 
     def test_vrp_strategy_produces_trades_with_iv(self):
-        """VRP strategy should produce trades when IV and RV are available."""
+        # VRP strategy should produce trades when IV and RV are available.
         from src.analysis.execution_model import ExecutionModel
         from src.analysis.replay_harness import (
             MarketDataSnapshot,
@@ -609,15 +597,13 @@ class TestReplayHarnessIVIntegration:
         assert state["last_rv"] == 0.15
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Determinism
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestDeterminism:
-    """Verify that replay is deterministic across runs."""
+    # Verify that replay is deterministic across runs.
 
     def test_identical_results_across_runs(self):
-        """Same inputs must produce identical outputs."""
+        # Same inputs must produce identical outputs.
         from src.analysis.execution_model import ExecutionModel
         from src.analysis.replay_harness import (
             MarketDataSnapshot,
@@ -692,7 +678,7 @@ class TestDeterminism:
             assert results[i]["portfolio"] == results[0]["portfolio"]
 
     def test_greeks_cache_enrichment_is_deterministic(self):
-        """Same cache state + same snapshot must produce same enrichment."""
+        # Same cache state + same snapshot must produce same enrichment.
         cache = GreeksCache()
         cache.update(".SPY250321P590", volatility=0.25, recv_ts_ms=1000)
         cache.update(".SPY250321P595", volatility=0.22, recv_ts_ms=1000)
@@ -708,12 +694,10 @@ class TestDeterminism:
         assert results[0] == 0.22  # 595 put is nearest
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: VRP Strategy IV Selection
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestVRPIVSelection:
-    """Test the IV selection logic in VRP strategy."""
+    # Test the IV selection logic in VRP strategy.
 
     def test_tastytrade_atm_iv_preferred(self):
         from src.strategies.vrp_credit_spread import _select_iv_from_snapshots
@@ -747,12 +731,10 @@ class TestVRPIVSelection:
         assert iv is None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Performance Safeguards
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestPerformanceSafeguards:
-    """Verify performance characteristics of the Greeks cache."""
+    # Verify performance characteristics of the Greeks cache.
 
     def test_cache_does_not_grow_unbounded_with_eviction(self):
         cache = GreeksCache(max_age_ms=100)

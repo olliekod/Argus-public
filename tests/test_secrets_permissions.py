@@ -1,9 +1,9 @@
-"""
-Tests for secrets file permissions.
+# Created by Oliver Meihls
 
-Verifies that save_secrets() sets mode 0o600 on the written file
-so only the owner can read it.
-"""
+# Tests for secrets file permissions.
+#
+# Verifies that save_secrets() sets mode 0o600 on the written file
+# so only the owner can read it.
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ save_secrets = _config_mod.save_secrets
 
 class TestSecretsPermissions:
     def test_saved_secrets_have_mode_600(self, tmp_path, monkeypatch):
-        """A written secrets file should have permissions 0o600 (Unix). On Windows, chmod(0o600) may not change st_mode."""
+        # A written secrets file should have permissions 0o600 (Unix). On Windows, chmod(0o600) may not change st_mode.
         secrets_path = str(tmp_path / "secrets.yaml")
         monkeypatch.setenv("ARGUS_SECRETS", secrets_path)
 
@@ -40,7 +40,7 @@ class TestSecretsPermissions:
             assert mode == 0o600, f"Expected 0o600, got {oct(mode)}"
 
     def test_saved_secrets_readable_by_owner(self, tmp_path, monkeypatch):
-        """Owner should be able to read the secrets file after writing."""
+        # Owner should be able to read the secrets file after writing.
         secrets_path = str(tmp_path / "secrets.yaml")
         monkeypatch.setenv("ARGUS_SECRETS", secrets_path)
 

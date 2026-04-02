@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""
-Ingest Polymarket wallet data for strategy analysis.
+# Created by Oliver Meihls
 
-This script pulls read-only wallet data from Polymarket Data API endpoints,
-stores immutable raw payloads, and populates normalized analytics tables.
-
-Usage:
-  python scripts/polymarket_wallet_ingest.py --wallet 0xabc...
-  python scripts/polymarket_wallet_ingest.py --wallet 0xabc --wallet 0xdef --max-pages 200
-"""
+# Ingest Polymarket wallet data for strategy analysis.
+#
+# This script pulls read-only wallet data from Polymarket Data API endpoints,
+# stores immutable raw payloads, and populates normalized analytics tables.
+#
+# Usage:
+# python scripts/polymarket_wallet_ingest.py --wallet 0xabc...
+# python scripts/polymarket_wallet_ingest.py --wallet 0xabc --wallet 0xdef --max-pages 200
 
 from __future__ import annotations
 
@@ -590,6 +590,7 @@ def main() -> None:
             conn.commit()
         except sqlite3.Error:
             pass
+
         raise
     finally:
         conn.close()

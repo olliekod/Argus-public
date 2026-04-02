@@ -1,25 +1,24 @@
-"""
-Argus Outcomes CLI
-==================
+# Created by Oliver Meihls
 
-Command-line interface for outcome computation, coverage reporting,
-uptime diagnostics, and gap analysis.
-
-Usage::
-
-    python -m src.outcomes list              # bar inventory + coverage %
-    python -m src.outcomes list-outcomes      # outcome inventory by status
-    python -m src.outcomes heartbeats         # heartbeat components, counts, DB path
-    python -m src.outcomes health             # collector health: last bar age per source/symbol
-    python -m src.outcomes gaps --provider bybit --symbol BTCUSDT  # top gaps
-    python -m src.outcomes uptime --start 2026-02-01 --end 2026-02-09
-    python -m src.outcomes diagnose --provider bybit --symbol BTCUSDT --start 2026-02-05 --end 2026-02-09
-    python -m src.outcomes discover --bases BTC,ETH,SOL  # discover Bybit instruments
-    python -m src.outcomes backfill-bars --symbol BTCUSDT [--start ...] [--end ...]
-    python -m src.outcomes backfill --provider bybit --symbol BTCUSDT --bar 60 --start ...
-    python -m src.outcomes backfill-all --start ... --end ...
-    python -m src.outcomes coverage [--provider X] [--symbol Y]
-"""
+# Argus Outcomes CLI
+#
+# Command-line interface for outcome computation, coverage reporting,
+# uptime diagnostics, and gap analysis.
+#
+# Usage::
+#
+# python -m src.outcomes list              # bar inventory + coverage %
+# python -m src.outcomes list-outcomes      # outcome inventory by status
+# python -m src.outcomes heartbeats         # heartbeat components, counts, DB path
+# python -m src.outcomes health             # collector health: last bar age per source/symbol
+# python -m src.outcomes gaps --provider bybit --symbol BTCUSDT  # top gaps
+# python -m src.outcomes uptime --start 2026-02-01 --end 2026-02-09
+# python -m src.outcomes diagnose --provider bybit --symbol BTCUSDT --start 2026-02-05 --end 2026-02-09
+# python -m src.outcomes discover --bases BTC,ETH,SOL  # discover Bybit instruments
+# python -m src.outcomes backfill-bars --symbol BTCUSDT [--start ...] [--end ...]
+# python -m src.outcomes backfill --provider bybit --symbol BTCUSDT --bar 60 --start ...
+# python -m src.outcomes backfill-all --start ... --end ...
+# python -m src.outcomes coverage [--provider X] [--symbol Y]
 
 from __future__ import annotations
 
@@ -46,13 +45,11 @@ from src.core.coverage import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Helpers
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def _parse_date(s: str) -> int:
-    """Parse date string to epoch milliseconds (UTC)."""
+    # Parse date string to epoch milliseconds (UTC).
     try:
         dt = datetime.strptime(s, "%Y-%m-%d")
         dt = dt.replace(tzinfo=timezone.utc)
@@ -65,7 +62,7 @@ def _parse_date(s: str) -> int:
 
 
 def _format_duration(total_seconds: int) -> str:
-    """Format seconds as human-readable duration."""
+    # Format seconds as human-readable duration.
     if total_seconds <= 0:
         return "0s"
     minutes, secs = divmod(total_seconds, 60)
@@ -166,7 +163,7 @@ def _suggest_keys(requested_provider: Optional[str],
 
 
 def _print_gap_table(gaps: List[GapInfo], indent: str = "    ") -> None:
-    """Print a formatted table of gaps."""
+    # Print a formatted table of gaps.
     if not gaps:
         print(f"{indent}(no significant gaps)")
         return
@@ -185,13 +182,11 @@ async def _open_db(args) -> Database:
     return db
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Commands
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 async def _cmd_list(args):
-    """List all bar keys with continuity diagnostics."""
+    # List all bar keys with continuity diagnostics.
     db = await _open_db(args)
     try:
         inventory = await db.get_bar_inventory()
@@ -240,7 +235,7 @@ async def _cmd_list(args):
 
 
 async def _cmd_list_outcomes(args):
-    """List all outcome keys in bar_outcomes."""
+    # List all outcome keys in bar_outcomes.
     db = await _open_db(args)
     try:
         inventory = await db.get_outcome_inventory()
@@ -281,7 +276,7 @@ async def _cmd_list_outcomes(args):
 
 
 async def _cmd_gaps(args):
-    """Show top N timestamp gaps for a provider/symbol/bar."""
+    # Show top N timestamp gaps for a provider/symbol/bar.
     db = await _open_db(args)
     try:
         bar_keys = await _get_bar_keys(db)
@@ -339,7 +334,7 @@ async def _cmd_gaps(args):
 
 
 async def _cmd_uptime(args):
-    """Show system uptime computed from heartbeat records."""
+    # Show system uptime computed from heartbeat records.
     db = await _open_db(args)
     try:
         start_ms = _parse_date(args.start)
@@ -405,7 +400,7 @@ async def _cmd_uptime(args):
 
 
 async def _cmd_diagnose(args):
-    """Uptime-aware bar coverage diagnosis."""
+    # Uptime-aware bar coverage diagnosis.
     db = await _open_db(args)
     try:
         bar_keys = await _get_bar_keys(db)
@@ -510,7 +505,7 @@ async def _cmd_diagnose(args):
 
 
 async def _cmd_heartbeats(args):
-    """List heartbeat components, counts, and timestamp ranges."""
+    # List heartbeat components, counts, and timestamp ranges.
     config = load_config(args.config)
     db_path = config.get("database", {}).get("path", "data/argus.db")
     db = Database(db_path)
@@ -552,7 +547,7 @@ async def _cmd_heartbeats(args):
 
 
 async def _cmd_backfill(args):
-    """Backfill outcomes for a date range."""
+    # Backfill outcomes for a date range.
     config = load_config(args.config)
     outcomes_config = config.get("outcomes", {})
     db = await _open_db(args)
@@ -591,7 +586,7 @@ async def _cmd_backfill(args):
 
 
 async def _cmd_backfill_all(args):
-    """Backfill outcomes for all provider/symbol combos in market_bars."""
+    # Backfill outcomes for all provider/symbol combos in market_bars.
     config = load_config(args.config)
     outcomes_config = config.get("outcomes", {})
     if not outcomes_config.get("enabled", True):
@@ -643,7 +638,7 @@ async def _cmd_backfill_all(args):
 
 
 async def _cmd_health(args):
-    """Show collector health: last bar time per provider/symbol."""
+    # Show collector health: last bar time per provider/symbol.
     db = await _open_db(args)
     try:
         rows = await db.get_bar_health()
@@ -679,7 +674,7 @@ async def _cmd_health(args):
 
 
 async def _cmd_discover(args):
-    """Discover tradeable Bybit perpetual instruments."""
+    # Discover tradeable Bybit perpetual instruments.
     from src.connectors.bybit_rest import BybitRestClient
 
     config = load_config(args.config)
@@ -718,7 +713,7 @@ async def _cmd_discover(args):
 
 
 async def _cmd_backfill_bars(args):
-    """Backfill missing 1m bars from Bybit REST kline API."""
+    # Backfill missing 1m bars from Bybit REST kline API.
     from src.connectors.bybit_rest import BybitRestClient, klines_to_bar_rows
 
     config = load_config(args.config)
@@ -802,7 +797,7 @@ async def _cmd_backfill_bars(args):
 
 
 async def _cmd_coverage(args):
-    """Show bar and outcome coverage stats."""
+    # Show bar and outcome coverage stats.
     db = await _open_db(args)
     try:
         W = 64
@@ -874,17 +869,14 @@ async def _cmd_coverage(args):
         await db.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Research Loop (Hades Port)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 async def _cmd_research_loop(args):
-    """Run the Hades strategy research loop.
-
-    Wraps ``scripts/strategy_research_loop.py`` logic as a first-class CLI command.
-    Supports --case-id to tag runs with a Pantheon research case.
-    """
+    # Run the Hades strategy research loop.
+    #
+    # Wraps ``scripts/strategy_research_loop.py`` logic as a first-class CLI command.
+    # Supports --case-id to tag runs with a Pantheon research case.
     import logging as _logging
 
     _logging.basicConfig(
@@ -958,9 +950,7 @@ async def _cmd_research_loop(args):
             _time.sleep(config.loop.interval_hours * 3600)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Main
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def main():

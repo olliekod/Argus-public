@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Verify that DXLink is delivering Greeks (IV) when subscribing with option symbols.
+# Created by Oliver Meihls
 
-Run: python scripts/verify_dxlink_greeks.py
-
-If you see "Greeks events received: 0", the streamer was likely subscribing to
-underlying symbols only; the orchestrator fix uses option-level symbols so IV
-is populated. This script uses option symbols to confirm the pipeline works.
-"""
+# Verify that DXLink is delivering Greeks (IV) when subscribing with option symbols.
+#
+# Run: python scripts/verify_dxlink_greeks.py
+#
+# If you see "Greeks events received: 0", the streamer was likely subscribing to
+# underlying symbols only; the orchestrator fix uses option-level symbols so IV
+# is populated. This script uses option symbols to confirm the pipeline works.
 
 from __future__ import annotations
 

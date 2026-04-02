@@ -1,21 +1,20 @@
-"""
-Phase 4B Integration Tests
-===========================
+# Created by Oliver Meihls
 
-End-to-end replay tests using DB-like data only.
-
-Validates:
-- market_bars replay
-- bar_outcomes replay
-- conservative execution model
-- portfolio accounting
-- outcome lookahead guard
-- market data availability barrier
-- no future data leakage
-- equity curve generation
-
-Includes a minimal deterministic strategy that trades on simple rules.
-"""
+# Phase 4B Integration Tests
+#
+# End-to-end replay tests using DB-like data only.
+#
+# Validates:
+# - market_bars replay
+# - bar_outcomes replay
+# - conservative execution model
+# - portfolio accounting
+# - outcome lookahead guard
+# - market data availability barrier
+# - no future data leakage
+# - equity curve generation
+#
+# Includes a minimal deterministic strategy that trades on simple rules.
 
 from __future__ import annotations
 
@@ -35,17 +34,14 @@ from src.analysis.replay_harness import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Deterministic Example Strategy
-# ═══════════════════════════════════════════════════════════════════════════
 
 class SimpleMovingAverageStrategy(ReplayStrategy):
-    """Minimal deterministic strategy for testing.
-
-    Trades on a 3-bar simple moving average cross:
-    - BUY when close > SMA(3)
-    - SELL when close < SMA(3)
-    """
+    # Minimal deterministic strategy for testing.
+    #
+    # Trades on a 3-bar simple moving average cross:
+    # - BUY when close > SMA(3)
+    # - SELL when close < SMA(3)
 
     def __init__(self) -> None:
         self._closes: List[float] = []
@@ -115,12 +111,10 @@ class SimpleMovingAverageStrategy(ReplayStrategy):
         }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Test Data Generators
-# ═══════════════════════════════════════════════════════════════════════════
 
 def make_bars(n: int = 20, start_ms: int = 1_700_000_000_000, price_start: float = 100.0) -> List[BarData]:
-    """Generate n synthetic bars with a simple uptrend then downtrend."""
+    # Generate n synthetic bars with a simple uptrend then downtrend.
     bars = []
     price = price_start
     for i in range(n):
@@ -142,7 +136,7 @@ def make_bars(n: int = 20, start_ms: int = 1_700_000_000_000, price_start: float
 
 
 def make_outcomes(bars: List[BarData], horizon_ms: int = 300_000) -> List[Dict[str, Any]]:
-    """Generate synthetic outcomes for each bar."""
+    # Generate synthetic outcomes for each bar.
     outcomes = []
     for i, bar in enumerate(bars):
         # Outcome is available only after window closes
@@ -180,7 +174,7 @@ def make_outcomes(bars: List[BarData], horizon_ms: int = 300_000) -> List[Dict[s
 
 
 def make_snapshots(bars: List[BarData], delay_ms: int = 5_000) -> List[MarketDataSnapshot]:
-    """Generate market data snapshots with a realistic delay."""
+    # Generate market data snapshots with a realistic delay.
     snaps = []
     for bar in bars:
         snaps.append(MarketDataSnapshot(
@@ -201,13 +195,11 @@ def make_snapshots(bars: List[BarData], delay_ms: int = 5_000) -> List[MarketDat
     return snaps
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Integration Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestPhase4BEndToEnd:
     def test_full_replay_with_bars_and_outcomes(self):
-        """End-to-end: replay bars → generate intents → fill → equity curve."""
+        # End-to-end: replay bars → generate intents → fill → equity curve.
         bars = make_bars(20)
         outcomes = make_outcomes(bars)
         strategy = SimpleMovingAverageStrategy()
@@ -237,7 +229,7 @@ class TestPhase4BEndToEnd:
         assert strategy._bars_seen == 20
 
     def test_equity_curve_generated(self):
-        """Verify equity curve has one point per bar."""
+        # Verify equity curve has one point per bar.
         bars = make_bars(10)
         outcomes = make_outcomes(bars)
         strategy = SimpleMovingAverageStrategy()
@@ -251,7 +243,7 @@ class TestPhase4BEndToEnd:
         assert curve[0].ts_ms > 0
 
     def test_fills_and_rejects_recorded(self):
-        """Execution model records fills and rejects correctly."""
+        # Execution model records fills and rejects correctly.
         bars = make_bars(20)
         outcomes = make_outcomes(bars)
         strategy = SimpleMovingAverageStrategy()
@@ -267,7 +259,7 @@ class TestPhase4BEndToEnd:
         assert total >= 0  # May be 0 if no SMA cross
 
     def test_session_distribution_tracked(self):
-        """Session regime distribution is tracked."""
+        # Session regime distribution is tracked.
         bars = make_bars(10)
         outcomes = make_outcomes(bars)
         strategy = SimpleMovingAverageStrategy()
@@ -280,13 +272,11 @@ class TestPhase4BEndToEnd:
         assert sum(result.session_distribution.values()) == 10
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Lookahead Barrier Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestOutcomeLookaheadBarrier:
     def test_outcomes_not_visible_before_window_end(self):
-        """Outcomes must not be visible until sim_time >= window_end_ms."""
+        # Outcomes must not be visible until sim_time >= window_end_ms.
 
         class OutcomeRecorder(ReplayStrategy):
             def __init__(self):
@@ -329,7 +319,7 @@ class TestOutcomeLookaheadBarrier:
         assert last_count > 0, "Final bar should see some outcomes"
 
     def test_no_future_outcomes_leaked(self):
-        """Verify that no outcome's window_end > sim_time is ever visible."""
+        # Verify that no outcome's window_end > sim_time is ever visible.
 
         class FutureLeakDetector(ReplayStrategy):
             def __init__(self):
@@ -363,13 +353,11 @@ class TestOutcomeLookaheadBarrier:
         assert strategy.leaked is False, "Future outcome data was leaked!"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Market Data Availability Barrier Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestMarketDataBarrier:
     def test_snapshots_not_visible_before_recv_ts(self):
-        """Snapshots should only appear when sim_time >= recv_ts_ms."""
+        # Snapshots should only appear when sim_time >= recv_ts_ms.
 
         class SnapshotRecorder(ReplayStrategy):
             def __init__(self):
@@ -412,7 +400,7 @@ class TestMarketDataBarrier:
         assert strategy.snapshot_counts[0][1] == 0, "First bar should see 0 snapshots"
 
     def test_no_future_snapshots_leaked(self):
-        """Verify no snapshot with recv_ts_ms > sim_time is visible."""
+        # Verify no snapshot with recv_ts_ms > sim_time is visible.
 
         class SnapshotLeakDetector(ReplayStrategy):
             def __init__(self):
@@ -448,7 +436,7 @@ class TestMarketDataBarrier:
         assert strategy.leaked is False, "Future snapshot data was leaked!"
 
     def test_snapshots_monotonically_increasing(self):
-        """Visible snapshots should accumulate monotonically."""
+        # Visible snapshots should accumulate monotonically.
 
         class MonotonicChecker(ReplayStrategy):
             def __init__(self):
@@ -488,13 +476,11 @@ class TestMarketDataBarrier:
             )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Backward Compatibility
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestBackwardCompatibility:
     def test_harness_works_without_snapshots(self):
-        """Old usage without snapshots should still work."""
+        # Old usage without snapshots should still work.
         bars = make_bars(10)
         outcomes = make_outcomes(bars)
         strategy = SimpleMovingAverageStrategy()
@@ -509,7 +495,7 @@ class TestBackwardCompatibility:
         assert result.bars_replayed == 10
 
     def test_old_strategy_without_kwargs(self):
-        """Strategy that doesn't accept visible_snapshots should still work."""
+        # Strategy that doesn't accept visible_snapshots should still work.
 
         class OldStyleStrategy(ReplayStrategy):
             @property
@@ -539,13 +525,11 @@ class TestBackwardCompatibility:
         assert result.bars_replayed == 5
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Quote recv_ts_ms in Execution
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRecvTsInExecution:
     def test_recv_ts_preferred_for_staleness(self):
-        """Execution model should use recv_ts_ms for staleness check."""
+        # Execution model should use recv_ts_ms for staleness check.
         exec_model = ExecutionModel(ExecutionConfig(max_stale_ms=60_000))
         sim_ts = 1_700_000_100_000
 
@@ -559,7 +543,7 @@ class TestRecvTsInExecution:
         assert result.filled is True, "Should use recv_ts (fresh), not provider ts (stale)"
 
     def test_falls_back_to_provider_ts(self):
-        """When recv_ts_ms=0, should fall back to provider timestamp."""
+        # When recv_ts_ms=0, should fall back to provider timestamp.
         exec_model = ExecutionModel(ExecutionConfig(max_stale_ms=60_000))
         sim_ts = 1_700_000_100_000
 
@@ -572,7 +556,7 @@ class TestRecvTsInExecution:
         assert result.filled is True
 
     def test_both_zero_skips_staleness(self):
-        """When both timestamps are 0, staleness check is skipped."""
+        # When both timestamps are 0, staleness check is skipped.
         exec_model = ExecutionModel(ExecutionConfig(max_stale_ms=60_000))
         sim_ts = 1_700_000_100_000
 

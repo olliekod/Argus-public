@@ -1,16 +1,16 @@
-"""
-Tests for orchestrator task tracking + shutdown correctness (10.4).
+# Created by Oliver Meihls
 
-Verifies:
-- All background tasks are registered in _tasks
-- shutdown cancels all tasks
-- No dangling tasks after shutdown
-- Graceful cleanup of components
-
-NOTE: These tests do NOT import the orchestrator module directly because
-it pulls in yfinance (through ibit_detector -> trade_calculator) which
-may not be installed. Instead, we test the shutdown contract structurally.
-"""
+# Tests for orchestrator task tracking + shutdown correctness (10.4).
+#
+# Verifies:
+# - All background tasks are registered in _tasks
+# - shutdown cancels all tasks
+# - No dangling tasks after shutdown
+# - Graceful cleanup of components
+#
+# NOTE: These tests do NOT import the orchestrator module directly because
+# it pulls in yfinance (through ibit_detector -> trade_calculator) which
+# may not be installed. Instead, we test the shutdown contract structurally.
 
 from __future__ import annotations
 
@@ -21,15 +21,14 @@ import pytest
 
 
 async def _simulate_stop(orch) -> None:
-    """Simulate the orchestrator stop() logic without importing the module.
-
-    Mirrors the shutdown sequence in ArgusOrchestrator.stop():
-    1. Set _running = False
-    2. Flush bar_builder and persistence
-    3. Stop event bus
-    4. Cancel all tasks and await them
-    5. Close connectors and DB
-    """
+    # Simulate the orchestrator stop() logic without importing the module.
+    #
+    # Mirrors the shutdown sequence in ArgusOrchestrator.stop():
+    # 1. Set _running = False
+    # 2. Flush bar_builder and persistence
+    # 3. Stop event bus
+    # 4. Cancel all tasks and await them
+    # 5. Close connectors and DB
     orch._running = False
 
     if orch.bar_builder:
@@ -78,7 +77,7 @@ async def _simulate_stop(orch) -> None:
 
 
 def _make_mock_orch(**overrides):
-    """Build a minimal MagicMock orchestrator with expected attributes."""
+    # Build a minimal MagicMock orchestrator with expected attributes.
     orch = MagicMock()
     orch._running = True
     orch._tasks = overrides.get("_tasks", [])
@@ -103,17 +102,17 @@ def _make_mock_orch(**overrides):
 
 
 class TestOrchestratorTaskTracking:
-    """Verify task management mirrors ArgusOrchestrator.stop() contract."""
+    # Verify task management mirrors ArgusOrchestrator.stop() contract.
 
     @pytest.mark.asyncio
     async def test_tasks_list_starts_empty(self):
-        """_tasks should be empty before run()."""
+        # _tasks should be empty before run().
         orch = _make_mock_orch()
         assert len(orch._tasks) == 0
 
     @pytest.mark.asyncio
     async def test_stop_cancels_all_tasks(self):
-        """stop() should cancel every task in _tasks."""
+        # stop() should cancel every task in _tasks.
         async def forever():
             await asyncio.sleep(3600)
 
@@ -128,7 +127,7 @@ class TestOrchestratorTaskTracking:
 
     @pytest.mark.asyncio
     async def test_stop_awaits_task_cancellation(self):
-        """After stop(), cancelled tasks should not be pending."""
+        # After stop(), cancelled tasks should not be pending.
         async def forever():
             await asyncio.sleep(3600)
 
@@ -144,14 +143,14 @@ class TestOrchestratorTaskTracking:
 
     @pytest.mark.asyncio
     async def test_stop_sets_running_false(self):
-        """stop() must set _running=False to break polling loops."""
+        # stop() must set _running=False to break polling loops.
         orch = _make_mock_orch()
         await _simulate_stop(orch)
         assert orch._running is False
 
     @pytest.mark.asyncio
     async def test_stop_flushes_persistence(self):
-        """stop() should call persistence.shutdown() if persistence exists."""
+        # stop() should call persistence.shutdown() if persistence exists.
         orch = _make_mock_orch(
             bar_builder=MagicMock(),
             persistence=MagicMock(),

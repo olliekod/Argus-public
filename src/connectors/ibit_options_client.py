@@ -1,10 +1,9 @@
-"""
-Crypto ETF Options Client
-=========================
+# Created by Oliver Meihls
 
-Fetches options chain data for crypto ETFs (IBIT, BITO, etc.) using yfinance.
-Provides IV Rank, available strikes, and chain data.
-"""
+# Crypto ETF Options Client
+#
+# Fetches options chain data for crypto ETFs (IBIT, BITO, etc.) using yfinance.
+# Provides IV Rank, available strikes, and chain data.
 
 import asyncio
 import logging
@@ -25,17 +24,15 @@ logger = logging.getLogger(__name__)
 
 
 class IBITOptionsClient:
-    """
-    Client for fetching options data from Yahoo Finance.
-    
-    Note: Data has 15-20 minute delay, which is acceptable for
-    multi-day put spread strategies.
-    """
+    # Client for fetching options data from Yahoo Finance.
+    #
+    # Note: Data has 15-20 minute delay, which is acceptable for
+    # multi-day put spread strategies.
     
     CACHE_TTL_SECONDS = 900  # 15 minutes
     
     def __init__(self, symbol: str = "IBIT"):
-        """Initialize the options client for a given symbol."""
+        # Initialize the options client for a given symbol.
         self.symbol = symbol.upper()
         self.ticker = yf.Ticker(self.symbol)
         self._cache: Dict[str, Tuple[float, any]] = {}
@@ -68,7 +65,7 @@ class IBITOptionsClient:
             self.last_error = error
     
     def _get_cached(self, key: str) -> Optional[any]:
-        """Get cached value if not expired."""
+        # Get cached value if not expired.
         if key in self._cache:
             timestamp, value = self._cache[key]
             if time.time() - timestamp < self.CACHE_TTL_SECONDS:
@@ -76,11 +73,11 @@ class IBITOptionsClient:
         return None
     
     def _set_cache(self, key: str, value: any) -> None:
-        """Set cache value with current timestamp."""
+        # Set cache value with current timestamp.
         self._cache[key] = (time.time(), value)
     
     def get_current_price(self) -> float:
-        """Get current IBIT price."""
+        # Get current IBIT price.
         cached = self._get_cached("price")
         if cached:
             return cached
@@ -98,12 +95,10 @@ class IBITOptionsClient:
             return 0.0
     
     def get_available_expirations(self) -> List[str]:
-        """
-        Get all available option expiration dates.
-        
-        Returns:
-            List of expiration dates as strings (YYYY-MM-DD)
-        """
+        # Get all available option expiration dates.
+        #
+        # Returns:
+        # List of expiration dates as strings (YYYY-MM-DD)
         cached = self._get_cached("expirations")
         if cached:
             return cached
@@ -125,16 +120,14 @@ class IBITOptionsClient:
         min_dte: int = 7, 
         max_dte: int = 14
     ) -> List[Tuple[str, int]]:
-        """
-        Get expirations within DTE range.
-        
-        Args:
-            min_dte: Minimum days to expiration
-            max_dte: Maximum days to expiration
-            
-        Returns:
-            List of (expiration_date, dte) tuples
-        """
+        # Get expirations within DTE range.
+        #
+        # Args:
+        # min_dte: Minimum days to expiration
+        # max_dte: Maximum days to expiration
+        #
+        # Returns:
+        # List of (expiration_date, dte) tuples
         eastern = ZoneInfo("America/New_York")
         today = datetime.now(eastern).date()
         expirations = self.get_available_expirations()
@@ -154,15 +147,13 @@ class IBITOptionsClient:
         return result
     
     def get_options_chain(self, expiration: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Get full options chain for an expiration.
-        
-        Args:
-            expiration: Expiration date string (YYYY-MM-DD)
-            
-        Returns:
-            Tuple of (calls_df, puts_df)
-        """
+        # Get full options chain for an expiration.
+        #
+        # Args:
+        # expiration: Expiration date string (YYYY-MM-DD)
+        #
+        # Returns:
+        # Tuple of (calls_df, puts_df)
         cache_key = f"chain_{expiration}"
         cached = self._get_cached(cache_key)
         if cached:
@@ -186,17 +177,15 @@ class IBITOptionsClient:
         target_delta: float = 0.18,
         spread_width: float = 2.0
     ) -> Optional[Dict]:
-        """
-        Find optimal put spread strikes.
-        
-        Args:
-            expiration: Target expiration
-            target_delta: Target delta for short put (~0.15-0.20)
-            spread_width: Distance between strikes in dollars
-            
-        Returns:
-            Dict with short_strike, long_strike, and chain data
-        """
+        # Find optimal put spread strikes.
+        #
+        # Args:
+        # expiration: Target expiration
+        # target_delta: Target delta for short put (~0.15-0.20)
+        # spread_width: Distance between strikes in dollars
+        #
+        # Returns:
+        # Dict with short_strike, long_strike, and chain data
         _, puts = self.get_options_chain(expiration)
         if puts.empty:
             return None
@@ -283,12 +272,10 @@ class IBITOptionsClient:
         }
     
     def get_atm_iv(self) -> float:
-        """
-        Get at-the-money implied volatility.
-        
-        Returns:
-            ATM IV as decimal (e.g., 0.45 = 45%)
-        """
+        # Get at-the-money implied volatility.
+        #
+        # Returns:
+        # ATM IV as decimal (e.g., 0.45 = 45%)
         expirations = self.get_expirations_in_range(7, 30)
         if not expirations:
             expirations = self.get_expirations_in_range(1, 60)
@@ -321,18 +308,16 @@ class IBITOptionsClient:
         return iv
     
     def get_iv_rank(self, current_iv: Optional[float] = None) -> float:
-        """
-        Calculate IV Rank (percentile over 52 weeks).
-        
-        Note: Since we don't have 52 weeks of history immediately,
-        we approximate using available data or return 50% as neutral.
-        
-        Args:
-            current_iv: Current IV (will fetch if not provided)
-            
-        Returns:
-            IV Rank as percentage (0-100)
-        """
+        # Calculate IV Rank (percentile over 52 weeks).
+        #
+        # Note: Since we don't have 52 weeks of history immediately,
+        # we approximate using available data or return 50% as neutral.
+        #
+        # Args:
+        # current_iv: Current IV (will fetch if not provided)
+        #
+        # Returns:
+        # IV Rank as percentage (0-100)
         if current_iv is None:
             current_iv = self.get_atm_iv()
         
@@ -372,12 +357,10 @@ class IBITOptionsClient:
             return ((current_iv - IV_LOW) / (IV_HIGH - IV_LOW)) * 100
     
     def get_market_status(self) -> Dict:
-        """
-        Get current market status and IBIT overview.
-
-        Returns:
-            Dict with price, IV, IV rank, and market hours status
-        """
+        # Get current market status and IBIT overview.
+        #
+        # Returns:
+        # Dict with price, IV, IV rank, and market hours status
         eastern = ZoneInfo("America/New_York")
         now = datetime.now(eastern)
 
@@ -402,7 +385,7 @@ class IBITOptionsClient:
         }
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Return health for dashboard."""
+        # Return health for dashboard.
         now = time.time()
         age = (now - self.last_success_ts) if self.last_success_ts else None
         if self.consecutive_failures > 0:
@@ -434,16 +417,14 @@ class IBITOptionsClient:
         )
     
     def get_bid_ask_quality(self, expiration: str, strike: float) -> Dict:
-        """
-        Get bid-ask spread quality for a specific option.
-        
-        Args:
-            expiration: Expiration date string
-            strike: Strike price
-            
-        Returns:
-            Dict with bid, ask, spread, spread_pct, and quality rating
-        """
+        # Get bid-ask spread quality for a specific option.
+        #
+        # Args:
+        # expiration: Expiration date string
+        # strike: Strike price
+        #
+        # Returns:
+        # Dict with bid, ask, spread, spread_pct, and quality rating
         _, puts = self.get_options_chain(expiration)
         if puts.empty:
             return {'quality': 'unknown', 'spread_pct': None}
@@ -500,17 +481,15 @@ class IBITOptionsClient:
         short_strike: float, 
         long_strike: float
     ) -> Dict:
-        """
-        Estimate realistic fill for a put spread considering bid-ask.
-        
-        Args:
-            expiration: Expiration date
-            short_strike: Short put strike
-            long_strike: Long put strike
-            
-        Returns:
-            Dict with theoretical, realistic, and worst-case fills
-        """
+        # Estimate realistic fill for a put spread considering bid-ask.
+        #
+        # Args:
+        # expiration: Expiration date
+        # short_strike: Short put strike
+        # long_strike: Long put strike
+        #
+        # Returns:
+        # Dict with theoretical, realistic, and worst-case fills
         short_quality = self.get_bid_ask_quality(expiration, short_strike)
         long_quality = self.get_bid_ask_quality(expiration, long_strike)
         
@@ -539,7 +518,7 @@ class IBITOptionsClient:
 
 # Test function
 async def test_client():
-    """Test the IBIT options client."""
+    # Test the IBIT options client.
     client = IBITOptionsClient()
     
     print("=" * 60)

@@ -1,16 +1,15 @@
-"""
-Tests for Strategy Evaluator
-==============================
+# Created by Oliver Meihls
 
-Verifies:
-- Deterministic ranking
-- Metric edge-case handling (no trades, no losses, zero variance, NaN)
-- Robustness penalty computation
-- Regime-conditioned scoring
-- Composite score correctness
-- Walk-forward stability penalty
-- Full evaluator pipeline (load → evaluate → rank)
-"""
+# Tests for Strategy Evaluator
+#
+# Verifies:
+# - Deterministic ranking
+# - Metric edge-case handling (no trades, no losses, zero variance, NaN)
+# - Robustness penalty computation
+# - Regime-conditioned scoring
+# - Composite score correctness
+# - Walk-forward stability penalty
+# - Full evaluator pipeline (load → evaluate → rank)
 
 from __future__ import annotations
 
@@ -38,9 +37,7 @@ from src.analysis.strategy_evaluator import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Fixtures: synthetic experiment artifacts
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _make_experiment(
     strategy_id: str = "TEST_STRATEGY",
@@ -105,9 +102,7 @@ def _make_experiment(
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: _safe_float
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSafeFloat:
     def test_normal_float(self):
@@ -134,9 +129,7 @@ class TestSafeFloat:
         assert _safe_float("not_a_number") == 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: extract_metrics
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestExtractMetrics:
     def test_basic_extraction(self):
@@ -165,9 +158,7 @@ class TestExtractMetrics:
         assert m["sharpe"] == 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Penalty computations
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRejectPenalty:
     def test_high_fill_rate_no_penalty(self):
@@ -297,9 +288,7 @@ class TestWalkForwardPenalty:
         assert p == 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Regime scoring
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRegimeScores:
     def test_basic_regime_scores(self):
@@ -329,13 +318,11 @@ class TestRegimeScores:
         assert compute_regime_scores({}) == {}
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Composite scoring
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestCompositeScore:
     def test_single_experiment_gets_mid_score(self):
-        """A single experiment should get norm 0.5 for return and sharpe."""
+        # A single experiment should get norm 0.5 for return and sharpe.
         m = extract_metrics(_make_experiment())
         score = compute_composite_score(m, [m])
         assert score["components"]["return_norm"] == 0.5
@@ -377,13 +364,11 @@ class TestCompositeScore:
         assert score_clean["composite_score"] > score_pen["composite_score"]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Deterministic ranking
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestDeterministicRanking:
     def test_ranking_is_deterministic(self):
-        """Running evaluate() twice on the same data produces identical rankings."""
+        # Running evaluate() twice on the same data produces identical rankings.
         exps = [
             _make_experiment(run_id="r1", strategy_id="S1", total_return_pct=5.0, sharpe=1.5),
             _make_experiment(run_id="r2", strategy_id="S2", total_return_pct=8.0, sharpe=2.0),
@@ -430,9 +415,7 @@ class TestDeterministicRanking:
         assert rankings[-1]["strategy_id"] == "BAD"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Edge cases
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestEdgeCases:
     def test_no_trades_experiment(self):
@@ -469,7 +452,7 @@ class TestEdgeCases:
         assert not math.isnan(score["composite_score"])
 
     def test_nan_in_experiment_json(self):
-        """NaN values in JSON should not crash the evaluator."""
+        # NaN values in JSON should not crash the evaluator.
         exp = _make_experiment()
         exp["result"]["portfolio"]["sharpe_annualized_proxy"] = None
         m = extract_metrics(exp)
@@ -481,7 +464,7 @@ class TestEdgeCases:
         assert m["run_id"] == ""
 
     def test_single_experiment(self):
-        """Evaluator works with just one experiment."""
+        # Evaluator works with just one experiment.
         with tempfile.TemporaryDirectory() as tmpdir:
             exp = _make_experiment()
             with open(os.path.join(tmpdir, "exp.json"), "w") as f:
@@ -517,9 +500,7 @@ class TestEdgeCases:
             assert count == 1
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Full pipeline
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestFullPipeline:
     def test_load_evaluate_save(self):

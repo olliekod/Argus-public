@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
@@ -45,7 +47,7 @@ def _strike_distance_pct(
     spot: float,
     metadata: Optional[MarketMetadata],
 ) -> Optional[float]:
-    """Compute abs(spot - strike) / spot for binary, or midpoint for range."""
+    # Compute abs(spot - strike) / spot for binary, or midpoint for range.
     if metadata is None or spot <= 0:
         return None
     if metadata.is_range and metadata.strike_floor is not None and metadata.strike_cap is not None:
@@ -60,7 +62,7 @@ def _strike_distance_bucket(
     sd_pct: Optional[float],
     edges: Optional[List[float]] = None,
 ) -> str:
-    """Bucket strike distance by configurable edges. Default: [0.5%, 1%, 2%, 5%]."""
+    # Bucket strike distance by configurable edges. Default: [0.5%, 1%, 2%, 5%].
     if sd_pct is None:
         return "na"
     if edges is None:
@@ -112,13 +114,12 @@ def build_decision_context(
     drift: float = 0.0,
     flow: float = 0.0,
 ) -> Dict[str, Any]:
-    """Build a compact decision context payload for paper logs.
-
-    Design goals:
-    - small: compact keys, rounded numeric values
-    - stable: explicit version field for future migrations
-    - safe: avoid large nested payloads
-    """
+    # Build a compact decision context payload for paper logs.
+    #
+    # Design goals:
+    # - small: compact keys, rounded numeric values
+    # - stable: explicit version field for future migrations
+    # - safe: avoid large nested payloads
     spread_cents: Optional[int] = None
     depth_contracts: Optional[int] = None
     obi: Optional[float] = None

@@ -1,4 +1,6 @@
-"""Persistent strategy/evidence store for Pantheon research cases."""
+# Created by Oliver Meihls
+
+# Persistent strategy/evidence store for Pantheon research cases.
 
 from __future__ import annotations
 
@@ -18,7 +20,7 @@ from src.agent.pantheon.roles import (
 
 @dataclass
 class EvidenceGrader:
-    """Grades strategy quality from Athena confidence + Ares blockers."""
+    # Grades strategy quality from Athena confidence + Ares blockers.
 
     def grade(self, athena_confidence: float, final_blockers: int) -> str:
         if athena_confidence > 0.8 and final_blockers == 0:
@@ -31,7 +33,7 @@ class EvidenceGrader:
 
 
 class FactoryPipe:
-    """Persists completed case files into an on-disk sqlite strategy library."""
+    # Persists completed case files into an on-disk sqlite strategy library.
 
     def __init__(self, db_path: str = "data/factory.db") -> None:
         self.db_path = Path(db_path)
@@ -74,7 +76,7 @@ class FactoryPipe:
                 )
 
     def persist_case(self, case: Any) -> int:
-        """Persist a completed case object and all stage artifacts."""
+        # Persist a completed case object and all stage artifacts.
         artifacts: List[Dict[str, Any]] = list(getattr(case, "artifacts", []))
         case_id = str(getattr(case, "case_id", ""))
         objective = str(getattr(case, "objective", "Unnamed Strategy"))
@@ -185,7 +187,7 @@ class FactoryPipe:
     def get_promoted_strategies(
         self, gradings: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
-        """Return all strategies that were promoted by Athena."""
+        # Return all strategies that were promoted by Athena.
         target_gradings = gradings or ["Gold", "Silver"]
         with self._connect() as conn:
             placeholders = ",".join(["?"] * len(target_gradings))
@@ -201,4 +203,5 @@ class FactoryPipe:
                 return parse_critique_response(content, manifest_hash="").manifest_hash
         except Exception:
             pass
+
         return fallback_hash

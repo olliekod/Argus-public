@@ -1,4 +1,6 @@
-"""Pantheon Intelligence Engine — structured research agents."""
+# Created by Oliver Meihls
+
+# Pantheon Intelligence Engine — structured research agents.
 
 from .factory import EvidenceGrader, FactoryPipe
 from .hermes import HadesBacktestConfig, HermesRouter

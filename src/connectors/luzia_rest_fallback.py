@@ -1,15 +1,14 @@
-"""
-Luzia.dev Unified REST Polling Connector
-========================================
+# Created by Oliver Meihls
 
-Provides aggregate crypto ticks from multiple exchanges via REST polling.
-Used as a resilient, last-line fallback when WebSockets are unavailable.
-
-Designed for Free Tier:
-- 100 requests/minute
-- 5,000 requests/day
-(Polls every ~15-30s to stay safely under daily limits, or faster on-demand).
-"""
+# Luzia.dev Unified REST Polling Connector
+#
+# Provides aggregate crypto ticks from multiple exchanges via REST polling.
+# Used as a resilient, last-line fallback when WebSockets are unavailable.
+#
+# Designed for Free Tier:
+# - 100 requests/minute
+# - 5,000 requests/day
+# (Polls every ~15-30s to stay safely under daily limits, or faster on-demand).
 
 import asyncio
 import time
@@ -23,11 +22,9 @@ logger = get_connector_logger('luzia_rest')
 
 
 class LuziaPollingFeed:
-    """
-    Luzia.dev REST Polling client.
-    
-    Used as an insurance policy when primary WS feeds are down.
-    """
+    # Luzia.dev REST Polling client.
+    #
+    # Used as an insurance policy when primary WS feeds are down.
     
     BASE_URL = "https://api.luzia.dev/v1/ticker"
     
@@ -57,12 +54,12 @@ class LuziaPollingFeed:
         logger.info(f"Luzia Polling Feed initialized for {self.endpoints} every {self.interval}s")
 
     async def start(self) -> None:
-        """Start polling loop."""
+        # Start polling loop.
         self._running = True
         self._task = asyncio.create_task(self._poll_loop())
 
     async def stop(self) -> None:
-        """Stop polling loop."""
+        # Stop polling loop.
         self._running = False
         if self._task:
             self._task.cancel()
@@ -126,7 +123,7 @@ class LuziaPollingFeed:
                     await asyncio.sleep(sleep_time)
 
     async def _handle_ticker(self, payload: Dict[str, Any]) -> None:
-        """Parse ticker payload and invoke callback."""
+        # Parse ticker payload and invoke callback.
         # Luzia REST Format: { "symbol": "BTC/USDT", "exchange": "binance", "last": ... }
         exchange = payload.get('exchange', 'luzia')
         symbol = payload.get('symbol', 'unknown')

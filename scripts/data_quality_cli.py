@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""
-Data Quality CLI
-================
+# Created by Oliver Meihls
 
-Command-line tool to generate data quality reports.
-
-Usage:
-    python -m scripts.data_quality_cli --providers alpaca yahoo --symbols IBIT BITO --days 7
-    python -m scripts.data_quality_cli --output reports/quality.json
-"""
+# Data Quality CLI
+#
+# Command-line tool to generate data quality reports.
+#
+# Usage:
+# python -m scripts.data_quality_cli --providers alpaca yahoo --symbols IBIT BITO --days 7
+# python -m scripts.data_quality_cli --output reports/quality.json
 
 import argparse
 import asyncio

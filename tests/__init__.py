@@ -1,3 +1,3 @@
-"""
-Test suite for Argus.
-"""
+# Created by Oliver Meihls
+
+# Test suite for Argus.

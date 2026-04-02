@@ -1,9 +1,8 @@
-"""
-Tests for Spread Candidate Generator
-=====================================
+# Created by Oliver Meihls
 
-Unit tests for Phase 3B put spread candidate generation.
-"""
+# Tests for Spread Candidate Generator
+#
+# Unit tests for Phase 3B put spread candidate generation.
 
 import time
 import pytest
@@ -25,7 +24,7 @@ _TEST_EXPIRATION_MS = _TEST_NOW_MS + (14 * 24 * 60 * 60 * 1000)  # 14 days forwa
 
 
 def make_put(strike: float, bid: float, ask: float, delta: float = None) -> OptionQuoteEvent:
-    """Helper to create a put quote."""
+    # Helper to create a put quote.
     return OptionQuoteEvent(
         contract_id=f"p_{strike}",
         symbol="IBIT",
@@ -41,7 +40,7 @@ def make_put(strike: float, bid: float, ask: float, delta: float = None) -> Opti
     )
 
 def make_snapshot(puts: list, underlying_price: float = 50.0) -> OptionChainSnapshotEvent:
-    """Helper to create a chain snapshot."""
+    # Helper to create a chain snapshot.
     return OptionChainSnapshotEvent(
         symbol="IBIT",
         expiration_ms=_TEST_EXPIRATION_MS,  # Dynamic future date
@@ -56,10 +55,10 @@ def make_snapshot(puts: list, underlying_price: float = 50.0) -> OptionChainSnap
 
 
 class TestSpreadCandidateGeneration:
-    """Tests for spread candidate generation."""
+    # Tests for spread candidate generation.
     
     def test_generates_valid_spread(self):
-        """Test generating a valid put spread candidate."""
+        # Test generating a valid put spread candidate.
         puts = [
             make_put(44.0, 0.80, 0.90, delta=-0.12),
             make_put(46.0, 1.50, 1.60, delta=-0.18),
@@ -85,7 +84,7 @@ class TestSpreadCandidateGeneration:
         assert c.max_loss == 1.40  # 2.0 - 0.60
     
     def test_filters_by_delta(self):
-        """Test delta-based filtering."""
+        # Test delta-based filtering.
         puts = [
             make_put(44.0, 0.80, 0.90, delta=-0.08),  # Too low delta
             make_put(46.0, 1.50, 1.60, delta=-0.18),
@@ -110,7 +109,7 @@ class TestSpreadCandidateGeneration:
         assert candidates[0].short_strike == 46.0
     
     def test_filters_by_credit(self):
-        """Test minimum credit filter."""
+        # Test minimum credit filter.
         puts = [
             make_put(44.0, 0.50, 0.55),  # Low credit spread
             make_put(46.0, 0.60, 0.65),
@@ -130,7 +129,7 @@ class TestSpreadCandidateGeneration:
         assert len(candidates) == 0
     
     def test_deterministic_ranking(self):
-        """Test that ranking is deterministic."""
+        # Test that ranking is deterministic.
         puts = [
             make_put(42.0, 0.50, 0.60, delta=-0.10),
             make_put(44.0, 0.90, 1.00, delta=-0.15),
@@ -159,10 +158,10 @@ class TestSpreadCandidateGeneration:
 
 
 class TestCandidateIdempotency:
-    """Tests for idempotency and determinism."""
+    # Tests for idempotency and determinism.
     
     def test_candidate_id_determination(self):
-        """Test that candidate IDs are deterministic."""
+        # Test that candidate IDs are deterministic.
         id1 = compute_candidate_id("strat", "IBIT", 1740124800000, 46.0, 44.0, 1700000000000)
         id2 = compute_candidate_id("strat", "IBIT", 1740124800000, 46.0, 44.0, 1700000000000)
         id3 = compute_candidate_id("strat", "IBIT", 1740124800000, 46.0, 44.0, 1700000001000)
@@ -171,7 +170,7 @@ class TestCandidateIdempotency:
         assert id1 != id3  # Different timestamp
     
     def test_config_hash_determinism(self):
-        """Test that config hashes are deterministic."""
+        # Test that config hashes are deterministic.
         config1 = {"min_dte": 7, "max_dte": 21, "target_delta": 0.18}
         config2 = {"min_dte": 7, "max_dte": 21, "target_delta": 0.18}
         config3 = {"min_dte": 7, "max_dte": 14, "target_delta": 0.18}
@@ -181,10 +180,10 @@ class TestCandidateIdempotency:
 
 
 class TestSignalEmission:
-    """Tests for signal emission."""
+    # Tests for signal emission.
     
     def test_emits_signals(self):
-        """Test that signals are emitted for candidates."""
+        # Test that signals are emitted for candidates.
         puts = [
             make_put(44.0, 0.80, 0.90, delta=-0.12),
             make_put(46.0, 1.50, 1.60, delta=-0.18),
@@ -217,15 +216,14 @@ class TestSignalEmission:
 
 
 class TestChainSnapshotIdempotency:
-    """Tests for chain snapshot idempotency and determinism.
-    
-    Since we use ON CONFLICT DO NOTHING, we verify that:
-    1. Same timestamp + same content = identical chain_hash (safe to skip)
-    2. Same snapshot processed twice = no signal duplication
-    """
+    # Tests for chain snapshot idempotency and determinism.
+    #
+    # Since we use ON CONFLICT DO NOTHING, we verify that:
+    # 1. Same timestamp + same content = identical chain_hash (safe to skip)
+    # 2. Same snapshot processed twice = no signal duplication
     
     def test_identical_snapshots_same_chain_hash(self):
-        """Identical snapshots at same timestamp should produce same chain_hash."""
+        # Identical snapshots at same timestamp should produce same chain_hash.
         from src.core.option_events import compute_chain_hash
         
         puts = [
@@ -244,7 +242,7 @@ class TestChainSnapshotIdempotency:
         assert hash1 == hash2, "Identical snapshots should have same chain_hash"
     
     def test_different_content_different_hash(self):
-        """Different chain structure must produce different chain_hash."""
+        # Different chain structure must produce different chain_hash.
         from src.core.option_events import compute_chain_hash
         
         # Different number of puts = different chain structure
@@ -264,7 +262,7 @@ class TestChainSnapshotIdempotency:
         assert hash1 != hash2, "Different chain structures should have different chain_hash"
     
     def test_no_signal_duplication_on_replay(self):
-        """Processing same snapshot twice should not emit duplicate signals."""
+        # Processing same snapshot twice should not emit duplicate signals.
         puts = [
             make_put(44.0, 0.80, 0.90, delta=-0.12),
             make_put(46.0, 1.50, 1.60, delta=-0.18),

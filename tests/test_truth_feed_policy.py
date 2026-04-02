@@ -1,9 +1,9 @@
-"""
-Tests for orchestrator truth-feed policy:
-  - Coinbase WS (primary) started in run(), disconnected in stop()
-  - OKX WS (secondary fallback) with deterministic source switching
-  - Truth-feed health tracking per asset
-"""
+# Created by Oliver Meihls
+
+# Tests for orchestrator truth-feed policy:
+# - Coinbase WS (primary) started in run(), disconnected in stop()
+# - OKX WS (secondary fallback) with deterministic source switching
+# - Truth-feed health tracking per asset
 
 from __future__ import annotations
 
@@ -14,12 +14,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
-# ---------------------------------------------------------------------------
 #  Helpers: mock orchestrator that only exercises truth-feed code paths
-# ---------------------------------------------------------------------------
 
 def _make_mock_orchestrator():
-    """Build a minimal mock of ArgusOrchestrator with truth-feed attrs."""
+    # Build a minimal mock of ArgusOrchestrator with truth-feed attrs.
     from types import SimpleNamespace
 
     orch = SimpleNamespace()
@@ -59,13 +57,11 @@ def _make_mock_orchestrator():
     return orch
 
 
-# ---------------------------------------------------------------------------
 #  run() starts Coinbase WS
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_coinbase_ws_started_in_run():
-    """Coinbase WS connect() must be called in run() via asyncio.create_task."""
+    # Coinbase WS connect() must be called in run() via asyncio.create_task.
     from src.orchestrator import ArgusOrchestrator
 
     # Patch out __init__ to avoid loading real config
@@ -137,13 +133,11 @@ async def test_coinbase_ws_started_in_run():
     )
 
 
-# ---------------------------------------------------------------------------
 #  stop() disconnects Coinbase WS
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_coinbase_ws_disconnected_in_stop():
-    """stop() must call coinbase_ws.disconnect()."""
+    # stop() must call coinbase_ws.disconnect().
     from src.orchestrator import ArgusOrchestrator
 
     with patch.object(ArgusOrchestrator, "__init__", lambda self, *a, **kw: None):
@@ -187,12 +181,10 @@ async def test_coinbase_ws_disconnected_in_stop():
     orch._okx_fallback.stop.assert_awaited_once()
 
 
-# ---------------------------------------------------------------------------
 #  Truth feed health: Coinbase tick updates tracking
-# ---------------------------------------------------------------------------
 
 def test_truth_feed_health_tracks_coinbase_ticks():
-    """Coinbase ticker handler must update truth-feed health."""
+    # Coinbase ticker handler must update truth-feed health.
     orch = _make_mock_orchestrator()
 
     # Import the handler logic pattern
@@ -208,12 +200,10 @@ def test_truth_feed_health_tracks_coinbase_ticks():
     assert health["active_source"] == "coinbase"
 
 
-# ---------------------------------------------------------------------------
 #  OKX fallback: fires only when Coinbase is silent
-# ---------------------------------------------------------------------------
 
 def test_okx_fallback_suppressed_when_coinbase_alive():
-    """OKX must NOT fire when Coinbase ticked recently."""
+    # OKX must NOT fire when Coinbase ticked recently.
     orch = _make_mock_orchestrator()
 
     # Coinbase ticked 1 second ago
@@ -230,7 +220,7 @@ def test_okx_fallback_suppressed_when_coinbase_alive():
 
 
 def test_okx_fallback_activates_when_coinbase_silent():
-    """OKX must fire when Coinbase has been silent > 5s."""
+    # OKX must fire when Coinbase has been silent > 5s.
     orch = _make_mock_orchestrator()
 
     # Coinbase ticked 10 seconds ago
@@ -247,7 +237,7 @@ def test_okx_fallback_activates_when_coinbase_silent():
 
 
 def test_truth_feed_source_switches_to_okx_on_silence():
-    """Simulates OKX callback updating active source when Coinbase is silent."""
+    # Simulates OKX callback updating active source when Coinbase is silent.
     orch = _make_mock_orchestrator()
 
     # Coinbase silent for 10s
@@ -262,7 +252,7 @@ def test_truth_feed_source_switches_to_okx_on_silence():
 
 
 def test_truth_feed_restores_to_coinbase_on_tick():
-    """When Coinbase ticks again after OKX fallback, source restores."""
+    # When Coinbase ticks again after OKX fallback, source restores.
     orch = _make_mock_orchestrator()
 
     # Currently on OKX fallback
@@ -279,12 +269,10 @@ def test_truth_feed_restores_to_coinbase_on_tick():
     assert health["fallback_count"] == 3
 
 
-# ---------------------------------------------------------------------------
 #  Source priority documentation
-# ---------------------------------------------------------------------------
 
 def test_source_priority_constants():
-    """Verify source priority is documented in health tracking."""
+    # Verify source priority is documented in health tracking.
     orch = _make_mock_orchestrator()
 
     # Both BTC and ETH must have health tracking
@@ -296,13 +284,11 @@ def test_source_priority_constants():
         assert orch._truth_feed_health[asset]["active_source"] == "coinbase"
 
 
-# ---------------------------------------------------------------------------
 #  Stop lifecycle: all connectors properly cleaned up
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_stop_cleans_up_all_connectors():
-    """stop() must disconnect Bybit, Coinbase, and OKX."""
+    # stop() must disconnect Bybit, Coinbase, and OKX.
     from src.orchestrator import ArgusOrchestrator
 
     with patch.object(ArgusOrchestrator, "__init__", lambda self, *a, **kw: None):

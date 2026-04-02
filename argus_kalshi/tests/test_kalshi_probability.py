@@ -1,14 +1,14 @@
-"""
-Tests for kalshi_probability — settlement probability model.
+# Created by Oliver Meihls
 
-Covers:
-  - Deterministic outputs for fixed inputs
-  - Case 1: time_to_settle > 60 s
-  - Case 2: time_to_settle ≤ 60 s (inside final window)
-  - m_req computation correctness
-  - Volatility estimator behavior with missing seconds
-  - Edge cases (zero vol, zero time, extreme strikes)
-"""
+# Tests for kalshi_probability — settlement probability model.
+#
+# Covers:
+# - Deterministic outputs for fixed inputs
+# - Case 1: time_to_settle > 60 s
+# - Case 2: time_to_settle ≤ 60 s (inside final window)
+# - m_req computation correctness
+# - Volatility estimator behavior with missing seconds
+# - Edge cases (zero vol, zero time, extreme strikes)
 
 from __future__ import annotations
 
@@ -23,9 +23,7 @@ from argus_kalshi.kalshi_probability import (
 from argus_kalshi.models import BtcWindowState
 
 
-# ---------------------------------------------------------------------------
 #  norm_cdf sanity
-# ---------------------------------------------------------------------------
 
 def test_norm_cdf_center() -> None:
     assert _norm_cdf(0.0) == pytest.approx(0.5)
@@ -36,18 +34,16 @@ def test_norm_cdf_tails() -> None:
     assert _norm_cdf(-3.0) == pytest.approx(0.00135, abs=1e-4)
 
 
-# ---------------------------------------------------------------------------
 #  Volatility estimator
-# ---------------------------------------------------------------------------
 
 def test_vol_constant_prices() -> None:
-    """Constant prices → zero volatility."""
+    # Constant prices → zero volatility.
     prices = [100.0] * 60
     assert estimate_volatility(prices) == 0.0
 
 
 def test_vol_two_prices() -> None:
-    """Two prices → single log-return, variance is 0 with n-1=0 denom guard."""
+    # Two prices → single log-return, variance is 0 with n-1=0 denom guard.
     # With only 1 log-return, the sample variance uses n-1=0 → degenerate.
     # Our implementation uses n-1 so with n=1 it returns 0.
     prices = [100.0, 101.0]
@@ -57,7 +53,7 @@ def test_vol_two_prices() -> None:
 
 
 def test_vol_known_returns() -> None:
-    """Fabricated prices with known log-returns."""
+    # Fabricated prices with known log-returns.
     # Prices: 100, 100*e^0.01, 100*e^0.02 → log-returns = [0.01, 0.01]
     p0 = 100.0
     p1 = p0 * math.exp(0.01)
@@ -68,7 +64,7 @@ def test_vol_known_returns() -> None:
 
 
 def test_vol_with_variation() -> None:
-    """Prices with actual variation produce positive vol."""
+    # Prices with actual variation produce positive vol.
     p0 = 100.0
     p1 = p0 * math.exp(0.01)
     p2 = p1 * math.exp(-0.02)
@@ -78,17 +74,15 @@ def test_vol_with_variation() -> None:
 
 
 def test_vol_robust_to_short_list() -> None:
-    """Fewer than 2 prices → zero vol."""
+    # Fewer than 2 prices → zero vol.
     assert estimate_volatility([]) == 0.0
     assert estimate_volatility([100.0]) == 0.0
 
 
-# ---------------------------------------------------------------------------
 #  Case 1: time_to_settle > 60 s (full window in the future)
-# ---------------------------------------------------------------------------
 
 def test_prob_at_the_money_high_vol() -> None:
-    """ATM with non-zero vol → ~0.5."""
+    # ATM with non-zero vol → ~0.5.
     p = compute_probability(
         strike=50000.0,
         current_price=50000.0,
@@ -99,7 +93,7 @@ def test_prob_at_the_money_high_vol() -> None:
 
 
 def test_prob_deep_itm() -> None:
-    """Price well above strike → P(YES) ≈ 1."""
+    # Price well above strike → P(YES) ≈ 1.
     p = compute_probability(
         strike=40000.0,
         current_price=60000.0,
@@ -110,7 +104,7 @@ def test_prob_deep_itm() -> None:
 
 
 def test_prob_deep_otm() -> None:
-    """Price well below strike → P(YES) ≈ 0."""
+    # Price well below strike → P(YES) ≈ 0.
     p = compute_probability(
         strike=60000.0,
         current_price=40000.0,
@@ -121,7 +115,7 @@ def test_prob_deep_otm() -> None:
 
 
 def test_prob_deterministic() -> None:
-    """Same inputs always produce the same output."""
+    # Same inputs always produce the same output.
     kwargs = dict(
         strike=65000.0,
         current_price=64500.0,
@@ -133,12 +127,10 @@ def test_prob_deterministic() -> None:
     assert p1 == p2
 
 
-# ---------------------------------------------------------------------------
 #  Case 2: inside the 60-second window
-# ---------------------------------------------------------------------------
 
 def test_inside_window_observed_dominates() -> None:
-    """When most of the window is observed, the result is nearly deterministic."""
+    # When most of the window is observed, the result is nearly deterministic.
     # 55 seconds observed at 65000, 5 remaining, strike=65000
     ws = BtcWindowState(
         last_60_sum=55 * 65000.0,
@@ -159,7 +151,7 @@ def test_inside_window_observed_dominates() -> None:
 
 
 def test_inside_window_already_won() -> None:
-    """Observed sum so high that remaining can't lose."""
+    # Observed sum so high that remaining can't lose.
     # 59 seconds observed at 70000, strike=60000, 1 second remaining
     ws = BtcWindowState(
         last_60_sum=59 * 70000.0,
@@ -180,7 +172,7 @@ def test_inside_window_already_won() -> None:
 
 
 def test_inside_window_already_lost() -> None:
-    """Observed sum so low that remaining can't win."""
+    # Observed sum so low that remaining can't win.
     # 59 seconds at 50000, strike=65000, 1 second remaining
     ws = BtcWindowState(
         last_60_sum=59 * 50000.0,
@@ -201,7 +193,7 @@ def test_inside_window_already_lost() -> None:
 
 
 def test_m_req_computation() -> None:
-    """Verify the m_req = (60*K - S_obs) / τ formula manually."""
+    # Verify the m_req = (60*K - S_obs) / τ formula manually.
     K = 65000.0
     s_obs = 55 * 64000.0   # 55 seconds at 64000
     tau = 5.0
@@ -225,12 +217,10 @@ def test_m_req_computation() -> None:
     assert p < 0.15
 
 
-# ---------------------------------------------------------------------------
 #  Edge cases
-# ---------------------------------------------------------------------------
 
 def test_zero_time_with_window() -> None:
-    """time_to_settle=0 with window → deterministic based on avg."""
+    # time_to_settle=0 with window → deterministic based on avg.
     ws = BtcWindowState(
         last_60_sum=60 * 66000.0,
         last_60_avg=66000.0,
@@ -248,7 +238,7 @@ def test_zero_time_with_window() -> None:
 
 
 def test_zero_vol_atm() -> None:
-    """Zero volatility at the money → P=0.5 (edge of the CDF)."""
+    # Zero volatility at the money → P=0.5 (edge of the CDF).
     # With sigma clamped to 1e-12, the z-score is huge or tiny.
     # ATM: z ≈ 0, so P ≈ 0.5
     p = compute_probability(
@@ -261,7 +251,7 @@ def test_zero_vol_atm() -> None:
 
 
 def test_negative_time() -> None:
-    """Negative time_to_settle → fallback behavior."""
+    # Negative time_to_settle → fallback behavior.
     p = compute_probability(
         strike=50000.0,
         current_price=50000.0,
@@ -273,7 +263,7 @@ def test_negative_time() -> None:
 
 
 def test_prob_bounded_0_1() -> None:
-    """P(YES) is always in [0, 1]."""
+    # P(YES) is always in [0, 1].
     import random
     random.seed(123)
     for _ in range(100):
@@ -285,12 +275,10 @@ def test_prob_bounded_0_1() -> None:
         assert 0.0 <= p <= 1.0
 
 
-# ---------------------------------------------------------------------------
 #  Drift parameter
-# ---------------------------------------------------------------------------
 
 def test_drift_shifts_p_yes_upward():
-    """Positive drift should increase p_yes vs zero drift."""
+    # Positive drift should increase p_yes vs zero drift.
     base = compute_probability(
         strike=100.0, current_price=98.0, sigma=0.0001,
         time_to_settle_s=120.0, drift=0.0,
@@ -315,7 +303,7 @@ def test_drift_shifts_p_yes_downward():
 
 
 def test_zero_drift_unchanged():
-    """drift=0 must be identical to old behaviour (backward compat)."""
+    # drift=0 must be identical to old behaviour (backward compat).
     p1 = compute_probability(100.0, 99.0, 0.0001, 90.0, drift=0.0)
     p2 = compute_probability(100.0, 99.0, 0.0001, 90.0)  # no drift kwarg
     assert p1 == pytest.approx(p2, abs=1e-9)

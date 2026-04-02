@@ -1,11 +1,11 @@
-"""
-CLI entrypoint for the Argus Kalshi trading system.
+# Created by Oliver Meihls
 
-    python -m argus_kalshi
-
-Runs with the compact farm config by default (params generated from grid, no drift).
-Override with --settings / ARGUS_SETTINGS_PATH and --secrets / ARGUS_SECRETS_PATH.
-"""
+# CLI entrypoint for the Argus Kalshi trading system.
+#
+# python -m argus_kalshi
+#
+# Runs with the compact farm config by default (params generated from grid, no drift).
+# Override with --settings / ARGUS_SETTINGS_PATH and --secrets / ARGUS_SECRETS_PATH.
 
 from __future__ import annotations
 
@@ -53,6 +53,7 @@ def main() -> None:
         asyncio.run(run(args.settings, args.secrets))
     except KeyboardInterrupt:
         pass
+
     except RuntimeError as exc:
         print(f"Fatal: {exc}", file=sys.stderr)
         sys.exit(1)

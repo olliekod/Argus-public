@@ -1,38 +1,35 @@
-"""
-Risk Engine
-============
+# Created by Oliver Meihls
 
-Core orchestrator for Phase 5 Portfolio Risk Engine.
-
-The RiskEngine receives proposed allocations from AllocationEngine,
-clamps them through a fixed sequence of constraints, and returns:
-1. Clamped allocations
-2. Structured ClampReason entries
-3. RiskAttribution artifact
-
-Constraint ordering (stable, explicit):
-    (1) Aggregate exposure cap
-    (2) Drawdown throttle
-    (3) Correlation / cluster caps
-    (4) Greek limits
-    (5) Tail-risk (Heston/PoP) for options only
-
-Invariants:
-- **Deterministic**: same inputs → same outputs (no unseeded randomness).
-- **No lookahead**: only uses data ≤ portfolio_state.as_of_ts_ms.
-- **Monotone**: clamp never increases exposure.
-- **Idempotent**: clamp(clamp(x)) == clamp(x).
-- **Stable ordering**: allocations sorted by allocation_id before clamping.
-
-Unit Normalization
-------------------
-Proposed allocations are converted to NormalizedAllocation (canonical
-USD/greeks units) before clamping, then converted back to Allocation.
-
-References
-----------
-- MASTER_PLAN.md §9 — Phase 5: Portfolio Risk Engine.
-"""
+# Risk Engine
+#
+# Core orchestrator for Phase 5 Portfolio Risk Engine.
+#
+# The RiskEngine receives proposed allocations from AllocationEngine,
+# clamps them through a fixed sequence of constraints, and returns:
+# 1. Clamped allocations
+# 2. Structured ClampReason entries
+# 3. RiskAttribution artifact
+#
+# Constraint ordering (stable, explicit):
+# (1) Aggregate exposure cap
+# (2) Drawdown throttle
+# (3) Correlation / cluster caps
+# (4) Greek limits
+# (5) Tail-risk (Heston/PoP) for options only
+#
+# Invariants:
+# - **Deterministic**: same inputs → same outputs (no unseeded randomness).
+# - **No lookahead**: only uses data ≤ portfolio_state.as_of_ts_ms.
+# - **Monotone**: clamp never increases exposure.
+# - **Idempotent**: clamp(clamp(x)) == clamp(x).
+# - **Stable ordering**: allocations sorted by allocation_id before clamping.
+#
+# Unit Normalization
+# Proposed allocations are converted to NormalizedAllocation (canonical
+# USD/greeks units) before clamping, then converted back to Allocation.
+#
+# References
+# - MASTER_PLAN.md §9 — Phase 5: Portfolio Risk Engine.
 
 from __future__ import annotations
 
@@ -72,32 +69,28 @@ logger = logging.getLogger("argus.risk_engine")
 _OPTION_MULTIPLIER = 100
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Data models
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 @dataclass
 class ClampReason:
-    """Structured record of a single clamping action.
-
-    Attributes
-    ----------
-    constraint_id : str
-        Which constraint generated this clamp (e.g. "drawdown_throttle").
-    allocation_id : str
-        Identifier for the allocation that was clamped.
-    before : dict
-        State before clamping (e.g. {"weight": 0.07, "contracts": 5}).
-    after : dict
-        State after clamping.
-    reason : str
-        Human-readable explanation.
-    severity : str
-        ``"info"`` | ``"warn"`` | ``"kill"``.
-    ts_ms : int
-        Timestamp of the clamp action.
-    """
+    # Structured record of a single clamping action.
+    #
+    # Attributes
+    # constraint_id : str
+    # Which constraint generated this clamp (e.g. "drawdown_throttle").
+    # allocation_id : str
+    # Identifier for the allocation that was clamped.
+    # before : dict
+    # State before clamping (e.g. {"weight": 0.07, "contracts": 5}).
+    # after : dict
+    # State after clamping.
+    # reason : str
+    # Human-readable explanation.
+    # severity : str
+    # ``"info"`` | ``"warn"`` | ``"kill"``.
+    # ts_ms : int
+    # Timestamp of the clamp action.
     constraint_id: str
     allocation_id: str
     before: Dict[str, Any]
@@ -120,20 +113,18 @@ class ClampReason:
 
 @dataclass
 class NormalizedAllocation:
-    """Canonical internal representation of an allocation in USD/greek units.
-
-    All constraints operate on this representation.  After clamping, it is
-    converted back to an Allocation.
-
-    Unit Conventions
-    ----------------
-    - notional_usd: absolute USD exposure (weight * equity).
-    - max_loss_usd: worst-case loss in USD.
-    - delta_shares_equiv: delta in shares (option_delta * multiplier * contracts).
-    - delta_usd: delta_shares_equiv * underlying_price.
-    - vega: USD per 1 vol point (vega_per_1pct * multiplier * contracts).
-    - gamma: shares per $1 move (bs_gamma * multiplier * contracts).
-    """
+    # Canonical internal representation of an allocation in USD/greek units.
+    #
+    # All constraints operate on this representation.  After clamping, it is
+    # converted back to an Allocation.
+    #
+    # Unit Conventions
+    # - notional_usd: absolute USD exposure (weight * equity).
+    # - max_loss_usd: worst-case loss in USD.
+    # - delta_shares_equiv: delta in shares (option_delta * multiplier * contracts).
+    # - delta_usd: delta_shares_equiv * underlying_price.
+    # - vega: USD per 1 vol point (vega_per_1pct * multiplier * contracts).
+    # - gamma: shares per $1 move (bs_gamma * multiplier * contracts).
     allocation_id: str
     strategy_id: str
     underlying: str
@@ -168,22 +159,20 @@ class NormalizedAllocation:
 
 @dataclass
 class RiskEngineConfig:
-    """Full configuration for the risk engine.
-
-    Attributes
-    ----------
-    enabled : bool
-        Master switch for the risk engine.
-    aggregate_exposure_cap : float
-        Maximum sum of absolute weights.
-    drawdown : DrawdownConfig
-    correlation : CorrelationConfig
-    greek_limits : GreekLimitsConfig
-    tail_risk : TailRiskConfig
-    risk_attribution_output_path : str
-    enforce_idempotence_check : bool
-    enforce_monotone_check : bool
-    """
+    # Full configuration for the risk engine.
+    #
+    # Attributes
+    # enabled : bool
+    # Master switch for the risk engine.
+    # aggregate_exposure_cap : float
+    # Maximum sum of absolute weights.
+    # drawdown : DrawdownConfig
+    # correlation : CorrelationConfig
+    # greek_limits : GreekLimitsConfig
+    # tail_risk : TailRiskConfig
+    # risk_attribution_output_path : str
+    # enforce_idempotence_check : bool
+    # enforce_monotone_check : bool
     enabled: bool = True
     aggregate_exposure_cap: float = 1.0
     drawdown: DrawdownConfig = field(default_factory=DrawdownConfig)
@@ -195,29 +184,26 @@ class RiskEngineConfig:
     enforce_monotone_check: bool = True
 
     def config_hash(self) -> str:
-        """Compute a deterministic hash of this config for versioning."""
+        # Compute a deterministic hash of this config for versioning.
         serializable = _config_to_sorted_dict(self)
         raw = json.dumps(serializable, sort_keys=True, default=str)
         return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  RiskEngine
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class RiskEngine:
-    """Portfolio risk engine that clamps proposed allocations.
-
-    Usage::
-
-        engine = RiskEngine()
-        clamped, reasons, attribution = engine.clamp(
-            proposed_allocations=allocations,
-            portfolio_state=state,
-            risk_config=config,
-        )
-    """
+    # Portfolio risk engine that clamps proposed allocations.
+    #
+    # Usage::
+    #
+    # engine = RiskEngine()
+    # clamped, reasons, attribution = engine.clamp(
+    # proposed_allocations=allocations,
+    # portfolio_state=state,
+    # risk_config=config,
+    # )
 
     def __init__(self) -> None:
         self._was_throttled: bool = False
@@ -228,22 +214,19 @@ class RiskEngine:
         portfolio_state: PortfolioState,
         risk_config: RiskEngineConfig,
     ) -> Tuple[List[Allocation], List[ClampReason], RiskAttribution]:
-        """Apply all risk constraints to proposed allocations.
-
-        Parameters
-        ----------
-        proposed_allocations : list of Allocation
-            Raw allocations from AllocationEngine.
-        portfolio_state : PortfolioState
-            Current portfolio snapshot.
-        risk_config : RiskEngineConfig
-            Risk engine configuration.
-
-        Returns
-        -------
-        tuple
-            (clamped_allocations, clamp_reasons, risk_attribution)
-        """
+        # Apply all risk constraints to proposed allocations.
+        #
+        # Parameters
+        # proposed_allocations : list of Allocation
+        # Raw allocations from AllocationEngine.
+        # portfolio_state : PortfolioState
+        # Current portfolio snapshot.
+        # risk_config : RiskEngineConfig
+        # Risk engine configuration.
+        #
+        # Returns
+        # tuple
+        # (clamped_allocations, clamp_reasons, risk_attribution)
         if portfolio_state.as_of_ts_ms <= 0:
             logger.warning(
                 "as_of_ts_ms is 0; using wall-clock time (breaks determinism)"
@@ -344,16 +327,14 @@ class RiskEngine:
 
         return clamped, reasons, attribution
 
-    # ──────────────────────────────────────────────────────────────────
     #  Normalization
-    # ──────────────────────────────────────────────────────────────────
 
     def _normalize(
         self,
         allocations: List[Allocation],
         state: PortfolioState,
     ) -> List[NormalizedAllocation]:
-        """Convert Allocation objects to NormalizedAllocation."""
+        # Convert Allocation objects to NormalizedAllocation.
         equity = state.equity_usd
         result: List[NormalizedAllocation] = []
 
@@ -448,7 +429,7 @@ class RiskEngine:
         normalized: List[NormalizedAllocation],
         equity: float,
     ) -> List[Allocation]:
-        """Convert NormalizedAllocation back to Allocation objects."""
+        # Convert NormalizedAllocation back to Allocation objects.
         result: List[Allocation] = []
         for na in normalized:
             # Preserve original dollar_risk (risk budget), scaled proportionally
@@ -469,9 +450,7 @@ class RiskEngine:
             ))
         return result
 
-    # ──────────────────────────────────────────────────────────────────
     #  Constraint (1): Aggregate exposure cap
-    # ──────────────────────────────────────────────────────────────────
 
     def _apply_aggregate_cap(
         self,
@@ -480,7 +459,7 @@ class RiskEngine:
         equity: float,
         ts_ms: int,
     ) -> Tuple[List[NormalizedAllocation], List[ClampReason]]:
-        """Scale down if sum of abs weights exceeds aggregate cap."""
+        # Scale down if sum of abs weights exceeds aggregate cap.
         reasons: List[ClampReason] = []
         total_abs = sum(abs(na.current_weight) for na in normalized)
 
@@ -515,9 +494,7 @@ class RiskEngine:
 
         return normalized, reasons
 
-    # ──────────────────────────────────────────────────────────────────
     #  Constraint (2): Drawdown throttle
-    # ──────────────────────────────────────────────────────────────────
 
     def _apply_drawdown_throttle(
         self,
@@ -527,14 +504,13 @@ class RiskEngine:
         aggregate_exposure_cap: float,
         ts_ms: int,
     ) -> Tuple[List[NormalizedAllocation], List[ClampReason], float]:
-        """Apply drawdown-based throttling as a tighter aggregate cap.
-
-        For idempotence, the throttle is applied as a **cap** on total
-        exposure rather than a per-allocation multiplier.  The effective
-        cap is ``aggregate_exposure_cap * throttle``.  If total exposure
-        is already within this cap, no change is made.  This guarantees
-        clamp(clamp(x)) == clamp(x) because the cap-check is absolute.
-        """
+        # Apply drawdown-based throttling as a tighter aggregate cap.
+        #
+        # For idempotence, the throttle is applied as a **cap** on total
+        # exposure rather than a per-allocation multiplier.  The effective
+        # cap is ``aggregate_exposure_cap * throttle``.  If total exposure
+        # is already within this cap, no change is made.  This guarantees
+        # clamp(clamp(x)) == clamp(x) because the cap-check is absolute.
         reasons: List[ClampReason] = []
         throttle = compute_drawdown_throttle(
             state.current_drawdown_pct, dd_config,
@@ -593,9 +569,7 @@ class RiskEngine:
 
         return normalized, reasons, throttle
 
-    # ──────────────────────────────────────────────────────────────────
     #  Constraint (3): Correlation / cluster caps
-    # ──────────────────────────────────────────────────────────────────
 
     def _apply_correlation_caps(
         self,
@@ -605,7 +579,7 @@ class RiskEngine:
         equity: float,
         ts_ms: int,
     ) -> Tuple[List[NormalizedAllocation], List[ClampReason], Dict[str, float]]:
-        """Apply underlying and cluster exposure caps."""
+        # Apply underlying and cluster exposure caps.
         reasons: List[ClampReason] = []
         cluster_exposures: Dict[str, float] = {}
 
@@ -733,9 +707,7 @@ class RiskEngine:
 
         return normalized, reasons, cluster_exposures
 
-    # ──────────────────────────────────────────────────────────────────
     #  Constraint (4): Greek limits
-    # ──────────────────────────────────────────────────────────────────
 
     def _apply_greek_limits(
         self,
@@ -744,7 +716,7 @@ class RiskEngine:
         gl_config: GreekLimitsConfig,
         ts_ms: int,
     ) -> Tuple[List[NormalizedAllocation], List[ClampReason]]:
-        """Apply per-underlying and portfolio greek limits."""
+        # Apply per-underlying and portfolio greek limits.
         reasons: List[ClampReason] = []
         existing_greeks = state.total_position_greeks()
         equity = state.equity_usd
@@ -865,9 +837,7 @@ class RiskEngine:
 
         return normalized, reasons
 
-    # ──────────────────────────────────────────────────────────────────
     #  Constraint (5): Tail-risk (options only)
-    # ──────────────────────────────────────────────────────────────────
 
     def _apply_tail_risk(
         self,
@@ -876,7 +846,7 @@ class RiskEngine:
         tr_config: TailRiskConfig,
         ts_ms: int,
     ) -> Tuple[List[NormalizedAllocation], List[ClampReason]]:
-        """Apply Heston/PoP-based tail risk caps to options allocations."""
+        # Apply Heston/PoP-based tail risk caps to options allocations.
         reasons: List[ClampReason] = []
 
         if not tr_config.enabled_for_options:
@@ -952,9 +922,7 @@ class RiskEngine:
 
         return normalized, reasons
 
-    # ──────────────────────────────────────────────────────────────────
     #  Idempotence check
-    # ──────────────────────────────────────────────────────────────────
 
     def _check_idempotence(
         self,
@@ -962,11 +930,10 @@ class RiskEngine:
         state: PortfolioState,
         config: RiskEngineConfig,
     ) -> None:
-        """Verify clamp(clamp(x)) == clamp(x).
-
-        Runs a second pass and compares outputs.  Only logs warnings
-        (does not raise) to avoid disrupting production flow.
-        """
+        # Verify clamp(clamp(x)) == clamp(x).
+        #
+        # Runs a second pass and compares outputs.  Only logs warnings
+        # (does not raise) to avoid disrupting production flow.
         # Disable checks during the second pass to avoid infinite recursion
         config_copy = RiskEngineConfig(
             enabled=config.enabled,
@@ -1000,20 +967,17 @@ class RiskEngine:
                 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def _attach_greek_contributions(
     allocations: List[Allocation],
     normalized: List[NormalizedAllocation],
 ) -> None:
-    """Attach greek contribution values to Allocation objects for attribution.
-
-    Sets private attributes ``_delta_contrib``, ``_vega_contrib``,
-    ``_gamma_contrib`` on each Allocation.
-    """
+    # Attach greek contribution values to Allocation objects for attribution.
+    #
+    # Sets private attributes ``_delta_contrib``, ``_vega_contrib``,
+    # ``_gamma_contrib`` on each Allocation.
     # Build lookup
     norm_by_id: Dict[str, NormalizedAllocation] = {}
     for na in normalized:
@@ -1033,7 +997,7 @@ def _attach_greek_contributions(
 
 
 def _config_to_sorted_dict(config: RiskEngineConfig) -> Dict[str, Any]:
-    """Convert RiskEngineConfig to a sorted dict for hashing."""
+    # Convert RiskEngineConfig to a sorted dict for hashing.
     result: Dict[str, Any] = {}
     result["enabled"] = config.enabled
     result["aggregate_exposure_cap"] = config.aggregate_exposure_cap

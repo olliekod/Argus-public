@@ -1,4 +1,6 @@
-"""Pre-commit guard to prevent committing secrets."""
+# Created by Oliver Meihls
+
+# Pre-commit guard to prevent committing secrets.
 
 from __future__ import annotations
 

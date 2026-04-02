@@ -1,9 +1,8 @@
-"""
-Signal Persistence Tests
-========================
+# Created by Oliver Meihls
 
-Ensures raw signals are persisted exactly once.
-"""
+# Signal Persistence Tests
+#
+# Ensures raw signals are persisted exactly once.
 
 import asyncio
 import threading

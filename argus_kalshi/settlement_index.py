@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 import json
@@ -43,7 +45,7 @@ class SettlementRecord:
 
 
 class SettlementIndex:
-    """Lookup table for settlement outcomes and historical exit prices."""
+    # Lookup table for settlement outcomes and historical exit prices.
 
     def __init__(self) -> None:
         self._records: Dict[Tuple[str, str], List[SettlementRecord]] = defaultdict(list)

@@ -1,23 +1,21 @@
-"""
-Polymarket Watchlist Service (Stream 3)
-=======================================
+# Created by Oliver Meihls
 
-Periodically polls the Gamma API and syncs a watchlist of active,
-high-volume Polymarket markets to the CLOB connector for order-book
-tracking.
-
-Workflow:
-1. Fetch markets from Gamma (discovery).
-2. Filter by volume / liquidity / keywords.
-3. Extract token IDs from matching markets.
-4. Push token IDs to the CLOB client's watchlist.
-
-Safety constraints
-------------------
-* Read-only — no order placement or trade execution.
-* Bounded watchlist size (configurable max).
-* Runs on its own poll cadence separate from Gamma/CLOB.
-"""
+# Polymarket Watchlist Service (Stream 3)
+#
+# Periodically polls the Gamma API and syncs a watchlist of active,
+# high-volume Polymarket markets to the CLOB connector for order-book
+# tracking.
+#
+# Workflow:
+# 1. Fetch markets from Gamma (discovery).
+# 2. Filter by volume / liquidity / keywords.
+# 3. Extract token IDs from matching markets.
+# 4. Push token IDs to the CLOB client's watchlist.
+#
+# Safety constraints
+# * Read-only — no order placement or trade execution.
+# * Bounded watchlist size (configurable max).
+# * Runs on its own poll cadence separate from Gamma/CLOB.
 
 from __future__ import annotations
 
@@ -34,24 +32,22 @@ _DEFAULT_MIN_VOLUME = 10_000  # USD volume minimum
 
 
 class PolymarketWatchlistService:
-    """Syncs high-interest Polymarket markets to the CLOB tracker.
-
-    Parameters
-    ----------
-    gamma_client
-        PolymarketGammaClient instance (for discovery).
-    clob_client
-        PolymarketCLOBClient instance (watchlist target).
-    sync_interval : float
-        Seconds between watchlist syncs.
-    max_watchlist : int
-        Maximum number of tokens to track.
-    min_volume : float
-        Minimum market volume to qualify for watchlist.
-    keywords : list of str, optional
-        Only include markets whose question contains one of these
-        keywords (case-insensitive).  Empty list = no keyword filter.
-    """
+    # Syncs high-interest Polymarket markets to the CLOB tracker.
+    #
+    # Parameters
+    # gamma_client
+    # PolymarketGammaClient instance (for discovery).
+    # clob_client
+    # PolymarketCLOBClient instance (watchlist target).
+    # sync_interval : float
+    # Seconds between watchlist syncs.
+    # max_watchlist : int
+    # Maximum number of tokens to track.
+    # min_volume : float
+    # Minimum market volume to qualify for watchlist.
+    # keywords : list of str, optional
+    # Only include markets whose question contains one of these
+    # keywords (case-insensitive).  Empty list = no keyword filter.
 
     def __init__(
         self,
@@ -87,7 +83,7 @@ class PolymarketWatchlistService:
         logger.info("PolymarketWatchlistService stopped")
 
     async def sync_loop(self) -> None:
-        """Continuous sync loop — run as asyncio.Task."""
+        # Continuous sync loop — run as asyncio.Task.
         while self._running:
             try:
                 await self.sync()
@@ -98,7 +94,7 @@ class PolymarketWatchlistService:
     # ── sync logic ───────────────────────────────────────────
 
     async def sync(self) -> List[str]:
-        """Run one sync cycle: discover → filter → push to CLOB."""
+        # Run one sync cycle: discover → filter → push to CLOB.
         cached = self._gamma.get_cached_markets()
         if not cached:
             logger.debug("No cached markets — skipping sync")

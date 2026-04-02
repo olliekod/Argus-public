@@ -1,6 +1,6 @@
-"""
-Status helpers for Argus observability (Status v2).
-"""
+# Created by Oliver Meihls
+
+# Status helpers for Argus observability (Status v2).
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def update_ema(prev: Optional[float], value: float, alpha: float = 0.2) -> float
 
 @dataclass(slots=True)
 class StatusSnapshot:
-    """Standardized status payload for connectors and internal components."""
+    # Standardized status payload for connectors and internal components.
 
     name: str
     type: str

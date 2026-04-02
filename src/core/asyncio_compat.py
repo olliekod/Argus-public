@@ -1,9 +1,9 @@
-"""
-Asyncio compatibility helpers.
+# Created by Oliver Meihls
 
-Ensures a default event loop exists for Python 3.14+ on Windows where
-asyncio.get_event_loop() no longer auto-creates a loop for the main thread.
-"""
+# Asyncio compatibility helpers.
+#
+# Ensures a default event loop exists for Python 3.14+ on Windows where
+# asyncio.get_event_loop() no longer auto-creates a loop for the main thread.
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from typing import Any, Coroutine
 
 
 def ensure_event_loop() -> asyncio.AbstractEventLoop:
-    """Ensure a current event loop exists for the main thread."""
+    # Ensure a current event loop exists for the main thread.
     try:
         return asyncio.get_running_loop()
     except RuntimeError:
@@ -27,7 +27,7 @@ def ensure_event_loop() -> asyncio.AbstractEventLoop:
 
 
 def run_sync(coro: Coroutine[Any, Any, Any]) -> Any:
-    """Run a coroutine safely from sync code."""
+    # Run a coroutine safely from sync code.
     try:
         asyncio.get_running_loop()
     except RuntimeError:

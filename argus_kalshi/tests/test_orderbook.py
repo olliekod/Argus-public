@@ -1,14 +1,14 @@
-"""
-Tests for orderbook.OrderBook.
+# Created by Oliver Meihls
 
-Covers:
-  - Snapshot application
-  - Delta application (add, remove, update levels)
-  - Sequence gap detection
-  - Best bid/ask derivation
-  - Implied prices
-  - Edge cases (empty book, single level, level removal)
-"""
+# Tests for orderbook.OrderBook.
+#
+# Covers:
+# - Snapshot application
+# - Delta application (add, remove, update levels)
+# - Sequence gap detection
+# - Best bid/ask derivation
+# - Implied prices
+# - Edge cases (empty book, single level, level removal)
 
 from __future__ import annotations
 
@@ -17,9 +17,7 @@ import pytest
 from argus_kalshi.orderbook import OrderBook, _fp_to_centicx, _centicx_to_fp
 
 
-# ---------------------------------------------------------------------------
 #  Fixed-point helpers
-# ---------------------------------------------------------------------------
 
 def test_fp_to_centicx() -> None:
     assert _fp_to_centicx("1.00") == 100
@@ -35,9 +33,7 @@ def test_centicx_to_fp() -> None:
     assert _centicx_to_fp(1) == "0.01"
 
 
-# ---------------------------------------------------------------------------
 #  Snapshot
-# ---------------------------------------------------------------------------
 
 def test_snapshot_basic() -> None:
     book = OrderBook(market_ticker="TEST-MARKET")
@@ -71,9 +67,7 @@ def test_snapshot_empty_sides() -> None:
     assert book.best_no_bid_cents == 0
 
 
-# ---------------------------------------------------------------------------
 #  Deltas
-# ---------------------------------------------------------------------------
 
 def test_delta_add_level() -> None:
     book = OrderBook(market_ticker="TEST")
@@ -115,7 +109,7 @@ def test_delta_update_quantity() -> None:
 
 
 def test_delta_list_of_entries() -> None:
-    """Apply multiple delta entries in a single message."""
+    # Apply multiple delta entries in a single message.
     book = OrderBook(market_ticker="TEST")
     book.apply_snapshot({"yes": [[50, "10.00"]], "no": [[40, "5.00"]]}, seq=1)
 
@@ -129,9 +123,7 @@ def test_delta_list_of_entries() -> None:
     assert book.best_no_bid_cents == 45
 
 
-# ---------------------------------------------------------------------------
 #  Sequence handling
-# ---------------------------------------------------------------------------
 
 def test_non_monotonic_seq_invalidates() -> None:
     book = OrderBook(market_ticker="TEST")
@@ -173,7 +165,7 @@ def test_sequential_deltas_ok() -> None:
 
 
 def test_forward_seq_jump_is_allowed() -> None:
-    """Seq can jump forward when a shared subscription interleaves other tickers."""
+    # Seq can jump forward when a shared subscription interleaves other tickers.
     book = OrderBook(market_ticker="TEST")
     book.apply_snapshot({"yes": [[50, "10.00"]], "no": []}, seq=1)
 
@@ -187,26 +179,24 @@ def test_forward_seq_jump_is_allowed() -> None:
     assert book.best_yes_bid_cents == 55
 
 
-# ---------------------------------------------------------------------------
 #  Implied prices
-# ---------------------------------------------------------------------------
 
 def test_implied_yes_ask() -> None:
-    """implied_yes_ask = 100 - best_no_bid."""
+    # implied_yes_ask = 100 - best_no_bid.
     book = OrderBook(market_ticker="TEST")
     book.apply_snapshot({"yes": [[55, "1.00"]], "no": [[40, "1.00"]]}, seq=1)
     assert book.implied_yes_ask_cents == 60  # 100 - 40
 
 
 def test_implied_no_ask() -> None:
-    """implied_no_ask = 100 - best_yes_bid."""
+    # implied_no_ask = 100 - best_yes_bid.
     book = OrderBook(market_ticker="TEST")
     book.apply_snapshot({"yes": [[55, "1.00"]], "no": [[40, "1.00"]]}, seq=1)
     assert book.implied_no_ask_cents == 45  # 100 - 55
 
 
 def test_implied_prices_empty_book() -> None:
-    """Empty book → asks are 100 (widest possible)."""
+    # Empty book → asks are 100 (widest possible).
     book = OrderBook(market_ticker="TEST")
     book.apply_snapshot({"yes": [], "no": []}, seq=1)
     assert book.implied_yes_ask_cents == 100
@@ -220,12 +210,10 @@ def test_spread() -> None:
     assert book.spread_cents == 5
 
 
-# ---------------------------------------------------------------------------
 #  Edge cases
-# ---------------------------------------------------------------------------
 
 def test_remove_nonexistent_level() -> None:
-    """Removing a level that doesn't exist is a no-op."""
+    # Removing a level that doesn't exist is a no-op.
     book = OrderBook(market_ticker="TEST")
     book.apply_snapshot({"yes": [[50, "10.00"]], "no": []}, seq=1)
 
@@ -259,7 +247,7 @@ def test_summary() -> None:
 
 
 def test_levels_snapshot_descending() -> None:
-    """levels_snapshot() returns levels in descending price order."""
+    # levels_snapshot() returns levels in descending price order.
     book = OrderBook(market_ticker="TEST")
     book.apply_snapshot({
         "yes": [[30, "1.00"], [50, "2.00"], [40, "3.00"]],
@@ -271,7 +259,7 @@ def test_levels_snapshot_descending() -> None:
 
 
 def test_has_snapshot_flag() -> None:
-    """has_snapshot distinguishes 'never initialised' from 'invalidated'."""
+    # has_snapshot distinguishes 'never initialised' from 'invalidated'.
     book = OrderBook(market_ticker="TEST")
     assert not book.has_snapshot
     assert not book.valid
@@ -286,7 +274,7 @@ def test_has_snapshot_flag() -> None:
 
 
 def test_non_monotonic_seq_preserves_has_snapshot() -> None:
-    """An out-of-order seq invalidates the book but has_snapshot remains True."""
+    # An out-of-order seq invalidates the book but has_snapshot remains True.
     book = OrderBook(market_ticker="TEST")
     book.apply_snapshot({"yes": [[50, "1.00"]], "no": []}, seq=1)
     book.apply_delta({"side": "yes", "price": 50, "delta": "1.00"}, seq=1)

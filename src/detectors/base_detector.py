@@ -1,9 +1,8 @@
-"""
-Base Detector Class
-===================
+# Created by Oliver Meihls
 
-Abstract base class for all opportunity detectors.
-"""
+# Base Detector Class
+#
+# Abstract base class for all opportunity detectors.
 
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
@@ -23,27 +22,23 @@ TRADEABLE_INSTRUMENTS = frozenset({"IBIT", "BITO", "SPY", "QQQ", "IWM"})
 
 
 class BaseDetector(ABC):
-    """
-    Abstract base class for opportunity detectors.
-
-    All detectors must implement:
-    - analyze(): Check for opportunities
-    - calculate_edge(): Calculate net edge after costs
-
-    Bus integration (optional):
-    - Call ``attach_bus(bus)`` to subscribe to ``market.bars`` and
-      auto-publish ``SignalEvent`` on ``signals.detections``.
-    - Override ``on_bar(event)`` for bar-driven analysis.
-    """
+    # Abstract base class for opportunity detectors.
+    #
+    # All detectors must implement:
+    # - analyze(): Check for opportunities
+    # - calculate_edge(): Calculate net edge after costs
+    #
+    # Bus integration (optional):
+    # - Call ``attach_bus(bus)`` to subscribe to ``market.bars`` and
+    # auto-publish ``SignalEvent`` on ``signals.detections``.
+    # - Override ``on_bar(event)`` for bar-driven analysis.
 
     def __init__(self, config: Dict[str, Any], db):
-        """
-        Initialize detector.
-
-        Args:
-            config: Detector-specific configuration (from thresholds.yaml)
-            db: Database instance for logging
-        """
+        # Initialize detector.
+        #
+        # Args:
+        # config: Detector-specific configuration (from thresholds.yaml)
+        # db: Database instance for logging
         self.config = config
         self.db = db
         self.enabled = config.get('enabled', True)
@@ -61,17 +56,17 @@ class BaseDetector(ABC):
     # ── bus wiring ──────────────────────────────────────────
 
     def attach_bus(self, bus) -> None:
-        """Subscribe this detector to ``market.bars`` on *bus*."""
+        # Subscribe this detector to ``market.bars`` on *bus*.
         self._event_bus = bus
         bus.subscribe(TOPIC_MARKET_BARS, self._bus_on_bar)
         self.logger.info("Attached to event bus (market.bars)")
 
     def set_activity_callback(self, callback) -> None:
-        """Provide a callback for activity tracking (detector_name, event_ts, kind)."""
+        # Provide a callback for activity tracking (detector_name, event_ts, kind).
         self._activity_callback = callback
 
     def _bus_on_bar(self, event: BarEvent) -> None:
-        """Internal handler invoked by the bus worker thread."""
+        # Internal handler invoked by the bus worker thread.
         if self._activity_callback:
             self._activity_callback(self.name, event.event_ts, "bar")
         try:
@@ -80,11 +75,12 @@ class BaseDetector(ABC):
             self.logger.exception("on_bar error for %s", event.symbol)
 
     def on_bar(self, event: BarEvent) -> None:
-        """Override in subclass for bar-driven analysis.
+        # Override in subclass for bar-driven analysis.
+        #
+        # Default implementation is a no-op so detectors that rely
+        # exclusively on the existing ``analyze()`` path keep working.
 
-        Default implementation is a no-op so detectors that rely
-        exclusively on the existing ``analyze()`` path keep working.
-        """
+        pass
 
     def _publish_signal(
         self,
@@ -93,11 +89,10 @@ class BaseDetector(ABC):
         priority: Priority,
         data: Dict[str, Any],
     ) -> None:
-        """Convenience: publish a :class:`SignalEvent` if bus is attached.
-
-        Enforces the instrument allowlist — signals for non-tradeable
-        assets are rejected with a warning.
-        """
+        # Convenience: publish a :class:`SignalEvent` if bus is attached.
+        #
+        # Enforces the instrument allowlist — signals for non-tradeable
+        # assets are rejected with a warning.
         if symbol not in TRADEABLE_INSTRUMENTS:
             self.logger.warning(
                 "Signal for non-tradeable %s suppressed (allowlist: %s)",
@@ -120,53 +115,45 @@ class BaseDetector(ABC):
     
     @abstractmethod
     async def analyze(self, market_data: Dict[str, Any]) -> Optional[Dict]:
-        """
-        Analyze market data for opportunities.
-        
-        Args:
-            market_data: Current market state
-            
-        Returns:
-            Detection dict if opportunity found, None otherwise
-        """
+        # Analyze market data for opportunities.
+        #
+        # Args:
+        # market_data: Current market state
+        #
+        # Returns:
+        # Detection dict if opportunity found, None otherwise
         pass
     
     @abstractmethod
     def calculate_edge(self, detection: Dict) -> float:
-        """
-        Calculate net edge after trading costs.
-        
-        Args:
-            detection: Detection data
-            
-        Returns:
-            Net edge in basis points
-        """
+        # Calculate net edge after trading costs.
+        #
+        # Args:
+        # detection: Detection data
+        #
+        # Returns:
+        # Net edge in basis points
         pass
     
     def should_trigger_entry(self, detection: Dict) -> bool:
-        """
-        Determine if this detection should trigger a simulated trade.
-        
-        Args:
-            detection: Detection data
-            
-        Returns:
-            True if should trigger entry
-        """
+        # Determine if this detection should trigger a simulated trade.
+        #
+        # Args:
+        # detection: Detection data
+        #
+        # Returns:
+        # True if should trigger entry
         min_edge = self.config.get('min_edge_after_fees_bps', 10)
         return detection.get('net_edge_bps', 0) >= min_edge
     
     def calculate_position_size(self, capital: float) -> float:
-        """
-        Calculate position size based on config.
-        
-        Args:
-            capital: Total capital
-            
-        Returns:
-            Position size in USD
-        """
+        # Calculate position size based on config.
+        #
+        # Args:
+        # capital: Total capital
+        #
+        # Returns:
+        # Position size in USD
         size_percent = self.config.get('position_size_percent', 10)
         max_leverage = self.config.get('max_leverage', 3)
         
@@ -178,16 +165,14 @@ class BaseDetector(ABC):
         entry_price: float,
         is_long: bool
     ) -> Dict[str, float]:
-        """
-        Calculate stop loss and take profit levels.
-        
-        Args:
-            entry_price: Entry price
-            is_long: True for long, False for short
-            
-        Returns:
-            Dict with stop_loss and take_profit
-        """
+        # Calculate stop loss and take profit levels.
+        #
+        # Args:
+        # entry_price: Entry price
+        # is_long: True for long, False for short
+        #
+        # Returns:
+        # Dict with stop_loss and take_profit
         stop_percent = self.config.get('stop_loss_percent', 1.5) / 100
         tp_percent = self.config.get('take_profit_percent', 1.0) / 100
         
@@ -204,15 +189,13 @@ class BaseDetector(ABC):
         }
     
     async def log_detection(self, detection: Dict) -> int:
-        """
-        Log detection to database.
-        
-        Args:
-            detection: Detection data
-            
-        Returns:
-            Database ID of inserted record
-        """
+        # Log detection to database.
+        #
+        # Args:
+        # detection: Detection data
+        #
+        # Returns:
+        # Database ID of inserted record
         detection['timestamp'] = datetime.now(timezone.utc).isoformat()
         detection_id = await self.db.insert_detection(detection)
         self.logger.info(
@@ -229,19 +212,17 @@ class BaseDetector(ABC):
         detection_data: Dict,
         **kwargs
     ) -> Dict:
-        """
-        Create a standardized detection dict.
-        
-        Args:
-            opportunity_type: Type of opportunity
-            asset: Asset symbol
-            exchange: Exchange name
-            detection_data: Type-specific data
-            **kwargs: Additional fields
-            
-        Returns:
-            Detection dict ready for database
-        """
+        # Create a standardized detection dict.
+        #
+        # Args:
+        # opportunity_type: Type of opportunity
+        # asset: Asset symbol
+        # exchange: Exchange name
+        # detection_data: Type-specific data
+        # **kwargs: Additional fields
+        #
+        # Returns:
+        # Detection dict ready for database
         # Calculate edge
         raw_edge_bps = kwargs.get('estimated_edge_bps', 0)
         net_edge_bps = self.calculate_edge({'raw_edge_bps': raw_edge_bps})

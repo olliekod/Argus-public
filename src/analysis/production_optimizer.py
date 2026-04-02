@@ -1,14 +1,13 @@
-"""
-Production Optimizer
-====================
+# Created by Oliver Meihls
 
-Thorough strategy optimization with:
-1. Full date range (BITO inception 2021 → yesterday)
-2. Walk-forward validation (in-sample + out-of-sample)
-3. Recommendation gauge (multiple factors, not just P&L)
-4. Apply to paper trading first (not live)
-5. Detailed analysis and confidence scoring
-"""
+# Production Optimizer
+#
+# Thorough strategy optimization with:
+# 1. Full date range (BITO inception 2021 → yesterday)
+# 2. Walk-forward validation (in-sample + out-of-sample)
+# 3. Recommendation gauge (multiple factors, not just P&L)
+# 4. Apply to paper trading first (not live)
+# 5. Detailed analysis and confidence scoring
 
 import logging
 from datetime import datetime, timedelta
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ValidationResult:
-    """Walk-forward validation result."""
+    # Walk-forward validation result.
     in_sample_return: float
     out_of_sample_return: float
     degradation_pct: float  # How much worse is OOS vs IS?
@@ -39,7 +38,7 @@ class ValidationResult:
 
 @dataclass
 class RecommendationScore:
-    """Multi-factor recommendation score."""
+    # Multi-factor recommendation score.
     total_score: float  # 0-100
     
     # Component scores (0-100 each)
@@ -57,7 +56,7 @@ class RecommendationScore:
 
 @dataclass
 class OptimizationReport:
-    """Complete optimization report."""
+    # Complete optimization report.
     timestamp: str
     
     # Best params
@@ -82,16 +81,14 @@ class OptimizationReport:
 
 
 class ProductionOptimizer:
-    """
-    Production-grade optimizer with thorough validation.
-    
-    Features:
-    1. Full historical range (BITO inception: Oct 2021)
-    2. 70/30 walk-forward validation
-    3. Multi-factor recommendation scoring
-    4. Paper trading integration
-    5. Conservative confidence thresholds
-    """
+    # Production-grade optimizer with thorough validation.
+    #
+    # Features:
+    # 1. Full historical range (BITO inception: Oct 2021)
+    # 2. 70/30 walk-forward validation
+    # 3. Multi-factor recommendation scoring
+    # 4. Paper trading integration
+    # 5. Conservative confidence thresholds
     
     # BITO inception date
     BITO_INCEPTION = "2021-10-19"
@@ -123,12 +120,12 @@ class ProductionOptimizer:
     CONFIG_PATH = Path("config/strategy_params.json")
     
     def __init__(self, symbol: str = "BITO"):
-        """Initialize production optimizer."""
+        # Initialize production optimizer.
         self.symbol = symbol
         logger.info(f"Production Optimizer initialized for {symbol}")
     
     def _count_combinations(self) -> int:
-        """Count total parameter combinations."""
+        # Count total parameter combinations.
         total = 1
         for values in self.PARAM_GRID.values():
             total *= len(values)
@@ -140,11 +137,9 @@ class ProductionOptimizer:
         start_date: str = None,
         end_date: str = None,
     ) -> BacktestResult:
-        """
-        Run full historical backtest.
-        
-        Uses BITO inception (Oct 2021) to yesterday by default.
-        """
+        # Run full historical backtest.
+        #
+        # Uses BITO inception (Oct 2021) to yesterday by default.
         if start_date is None:
             start_date = self.BITO_INCEPTION
         if end_date is None:
@@ -163,11 +158,9 @@ class ProductionOptimizer:
         params: Dict,
         train_pct: float = 0.70,
     ) -> ValidationResult:
-        """
-        Walk-forward validation: train on 70%, test on 30%.
-        
-        This prevents overfitting by testing on unseen data.
-        """
+        # Walk-forward validation: train on 70%, test on 30%.
+        #
+        # This prevents overfitting by testing on unseen data.
         # Full date range
         start = datetime.strptime(self.BITO_INCEPTION, "%Y-%m-%d")
         end = datetime.now() - timedelta(days=1)
@@ -220,16 +213,14 @@ class ProductionOptimizer:
         validation: ValidationResult,
         current_result: BacktestResult,
     ) -> RecommendationScore:
-        """
-        Calculate multi-factor recommendation score.
-        
-        Factors:
-        1. Profitability: Total return %
-        2. Consistency: Monthly win rate
-        3. Robustness: Walk-forward validation
-        4. Risk: Max drawdown
-        5. Trade count: Statistical significance
-        """
+        # Calculate multi-factor recommendation score.
+        #
+        # Factors:
+        # 1. Profitability: Total return %
+        # 2. Consistency: Monthly win rate
+        # 3. Robustness: Walk-forward validation
+        # 4. Risk: Max drawdown
+        # 5. Trade count: Statistical significance
         reasoning = []
         
         # 1. Profitability (0-100)
@@ -346,13 +337,11 @@ class ProductionOptimizer:
         min_trades: int = 30,
         show_progress: bool = True,
     ) -> OptimizationReport:
-        """
-        Run full production optimization.
-        
-        1. Test all combinations on full history
-        2. Validate best with walk-forward
-        3. Generate recommendation
-        """
+        # Run full production optimization.
+        #
+        # 1. Test all combinations on full history
+        # 2. Validate best with walk-forward
+        # 3. Generate recommendation
         combinations = list(itertools.product(*self.PARAM_GRID.values()))
         keys = list(self.PARAM_GRID.keys())
         
@@ -435,7 +424,7 @@ class ProductionOptimizer:
         )
     
     def format_report(self, report: OptimizationReport) -> str:
-        """Format optimization report."""
+        # Format optimization report.
         rec = report.recommendation
         
         # Recommendation badge
@@ -526,13 +515,11 @@ class ProductionOptimizer:
         return "\n".join(lines)
     
     def save_params(self, params: Dict, target: str = 'paper') -> None:
-        """
-        Save parameters to config file.
-        
-        Args:
-            params: Parameters to save
-            target: 'paper' or 'live'
-        """
+        # Save parameters to config file.
+        #
+        # Args:
+        # params: Parameters to save
+        # target: 'paper' or 'live'
         config_file = self.CONFIG_PATH
         config_file.parent.mkdir(parents=True, exist_ok=True)
         
@@ -566,7 +553,7 @@ class ProductionOptimizer:
 
 
 def run_optimization():
-    """Run production optimization from command line."""
+    # Run production optimization from command line.
     optimizer = ProductionOptimizer(symbol="BITO")
     
     print("=" * 70)

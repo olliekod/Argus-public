@@ -1,14 +1,14 @@
-"""
-Tests for Bybit REST backfill module.
+# Created by Oliver Meihls
 
-Tests:
-- klines_to_bar_rows conversion
-- backfill_klines chunking with mocked HTTP
-- DB idempotency: INSERT OR IGNORE preserves existing bars
-- backfill fills only the gap
-- No invented data when API returns partial results
-- Instrument discovery parsing
-"""
+# Tests for Bybit REST backfill module.
+#
+# Tests:
+# - klines_to_bar_rows conversion
+# - backfill_klines chunking with mocked HTTP
+# - DB idempotency: INSERT OR IGNORE preserves existing bars
+# - backfill fills only the gap
+# - No invented data when API returns partial results
+# - Instrument discovery parsing
 
 from __future__ import annotations
 
@@ -35,9 +35,7 @@ from src.connectors.bybit_rest import (
 from src.core.database import Database
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Fixtures / helpers
-# ═══════════════════════════════════════════════════════════════════════════════
 
 BASE_MS = 1_700_000_000_000  # ~2023-11-14 UTC
 
@@ -60,7 +58,7 @@ async def _make_db() -> Database:
 
 
 def _make_kline(offset_min: int, close: float = 100.0) -> BybitKline:
-    """Create a synthetic kline at BASE_MS + offset_min minutes."""
+    # Create a synthetic kline at BASE_MS + offset_min minutes.
     return BybitKline(
         timestamp_ms=_ms(offset_min * 60),
         open=close - 0.5,
@@ -73,7 +71,7 @@ def _make_kline(offset_min: int, close: float = 100.0) -> BybitKline:
 
 
 def _make_api_response(klines: List[BybitKline]) -> dict:
-    """Build a Bybit kline API response dict from BybitKline objects."""
+    # Build a Bybit kline API response dict from BybitKline objects.
     # Bybit returns newest first
     sorted_desc = sorted(klines, key=lambda k: k.timestamp_ms, reverse=True)
     return {
@@ -97,7 +95,7 @@ def _make_api_response(klines: List[BybitKline]) -> dict:
 
 
 def _make_instruments_response(symbols: List[str]) -> dict:
-    """Build a Bybit instruments-info API response."""
+    # Build a Bybit instruments-info API response.
     return {
         "retCode": 0,
         "retMsg": "OK",
@@ -119,9 +117,7 @@ def _make_instruments_response(symbols: List[str]) -> dict:
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  A) klines_to_bar_rows conversion
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestKlinesToBarRows:
@@ -158,16 +154,14 @@ class TestKlinesToBarRows:
         assert rows == []
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  B) DB upsert idempotency
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestDBBackfillIdempotency:
 
     @pytest.mark.asyncio
     async def test_insert_or_ignore_no_duplicates(self):
-        """Running backfill twice yields same bar count."""
+        # Running backfill twice yields same bar count.
         db = await _make_db()
         try:
             klines = [_make_kline(i) for i in range(10)]
@@ -191,7 +185,7 @@ class TestDBBackfillIdempotency:
 
     @pytest.mark.asyncio
     async def test_existing_live_bars_not_overwritten(self):
-        """Backfill bars don't overwrite live-collected bars."""
+        # Backfill bars don't overwrite live-collected bars.
         db = await _make_db()
         try:
             # Insert a "live" bar with specific close price
@@ -232,7 +226,7 @@ class TestDBBackfillIdempotency:
 
     @pytest.mark.asyncio
     async def test_fills_only_the_gap(self):
-        """Backfill inserts only missing bars, not existing ones."""
+        # Backfill inserts only missing bars, not existing ones.
         db = await _make_db()
         try:
             # Insert bars at minutes 0, 1, 2, 5, 6, 7 (gap at 3, 4)
@@ -269,9 +263,7 @@ class TestDBBackfillIdempotency:
             await db.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  C) get_last_bar_timestamp_ms / get_first_bar_timestamp_ms
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestBarTimestampQueries:
@@ -316,16 +308,14 @@ class TestBarTimestampQueries:
             await db.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  D) REST client with mocked HTTP
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestBybitRestClientMocked:
 
     @pytest.mark.asyncio
     async def test_get_klines_parses_correctly(self):
-        """Mock a single kline API call and verify parsing."""
+        # Mock a single kline API call and verify parsing.
         klines = [_make_kline(i) for i in range(5)]
         response = _make_api_response(klines)
 
@@ -340,7 +330,7 @@ class TestBybitRestClientMocked:
 
     @pytest.mark.asyncio
     async def test_backfill_klines_chunks_correctly(self):
-        """Verify backfill_klines makes multiple API calls for large ranges."""
+        # Verify backfill_klines makes multiple API calls for large ranges.
         # Simulate 400 minutes of data (needs 2 chunks of 200)
         chunk1 = [_make_kline(i) for i in range(200)]
         chunk2 = [_make_kline(200 + i) for i in range(200)]
@@ -369,7 +359,7 @@ class TestBybitRestClientMocked:
 
     @pytest.mark.asyncio
     async def test_backfill_no_data_returns_empty(self):
-        """When API returns no klines, backfill returns empty."""
+        # When API returns no klines, backfill returns empty.
         client = BybitRestClient()
         client.get_klines = AsyncMock(return_value=[])
 
@@ -379,7 +369,7 @@ class TestBybitRestClientMocked:
 
     @pytest.mark.asyncio
     async def test_backfill_deduplicates(self):
-        """Overlapping chunks don't produce duplicates."""
+        # Overlapping chunks don't produce duplicates.
         overlap_klines = [_make_kline(i) for i in range(5)]
 
         call_count = 0
@@ -403,7 +393,7 @@ class TestBybitRestClientMocked:
 
     @pytest.mark.asyncio
     async def test_discover_perpetuals(self):
-        """Test instrument discovery parsing with mocked response."""
+        # Test instrument discovery parsing with mocked response.
         response = _make_instruments_response(
             ["BTCUSDT", "ETHUSDT", "SOLUSDT", "DOGEUSDT"])
 
@@ -420,7 +410,7 @@ class TestBybitRestClientMocked:
 
     @pytest.mark.asyncio
     async def test_discover_all_perpetuals(self):
-        """Without base_coins filter, returns all."""
+        # Without base_coins filter, returns all.
         response = _make_instruments_response(
             ["BTCUSDT", "ETHUSDT", "SOLUSDT"])
 
@@ -431,9 +421,7 @@ class TestBybitRestClientMocked:
         assert len(instruments) == 3
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  E) bar_health DB method
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestBarHealth:
@@ -466,9 +454,7 @@ class TestBarHealth:
             await db.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  F) interval_to_ms helper
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestIntervalToMs:
@@ -489,9 +475,7 @@ class TestIntervalToMs:
         assert _interval_to_ms("xyz") == 60_000
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  G) Determinism: same klines -> same rows
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestDeterminism:
@@ -504,7 +488,7 @@ class TestDeterminism:
 
     @pytest.mark.asyncio
     async def test_db_backfill_deterministic(self):
-        """Two independent DBs with same backfill -> identical contents."""
+        # Two independent DBs with same backfill -> identical contents.
         db1 = await _make_db()
         db2 = await _make_db()
         try:

@@ -1,4 +1,6 @@
-"""Analysis module - options analytics and trade calculations."""
+# Created by Oliver Meihls
+
+# Analysis module - options analytics and trade calculations.
 
 from .greeks_engine import GreeksEngine, Greeks, SpreadGreeks
 from .trade_calculator import TradeCalculator, TradeRecommendation

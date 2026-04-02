@@ -1,53 +1,50 @@
-"""
-Deterministic Replay Harness
-=============================
+# Created by Oliver Meihls
 
-Replays persisted ``market_bars``, ``bar_outcomes``, and ``regimes``
-from the database in strict chronological order, advancing a virtual
-clock bar-by-bar.
-
-Lookahead barriers (the "Time Guard")
---------------------------------------
-The **invariant**: a strategy must never observe data it could not
-have seen in real time.
-
-- **Outcomes**: only visible when ``sim_time >= outcome.window_end_ms``.
-- **Regimes**: only visible when ``sim_time >= regime.timestamp_ms``.
-- **Snapshots**: only visible when ``sim_time >= snapshot.recv_ts_ms``.
-
-This is enforced structurally:
-1. All data streams are sorted by their release timestamp.
-2. Cursors advance monotonically and never look back.
-3. The harness never calls ``strategy.on_bar()`` with data it
-   could not have observed at that point in real time.
-
-Replay loop
------------
-::
-
-    for each bar in chronological order:
-        sim_time = bar.timestamp_ms + bar_duration_ms
-        strategy.on_bar(bar, visible_outcomes)
-        intents = strategy.generate_intents(sim_time)
-        for intent in intents:
-            fill = execution_model.attempt_fill(...)
-            if fill.filled:
-                portfolio.apply(fill)
-        portfolio.mark_to_market(bar)
-
-Usage
------
-::
-
-    harness = ReplayHarness(
-        bars=bars,
-        outcomes=outcomes,
-        strategy=my_strategy,
-        execution_model=ExecutionModel(),
-    )
-    result = harness.run()
-    print(result.summary())
-"""
+# Deterministic Replay Harness
+#
+# Replays persisted ``market_bars``, ``bar_outcomes``, and ``regimes``
+# from the database in strict chronological order, advancing a virtual
+# clock bar-by-bar.
+#
+# Lookahead barriers (the "Time Guard")
+# The **invariant**: a strategy must never observe data it could not
+# have seen in real time.
+#
+# - **Outcomes**: only visible when ``sim_time >= outcome.window_end_ms``.
+# - **Regimes**: only visible when ``sim_time >= regime.timestamp_ms``.
+# - **Snapshots**: only visible when ``sim_time >= snapshot.recv_ts_ms``.
+#
+# This is enforced structurally:
+# 1. All data streams are sorted by their release timestamp.
+# 2. Cursors advance monotonically and never look back.
+# 3. The harness never calls ``strategy.on_bar()`` with data it
+# could not have observed at that point in real time.
+#
+# Replay loop
+# ::
+#
+# for each bar in chronological order:
+# sim_time = bar.timestamp_ms + bar_duration_ms
+# strategy.on_bar(bar, visible_outcomes)
+# intents = strategy.generate_intents(sim_time)
+# for intent in intents:
+# fill = execution_model.attempt_fill(...)
+# if fill.filled:
+# portfolio.apply(fill)
+# portfolio.mark_to_market(bar)
+#
+# Usage
+# -----
+# ::
+#
+# harness = ReplayHarness(
+# bars=bars,
+# outcomes=outcomes,
+# strategy=my_strategy,
+# execution_model=ExecutionModel(),
+# )
+# result = harness.run()
+# print(result.summary())
 
 from __future__ import annotations
 
@@ -65,21 +62,18 @@ from src.core.quote_freshness import is_quote_fresh
 logger = logging.getLogger("argus.replay_harness")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Market Data Snapshot (for data availability barrier)
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass(frozen=True)
 class MarketDataSnapshot:
-    """Point-in-time market data snapshot with receipt timestamp.
-
-    Used by the replay harness to enforce the data availability barrier:
-    strategies must only see snapshots whose ``recv_ts_ms`` is <= ``sim_ts_ms``.
-
-    This prevents strategies from accessing quotes or Greeks that had not
-    yet been received at simulation time — making delayed feeds
-    realistically delayed in replay.
-    """
+    # Point-in-time market data snapshot with receipt timestamp.
+    #
+    # Used by the replay harness to enforce the data availability barrier:
+    # strategies must only see snapshots whose ``recv_ts_ms`` is <= ``sim_ts_ms``.
+    #
+    # This prevents strategies from accessing quotes or Greeks that had not
+    # yet been received at simulation time — making delayed feeds
+    # realistically delayed in replay.
     symbol: str
     recv_ts_ms: int           # local receipt time (epoch ms)
     bid: float = 0.0
@@ -101,16 +95,13 @@ class MarketDataSnapshot:
     quotes_json: Optional[str] = None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Strategy interface for replay
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass(frozen=True)
 class TradeIntent:
-    """A proposed trade emitted by a replay strategy.
-
-    The harness passes this to the ExecutionModel for fill simulation.
-    """
+    # A proposed trade emitted by a replay strategy.
+    #
+    # The harness passes this to the ExecutionModel for fill simulation.
     symbol: str
     side: Literal["BUY", "SELL"]
     quantity: int
@@ -124,17 +115,16 @@ class TradeIntent:
 
 
 class ReplayStrategy(ABC):
-    """Interface that replay-compatible strategies must implement.
-
-    Unlike the live ``BaseStrategy`` which is event-bus driven, the
-    replay strategy is *pull-based*: the harness calls methods in a
-    strict sequence and the strategy never sees future data.
-    """
+    # Interface that replay-compatible strategies must implement.
+    #
+    # Unlike the live ``BaseStrategy`` which is event-bus driven, the
+    # replay strategy is *pull-based*: the harness calls methods in a
+    # strict sequence and the strategy never sees future data.
 
     @property
     @abstractmethod
     def strategy_id(self) -> str:
-        """Unique identifier (e.g. ``"OVERNIGHT_MOMENTUM_V1"``)."""
+        # Unique identifier (e.g. ``"OVERNIGHT_MOMENTUM_V1"``).
         ...
 
     @abstractmethod
@@ -148,43 +138,43 @@ class ReplayStrategy(ABC):
         visible_regimes: Optional[Dict[str, Dict[str, Any]]] = None,
         visible_snapshots: Optional[List[Any]] = None,
     ) -> None:
-        """Feed one bar to the strategy.
-
-        ``visible_outcomes`` only contains outcomes whose
-        ``window_end_ms <= sim_ts_ms`` (the lookahead barrier).
-
-        ``visible_regimes`` maps ``scope`` (symbol or market name) to
-        the latest regime dict whose ``timestamp_ms <= sim_ts_ms``.
-        """
+        # Feed one bar to the strategy.
+        #
+        # ``visible_outcomes`` only contains outcomes whose
+        # ``window_end_ms <= sim_ts_ms`` (the lookahead barrier).
+        #
+        # ``visible_regimes`` maps ``scope`` (symbol or market name) to
+        # the latest regime dict whose ``timestamp_ms <= sim_ts_ms``.
         ...
 
     @abstractmethod
     def generate_intents(self, sim_ts_ms: int) -> List[TradeIntent]:
-        """Return zero or more trade intents for the current bar.
-
-        Called immediately after ``on_bar``.  The harness will attempt
-        to fill each intent via the ExecutionModel.
-        """
+        # Return zero or more trade intents for the current bar.
+        #
+        # Called immediately after ``on_bar``.  The harness will attempt
+        # to fill each intent via the ExecutionModel.
         ...
 
     def on_fill(self, intent: TradeIntent, fill: Any) -> None:
-        """Optional callback when a fill is executed."""
+        # Optional callback when a fill is executed.
+
+        pass
 
     def on_reject(self, intent: TradeIntent, fill: Any) -> None:
-        """Optional callback when an intent is rejected."""
+        # Optional callback when an intent is rejected.
+
+        pass
 
     def finalize(self) -> Dict[str, Any]:
-        """Called once at the end of replay. Return any internal state."""
+        # Called once at the end of replay. Return any internal state.
         return {}
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Virtual Portfolio
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass
 class Position:
-    """A single tracked position."""
+    # A single tracked position.
     symbol: str
     side: Literal["LONG", "SHORT"]
     quantity: int
@@ -203,7 +193,7 @@ class Position:
 
 @dataclass
 class PortfolioSnapshot:
-    """Point-in-time portfolio state."""
+    # Point-in-time portfolio state.
     ts_ms: int
     equity: float
     cash: float
@@ -215,7 +205,7 @@ class PortfolioSnapshot:
 
 
 class VirtualPortfolio:
-    """Tracks positions, PnL, and equity curve during replay."""
+    # Tracks positions, PnL, and equity curve during replay.
     
     # 252 trading days * 6.5 RTH hours * 60 minutes
     EQUITIES_ANNUAL_MINUTES = 252 * 6.5 * 60
@@ -242,7 +232,7 @@ class VirtualPortfolio:
         tag: str = "",
         meta: Optional[Dict[str, Any]] = None,
     ) -> Position:
-        """Record a new position."""
+        # Record a new position.
         notional = fill_price * quantity * multiplier
         if side == "SHORT":
             self._cash += notional  # credit received
@@ -275,7 +265,7 @@ class VirtualPortfolio:
         commission: float = 0.0,
         multiplier: int = 100,
     ) -> float:
-        """Close a position and return realized PnL (net of all commissions)."""
+        # Close a position and return realized PnL (net of all commissions).
         notional = fill_price * position.quantity * multiplier
         if position.side == "SHORT":
             # Buy to close: pay debit
@@ -311,7 +301,7 @@ class VirtualPortfolio:
         multiplier: int = 100,
         regimes: Optional[Dict[str, str]] = None,
     ) -> PortfolioSnapshot:
-        """Update unrealized PnL and record an equity curve point."""
+        # Update unrealized PnL and record an equity curve point.
         unrealized = 0.0
         pos_value = 0.0
         for pos in self._positions:
@@ -433,7 +423,7 @@ class VirtualPortfolio:
         }
 
     def get_regime_breakdown(self) -> Dict[str, Dict[str, Any]]:
-        """Calculate PnL and time spent in each regime."""
+        # Calculate PnL and time spent in each regime.
         breakdown = {} # (factor, value) -> {pnl, bars}
         
         if not self._equity_curve:
@@ -465,13 +455,11 @@ class VirtualPortfolio:
         return breakdown
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Replay Harness
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass
 class ReplayConfig:
-    """Configuration for the replay harness."""
+    # Configuration for the replay harness.
     starting_cash: float = 10_000.0
     bar_duration_seconds: int = 60
     market: str = "EQUITIES"
@@ -483,7 +471,7 @@ class ReplayConfig:
 
 @dataclass
 class ReplayResult:
-    """Complete result of a replay run."""
+    # Complete result of a replay run.
     strategy_id: str
     config: ReplayConfig
     portfolio_summary: Dict[str, Any]
@@ -509,22 +497,20 @@ class ReplayResult:
 
 
 class ReplayHarness:
-    """Deterministic replay engine with strict lookahead barrier.
-
-    Parameters
-    ----------
-    bars : list of BarData
-        Market bars in ascending timestamp order.
-    outcomes : list of dict
-        Pre-computed bar outcomes (from ``bar_outcomes`` table).
-        Each dict must have at least ``timestamp_ms`` and ``window_end_ms``.
-    strategy : ReplayStrategy
-        The strategy under test.
-    execution_model : ExecutionModel
-        Fill simulator (from ``execution_model.py``).
-    config : ReplayConfig
-        Harness-level settings.
-    """
+    # Deterministic replay engine with strict lookahead barrier.
+    #
+    # Parameters
+    # bars : list of BarData
+    # Market bars in ascending timestamp order.
+    # outcomes : list of dict
+    # Pre-computed bar outcomes (from ``bar_outcomes`` table).
+    # Each dict must have at least ``timestamp_ms`` and ``window_end_ms``.
+    # strategy : ReplayStrategy
+    # The strategy under test.
+    # execution_model : ExecutionModel
+    # Fill simulator (from ``execution_model.py``).
+    # config : ReplayConfig
+    # Harness-level settings.
 
     def __init__(
         self,
@@ -569,20 +555,19 @@ class ReplayHarness:
         self._session_counts: Dict[str, int] = {}
 
     def run(self) -> ReplayResult:
-        """Execute the full replay loop.
-
-        This is the core of the backtester.  It enforces:
-        1. Bars are processed in strict chronological order.
-        2. Outcomes are only visible when ``sim_time >= window_end_ms``.
-        3. Regimes are only visible when ``sim_time >= regime.timestamp_ms``.
-        4. Market data snapshots are only visible when
-           ``sim_time >= snapshot.recv_ts_ms`` (data availability barrier).
-        5. Strategy only sees data it could have observed at that point.
-
-        The execution model's ledger is reset at the start of every run()
-        so that consecutive replay calls produce independent results and
-        ledger state does not leak between runs.
-        """
+        # Execute the full replay loop.
+        #
+        # This is the core of the backtester.  It enforces:
+        # 1. Bars are processed in strict chronological order.
+        # 2. Outcomes are only visible when ``sim_time >= window_end_ms``.
+        # 3. Regimes are only visible when ``sim_time >= regime.timestamp_ms``.
+        # 4. Market data snapshots are only visible when
+        # ``sim_time >= snapshot.recv_ts_ms`` (data availability barrier).
+        # 5. Strategy only sees data it could have observed at that point.
+        #
+        # The execution model's ledger is reset at the start of every run()
+        # so that consecutive replay calls produce independent results and
+        # ledger state does not leak between runs.
         # Reset execution model ledger so consecutive runs are independent
         self._exec.reset()
 
@@ -708,9 +693,7 @@ class ReplayHarness:
     def portfolio(self) -> VirtualPortfolio:
         return self._portfolio
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
+# Internal helpers
 
     def _execute_intent(
         self,
@@ -718,7 +701,7 @@ class ReplayHarness:
         bar: BarData,
         sim_ts_ms: int,
     ) -> None:
-        """Attempt to fill a TradeIntent via the execution model."""
+        # Attempt to fill a TradeIntent via the execution model.
         from .execution_model import Quote
 
         # Build a conservative quote from the bar
@@ -787,7 +770,7 @@ class ReplayHarness:
 
     @staticmethod
     def _dict_to_outcome(d: Dict[str, Any]) -> OutcomeResult:
-        """Convert a DB dict row into an OutcomeResult."""
+        # Convert a DB dict row into an OutcomeResult.
         return OutcomeResult(
             provider=d.get("provider", ""),
             symbol=d.get("symbol", ""),
@@ -818,35 +801,30 @@ class ReplayHarness:
         )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helper: load bars + outcomes from DB (async → sync bridge)
-# ═══════════════════════════════════════════════════════════════════════════
 
 def get_latest_regime(
     regimes: List[Dict[str, Any]],
     scope: str,
     asof_ms: int,
 ) -> Optional[Dict[str, Any]]:
-    """Return the most recent regime for *scope* at or before *asof_ms*.
-
-    Parameters
-    ----------
-    regimes : list of dict
-        Regime rows, each with ``scope`` and ``timestamp_ms`` keys.
-        Must be sorted ascending by ``timestamp_ms`` (as returned by
-        ``Database.get_regimes``).
-    scope : str
-        Symbol (e.g. ``"SPY"``) or market (e.g. ``"EQUITIES"``).
-    asof_ms : int
-        The simulation time.  Only regimes with
-        ``timestamp_ms <= asof_ms`` are considered.
-
-    Returns
-    -------
-    dict or None
-        The latest matching regime, or ``None`` if no regime existed
-        at that point in time.
-    """
+    # Return the most recent regime for *scope* at or before *asof_ms*.
+    #
+    # Parameters
+    # regimes : list of dict
+    # Regime rows, each with ``scope`` and ``timestamp_ms`` keys.
+    # Must be sorted ascending by ``timestamp_ms`` (as returned by
+    # ``Database.get_regimes``).
+    # scope : str
+    # Symbol (e.g. ``"SPY"``) or market (e.g. ``"EQUITIES"``).
+    # asof_ms : int
+    # The simulation time.  Only regimes with
+    # ``timestamp_ms <= asof_ms`` are considered.
+    #
+    # Returns
+    # dict or None
+    # The latest matching regime, or ``None`` if no regime existed
+    # at that point in time.
     result: Optional[Dict[str, Any]] = None
     for r in regimes:
         if r.get("scope") != scope:
@@ -869,11 +847,10 @@ async def load_replay_data(
     load_regimes: bool = False,
     load_snapshots: bool = False,
 ) -> tuple:
-    """Load bars, outcomes, and optionally regimes/snapshots from the database.
-
-    Returns:
-        (bars, outcomes, [regimes], [snapshots]) depending on flags.
-    """
+    # Load bars, outcomes, and optionally regimes/snapshots from the database.
+    #
+    # Returns:
+    # (bars, outcomes, [regimes], [snapshots]) depending on flags.
     from src.core.outcome_engine import BarData, _timestamp_to_ms
 
     bars_raw = await db.get_bars_for_outcome_computation(

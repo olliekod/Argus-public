@@ -1,9 +1,8 @@
-"""
-Gate Strategy Tests
-===================
+# Created by Oliver Meihls
 
-Tests for the Day-of-Week + Regime timing gate strategy.
-"""
+# Gate Strategy Tests
+#
+# Tests for the Day-of-Week + Regime timing gate strategy.
 
 from datetime import datetime, timezone
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-Build a cross-wallet consensus profile from Polymarket wallet analysis JSON files.
+# Created by Oliver Meihls
 
-Usage:
-  python scripts/polymarket_wallet_consensus.py --analysis logs/analysis/polymarket/.../wallet_0x..._analysis.json --analysis ...
-"""
+# Build a cross-wallet consensus profile from Polymarket wallet analysis JSON files.
+#
+# Usage:
+# python scripts/polymarket_wallet_consensus.py --analysis logs/analysis/polymarket/.../wallet_0x..._analysis.json --analysis ...
 
 from __future__ import annotations
 

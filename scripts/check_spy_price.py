@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import asyncio
 from src.connectors.alpaca_client import AlpacaClient
 from src.utils.config import load_config, load_secrets

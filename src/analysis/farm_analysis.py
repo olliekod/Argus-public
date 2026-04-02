@@ -1,10 +1,9 @@
-"""
-Paper Trader Farm Analysis Utility
-==================================
+# Created by Oliver Meihls
 
-Standalone script to analyze the performance of the 400,000 parallel paper traders.
-Identifies top-performing parameter combinations and strategy clusters.
-"""
+# Paper Trader Farm Analysis Utility
+#
+# Standalone script to analyze the performance of the 400,000 parallel paper traders.
+# Identifies top-performing parameter combinations and strategy clusters.
 
 import asyncio
 import os
@@ -17,7 +16,7 @@ from typing import List, Dict
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 async def get_top_traders(db_path: str, top_n: int = 20, days: int = 30):
-    """Fetch top performing traders from the database."""
+    # Fetch top performing traders from the database.
     conn = sqlite3.connect(db_path)
     
     query = f"""
@@ -41,7 +40,7 @@ async def get_top_traders(db_path: str, top_n: int = 20, days: int = 30):
     return df
 
 def analyze_farm():
-    """Run analysis and print report."""
+    # Run analysis and print report.
     db_path = "data/argus.db"
     if not os.path.exists(db_path):
         print(f"Error: Database not found at {db_path}")

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Benchmark providers for the liquid ETF universe with separate scorecards."""
+# Created by Oliver Meihls
+
+# Benchmark providers for the liquid ETF universe with separate scorecards.
 
 from __future__ import annotations
 
@@ -158,7 +160,7 @@ async def _options_rows(config: dict[str, Any], secrets: dict[str, Any], duratio
 
 
 async def _underlying_head_to_head(secrets: dict[str, Any], duration: int = 5) -> list[dict[str, Any]]:
-    """Compare Alpaca REST vs Tastytrade DXLink for underlying quotes."""
+    # Compare Alpaca REST vs Tastytrade DXLink for underlying quotes.
     results = []
     symbols = ["SPY", "IBIT", "QQQ"]
     

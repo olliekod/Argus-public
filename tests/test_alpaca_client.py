@@ -1,14 +1,14 @@
-"""
-Tests for Alpaca Data Client.
+# Created by Oliver Meihls
 
-Verifies:
-1. Fixed interval polling (no market-hours gating)
-2. Restart dedupe from database
-3. Bar ordering by bar_ts
-4. Overlap window functionality
-
-Run with: pytest tests/test_alpaca_client.py -v
-"""
+# Tests for Alpaca Data Client.
+#
+# Verifies:
+# 1. Fixed interval polling (no market-hours gating)
+# 2. Restart dedupe from database
+# 3. Bar ordering by bar_ts
+# 4. Overlap window functionality
+#
+# Run with: pytest tests/test_alpaca_client.py -v
 
 import asyncio
 import pytest
@@ -16,12 +16,10 @@ from typing import Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Mock Database for Testing
-# ═══════════════════════════════════════════════════════════════════════════
 
 class MockDatabase:
-    """Mock database that simulates get_latest_bar_ts."""
+    # Mock database that simulates get_latest_bar_ts.
     
     def __init__(self):
         self._latest_bar_ts: Dict[tuple, int] = {}
@@ -29,24 +27,22 @@ class MockDatabase:
     async def get_latest_bar_ts(
         self, source: str, symbol: str, bar_duration: int = 60
     ) -> Optional[int]:
-        """Return stored latest bar timestamp or None."""
+        # Return stored latest bar timestamp or None.
         key = (source, symbol, bar_duration)
         return self._latest_bar_ts.get(key)
     
     def set_latest_bar_ts(
         self, source: str, symbol: str, bar_duration: int, ts_ms: int
     ) -> None:
-        """Set the latest bar timestamp for testing."""
+        # Set the latest bar timestamp for testing.
         key = (source, symbol, bar_duration)
         self._latest_bar_ts[key] = ts_ms
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Mock Event Bus
-# ═══════════════════════════════════════════════════════════════════════════
 
 class MockEventBus:
-    """Mock event bus that collects published events."""
+    # Mock event bus that collects published events.
     
     def __init__(self):
         self.published: List[tuple] = []  # (topic, event)
@@ -58,12 +54,10 @@ class MockEventBus:
         self.published.clear()
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Fixture Bars
-# ═══════════════════════════════════════════════════════════════════════════
 
 def make_alpaca_bar(ts_iso: str, o: float, h: float, l: float, c: float, v: float) -> dict:
-    """Create a mock Alpaca API bar response."""
+    # Create a mock Alpaca API bar response.
     return {"t": ts_iso, "o": o, "h": h, "l": l, "c": c, "v": v}
 
 
@@ -76,9 +70,7 @@ FIXTURE_BARS = [
 ]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Dedupe Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRestartDedupe:
     @pytest.fixture
@@ -91,7 +83,7 @@ class TestRestartDedupe:
     
     @pytest.mark.asyncio
     async def test_init_from_db_sets_last_bar_ts(self, mock_db, mock_bus):
-        """On startup, init_from_db should populate last_bar_ts from database."""
+        # On startup, init_from_db should populate last_bar_ts from database.
         from src.connectors.alpaca_client import AlpacaDataClient
         
         # Pre-populate database with existing bar
@@ -113,7 +105,7 @@ class TestRestartDedupe:
     
     @pytest.mark.asyncio
     async def test_init_from_db_no_existing_bars(self, mock_db, mock_bus):
-        """If no bars exist in DB, last_bar_ts should remain empty."""
+        # If no bars exist in DB, last_bar_ts should remain empty.
         from src.connectors.alpaca_client import AlpacaDataClient
         
         client = AlpacaDataClient(
@@ -133,7 +125,7 @@ class TestRestartDedupe:
 
     @pytest.mark.asyncio
     async def test_init_from_db_calls_get_latest_bar_ts_with_bar_duration(self, mock_bus):
-        """init_from_db should call get_latest_bar_ts with bar_duration."""
+        # init_from_db should call get_latest_bar_ts with bar_duration.
         from src.connectors.alpaca_client import AlpacaDataClient
 
         mock_db = MagicMock()
@@ -164,7 +156,7 @@ class TestRestartDedupe:
     
     @pytest.mark.asyncio
     async def test_dedupe_only_emits_new_bars(self, mock_db, mock_bus):
-        """After restart, should only emit bars newer than last_bar_ts."""
+        # After restart, should only emit bars newer than last_bar_ts.
         from src.connectors.alpaca_client import AlpacaDataClient, _parse_rfc3339_to_ms
         
         # Set last bar to 14:31 (second bar)
@@ -216,7 +208,7 @@ class TestBarOrdering:
     
     @pytest.mark.asyncio
     async def test_bars_emitted_in_ts_order(self, mock_bus):
-        """Bars should be emitted in strict increasing bar_ts order."""
+        # Bars should be emitted in strict increasing bar_ts order.
         from src.connectors.alpaca_client import AlpacaDataClient, _parse_rfc3339_to_ms
         
         client = AlpacaDataClient(
@@ -254,7 +246,7 @@ class TestFixedIntervalPolling:
         return MockEventBus()
     
     def test_no_market_hours_logic(self, mock_bus):
-        """Client should not have any market-hours-aware polling logic."""
+        # Client should not have any market-hours-aware polling logic.
         from src.connectors.alpaca_client import AlpacaDataClient
         
         client = AlpacaDataClient(
@@ -274,7 +266,7 @@ class TestFixedIntervalPolling:
         assert client._poll_interval == 60
     
     def test_overlap_seconds_configurable(self, mock_bus):
-        """Overlap seconds should be configurable."""
+        # Overlap seconds should be configurable.
         from src.connectors.alpaca_client import AlpacaDataClient
         
         client = AlpacaDataClient(
@@ -296,7 +288,7 @@ class TestHealthStatus:
         return MockEventBus()
     
     def test_health_status_includes_init_state(self, mock_bus):
-        """Health status should report initialization state."""
+        # Health status should report initialization state.
         from src.connectors.alpaca_client import AlpacaDataClient
         
         client = AlpacaDataClient(
@@ -320,7 +312,7 @@ class TestHealthStatus:
 
 class TestTimestampHandling:
     def test_parse_rfc3339_to_ms(self):
-        """RFC3339 timestamps should be parsed to int milliseconds."""
+        # RFC3339 timestamps should be parsed to int milliseconds.
         from src.connectors.alpaca_client import _parse_rfc3339_to_ms
         
         ts_ms = _parse_rfc3339_to_ms("2024-01-15T14:30:00Z")
@@ -335,7 +327,7 @@ class TestTimestampHandling:
         assert ts_ms == 1705329000000
     
     def test_last_bar_ts_is_int_ms(self):
-        """Internal last_bar_ts tracking should use int milliseconds."""
+        # Internal last_bar_ts tracking should use int milliseconds.
         from src.connectors.alpaca_client import AlpacaDataClient
         
         bus = MockEventBus()

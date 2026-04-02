@@ -1,10 +1,9 @@
-"""
-Crypto ETF Options Opportunity Detector
-=======================================
+# Created by Oliver Meihls
 
-Detects opportunities to sell put spreads on crypto ETFs (IBIT, BITO, etc.).
-Integrates with TradeCalculator for precise recommendations.
-"""
+# Crypto ETF Options Opportunity Detector
+#
+# Detects opportunities to sell put spreads on crypto ETFs (IBIT, BITO, etc.).
+# Integrates with TradeCalculator for precise recommendations.
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -24,19 +23,17 @@ logger = logging.getLogger(__name__)
 
 
 class ETFOptionsDetector(BaseDetector):
-    """
-    Detector for ETF options opportunities (v2).
-    
-    Strategy: When volatility spikes and an ETF drops significantly,
-    sell put spreads to collect elevated premium.
-    
-    v2 Features:
-    - Real options chain data via yfinance
-    - Greeks calculation (Delta, Theta, Vega)
-    - Dynamic position sizing based on PoP
-    - Economic calendar blackout warnings
-    - IV Rank validation
-    """
+    # Detector for ETF options opportunities (v2).
+    #
+    # Strategy: When volatility spikes and an ETF drops significantly,
+    # sell put spreads to collect elevated premium.
+    #
+    # v2 Features:
+    # - Real options chain data via yfinance
+    # - Greeks calculation (Delta, Theta, Vega)
+    # - Dynamic position sizing based on PoP
+    # - Economic calendar blackout warnings
+    # - IV Rank validation
     
     def __init__(self, config: Dict[str, Any], db, symbol: str = "SPY", iv_consensus: Optional[Any] = None):
         super().__init__(config, db)
@@ -93,22 +90,22 @@ class ETFOptionsDetector(BaseDetector):
         )
     
     def set_telegram_callback(self, callback) -> None:
-        """Set callback for sending Telegram notifications."""
+        # Set callback for sending Telegram notifications.
         self._telegram_callback = callback
         
     def set_paper_trader_farm(self, farm) -> None:
-        """Connect the larger scale paper trader farm."""
+        # Connect the larger scale paper trader farm.
         self.paper_trader_farm = farm
     
     def update_proxy_iv(self, iv: float) -> None:
-        """Update volatility proxy IV data."""
+        # Update volatility proxy IV data.
         self._current_proxy_iv = iv
         self._proxy_iv_history.append(iv)
         if len(self._proxy_iv_history) > 168:
             self._proxy_iv_history = self._proxy_iv_history[-168:]
     
     def update_symbol_data(self, data: Dict) -> None:
-        """Update ETF price data."""
+        # Update ETF price data.
         self._current_symbol_data = data
         self._symbol_price_history.append({
             'price': data.get('price', 0),
@@ -118,7 +115,7 @@ class ETFOptionsDetector(BaseDetector):
             self._symbol_price_history = self._symbol_price_history[-720:]
 
     def get_signal_checklist(self) -> Dict[str, Any]:
-        """Return a checklist of conditions for an ETF signal."""
+        # Return a checklist of conditions for an ETF signal.
         proxy_iv = self._current_proxy_iv or 0
         symbol_change = 0.0
         symbol_price = 0.0
@@ -178,7 +175,7 @@ class ETFOptionsDetector(BaseDetector):
         regime_change_5d_pct: float,
         timestamp: str,
     ) -> Optional[Dict[str, Any]]:
-        """Build a research-mode signal without gating thresholds."""
+        # Build a research-mode signal without gating thresholds.
         if not self._current_proxy_iv or not self._current_symbol_data:
             return None
 
@@ -224,10 +221,11 @@ class ETFOptionsDetector(BaseDetector):
     # ── bar-driven path (event bus) ───────────────────────
 
     def on_bar(self, event: BarEvent) -> None:
-        """Consume bars as context/features."""
+        # Consume bars as context/features.
         if event.symbol == self.vol_proxy and event.source != 'yahoo':
             # Cryptos come as non-yahoo bars
             pass
+
         elif event.symbol == self.symbol:
             # Main symbol bar
             self.update_symbol_data({
@@ -237,7 +235,7 @@ class ETFOptionsDetector(BaseDetector):
             })
 
     def _check_market_hours(self) -> bool:
-        """Check if US stock market is open (9:30 AM - 4:00 PM ET)."""
+        # Check if US stock market is open (9:30 AM - 4:00 PM ET).
         eastern = ZoneInfo("America/New_York")
         now = datetime.now(eastern)
         is_weekday = now.weekday() < 5
@@ -246,7 +244,7 @@ class ETFOptionsDetector(BaseDetector):
         return is_weekday and market_open <= now <= market_close
     
     async def analyze(self, market_data: Dict[str, Any]) -> Optional[Dict]:
-        """Analyze for ETF options opportunities."""
+        # Analyze for ETF options opportunities.
         if not self.enabled:
             return None
         
@@ -443,7 +441,7 @@ class ETFOptionsDetector(BaseDetector):
         return detection
     
     def format_telegram_alert(self, detection: Dict) -> str:
-        """Format detection for Telegram."""
+        # Format detection for Telegram.
         data = detection.get('detection_data', {})
         recommendation = data.get('recommendation')
         
@@ -469,14 +467,14 @@ SELL: ${data.get('short_strike', 0):.0f} Put / BUY: ${data.get('long_strike', 0)
 """
     
     def calculate_edge(self, detection: Dict) -> float:
-        """Calculate edge based on credit/risk ratio."""
+        # Calculate edge based on credit/risk ratio.
         data = detection.get('detection_data', {})
         credit = data.get('net_credit', 0)
         risk = data.get('max_risk', 1)
         return (credit / risk * 100) if risk > 0 else 100
     
     def get_current_conditions(self) -> Dict:
-        """Get current market conditions."""
+        # Get current market conditions.
         iv_rank = 50
         try:
             status = self.options_client.get_market_status()
@@ -495,5 +493,5 @@ SELL: ${data.get('short_strike', 0):.0f} Put / BUY: ${data.get('long_strike', 0)
         }
     
     def is_market_open(self) -> bool:
-        """Check if stock market is currently open."""
+        # Check if stock market is currently open.
         return self._check_market_hours()

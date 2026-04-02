@@ -1,13 +1,12 @@
-"""
-OKX WebSocket Fallback Connector
-================================
+# Created by Oliver Meihls
 
-Public WebSocket client for OKX spot ticker data. Used as a resilient
-fallback when the primary truth feed (e.g. Coinbase WS) is down or stale.
-
-OKX public tickers channel does not require API key or authentication.
-If you have an OKX API key, it is only needed for private channels (e.g. trading).
-"""
+# OKX WebSocket Fallback Connector
+#
+# Public WebSocket client for OKX spot ticker data. Used as a resilient
+# fallback when the primary truth feed (e.g. Coinbase WS) is down or stale.
+#
+# OKX public tickers channel does not require API key or authentication.
+# If you have an OKX API key, it is only needed for private channels (e.g. trading).
 
 import asyncio
 import json
@@ -22,13 +21,11 @@ logger = get_connector_logger("okx_ws")
 
 
 class OkxWsFallback:
-    """
-    OKX V5 public WebSocket client for spot tickers.
-
-    Subscribes to the tickers channel (e.g. BTC-USDT) and invokes
-    on_ticker with a normalized payload compatible with the Kalshi
-    truth-feed callback (last_price, symbol, etc.).
-    """
+    # OKX V5 public WebSocket client for spot tickers.
+    #
+    # Subscribes to the tickers channel (e.g. BTC-USDT) and invokes
+    # on_ticker with a normalized payload compatible with the Kalshi
+    # truth-feed callback (last_price, symbol, etc.).
 
     # Public WebSocket endpoint — no auth required for tickers
     DEFAULT_WS_URL = "wss://ws.okx.com:8443/ws/v5/public"
@@ -39,12 +36,10 @@ class OkxWsFallback:
         on_ticker: Optional[Callable] = None,
         ws_url: Optional[str] = None,
     ):
-        """
-        Args:
-            inst_ids: OKX instrument IDs, e.g. ["BTC-USDT"].
-            on_ticker: Async or sync callback receiving dict with last_price, symbol, etc.
-            ws_url: Override WebSocket URL (default: public v5 endpoint).
-        """
+        # Args:
+        # inst_ids: OKX instrument IDs, e.g. ["BTC-USDT"].
+        # on_ticker: Async or sync callback receiving dict with last_price, symbol, etc.
+        # ws_url: Override WebSocket URL (default: public v5 endpoint).
         self.inst_ids = list(inst_ids)
         self.on_ticker = on_ticker
         self._ws_url = (ws_url or self.DEFAULT_WS_URL).rstrip("/")
@@ -56,12 +51,12 @@ class OkxWsFallback:
         logger.info("OKX WebSocket fallback initialized for %s", self.inst_ids)
 
     async def start(self) -> None:
-        """Start the WebSocket connection and message loop (background task)."""
+        # Start the WebSocket connection and message loop (background task).
         self._running = True
         self._task = asyncio.create_task(self._connect_loop())
 
     async def stop(self) -> None:
-        """Stop the WebSocket and cancel the background task."""
+        # Stop the WebSocket and cancel the background task.
         self._running = False
         if self._ws:
             await self._ws.close()
@@ -72,11 +67,12 @@ class OkxWsFallback:
                 await self._task
             except asyncio.CancelledError:
                 pass
+
             self._task = None
         logger.info("OKX WebSocket fallback stopped")
 
     async def _connect_loop(self) -> None:
-        """Connect, subscribe, and run message loop; reconnect on failure."""
+        # Connect, subscribe, and run message loop; reconnect on failure.
         retry_count = 0
         while self._running:
             try:
@@ -109,7 +105,7 @@ class OkxWsFallback:
                 await asyncio.sleep(delay)
 
     async def _message_loop(self) -> None:
-        """Process incoming messages; handle ticker pushes and event confirmations."""
+        # Process incoming messages; handle ticker pushes and event confirmations.
         if not self._ws:
             return
         async for raw in self._ws:
@@ -134,7 +130,7 @@ class OkxWsFallback:
                 logger.error("OKX message parse error: %s", e)
 
     async def _handle_ticker(self, raw: Dict[str, Any]) -> None:
-        """Parse OKX ticker object and invoke callback with normalized payload."""
+        # Parse OKX ticker object and invoke callback with normalized payload.
         # OKX: last, lastPx (legacy), bidPx, askPx, ts (ms), instId
         inst_id = raw.get("instId", "")
         last = raw.get("last") or raw.get("lastPx")

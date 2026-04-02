@@ -1,18 +1,17 @@
-"""
-Data Quality Report
-===================
+# Created by Oliver Meihls
 
-Compute quality metrics per provider+symbol from bar data:
-- gap_rate: percentage of expected bars that are missing
-- staleness_p50/p95: bar age when received (median and 95th percentile)
-- missing_intervals: list of [start_ts, end_ts] gaps
-- ohlc_violations: count of OHLC invariant failures
-
-Usage:
-    from src.analysis.data_quality import DataQualityReport
-    report = DataQualityReport(db)
-    metrics = await report.compute_metrics(provider="alpaca", symbol="IBIT", days=7)
-"""
+# Data Quality Report
+#
+# Compute quality metrics per provider+symbol from bar data:
+# - gap_rate: percentage of expected bars that are missing
+# - staleness_p50/p95: bar age when received (median and 95th percentile)
+# - missing_intervals: list of [start_ts, end_ts] gaps
+# - ohlc_violations: count of OHLC invariant failures
+#
+# Usage:
+# from src.analysis.data_quality import DataQualityReport
+# report = DataQualityReport(db)
+# metrics = await report.compute_metrics(provider="alpaca", symbol="IBIT", days=7)
 
 from __future__ import annotations
 
@@ -27,7 +26,7 @@ logger = logging.getLogger("argus.analysis.data_quality")
 
 @dataclass
 class QualityMetrics:
-    """Quality metrics for a provider+symbol."""
+    # Quality metrics for a provider+symbol.
     provider: str
     symbol: str
     period_start: float  # UTC epoch
@@ -67,14 +66,11 @@ class QualityMetrics:
 
 
 class DataQualityReport:
-    """
-    Compute data quality metrics from bar history.
-    
-    Parameters
-    ----------
-    db : Database
-        Argus database instance.
-    """
+    # Compute data quality metrics from bar history.
+    #
+    # Parameters
+    # db : Database
+    # Argus database instance.
     
     def __init__(self, db) -> None:
         self._db = db
@@ -86,25 +82,21 @@ class DataQualityReport:
         days: int = 7,
         bar_duration_s: int = 60,
     ) -> QualityMetrics:
-        """
-        Compute quality metrics for a provider+symbol.
-        
-        Parameters
-        ----------
-        provider : str
-            Data provider (e.g., "alpaca", "yahoo", "bybit").
-        symbol : str
-            Symbol (e.g., "IBIT", "BITO").
-        days : int
-            Number of days to analyze.
-        bar_duration_s : int
-            Expected bar duration in seconds (default 60 for 1-min bars).
-        
-        Returns
-        -------
-        QualityMetrics
-            Quality metrics for the specified period.
-        """
+        # Compute quality metrics for a provider+symbol.
+        #
+        # Parameters
+        # provider : str
+        # Data provider (e.g., "alpaca", "yahoo", "bybit").
+        # symbol : str
+        # Symbol (e.g., "IBIT", "BITO").
+        # days : int
+        # Number of days to analyze.
+        # bar_duration_s : int
+        # Expected bar duration in seconds (default 60 for 1-min bars).
+        #
+        # Returns
+        # QualityMetrics
+        # Quality metrics for the specified period.
         now = datetime.now(timezone.utc)
         end_ts = now.timestamp()
         start_ts = (now - timedelta(days=days)).timestamp()
@@ -180,7 +172,7 @@ class DataQualityReport:
         start_ts: float,
         end_ts: float,
     ) -> List[Dict[str, Any]]:
-        """Fetch bars from database."""
+        # Fetch bars from database.
         start_iso = datetime.fromtimestamp(start_ts, tz=timezone.utc).isoformat()
         end_iso = datetime.fromtimestamp(end_ts, tz=timezone.utc).isoformat()
 
@@ -254,7 +246,7 @@ class DataQualityReport:
     
     @staticmethod
     def _count_weekdays(start_ts: float, end_ts: float) -> int:
-        """Count weekdays (Mon-Fri) between two timestamps."""
+        # Count weekdays (Mon-Fri) between two timestamps.
         start = datetime.fromtimestamp(start_ts, tz=timezone.utc)
         end = datetime.fromtimestamp(end_ts, tz=timezone.utc)
         count = 0
@@ -271,23 +263,19 @@ class DataQualityReport:
         symbols: Optional[List[str]] = None,
         days: int = 7,
     ) -> Dict[str, Any]:
-        """
-        Generate a complete data quality report.
-        
-        Parameters
-        ----------
-        providers : list of str or None
-            Providers to analyze. None = all known.
-        symbols : list of str or None
-            Symbols to analyze. None = all known.
-        days : int
-            Number of days to analyze.
-        
-        Returns
-        -------
-        dict
-            Complete report with metrics per provider+symbol.
-        """
+        # Generate a complete data quality report.
+        #
+        # Parameters
+        # providers : list of str or None
+        # Providers to analyze. None = all known.
+        # symbols : list of str or None
+        # Symbols to analyze. None = all known.
+        # days : int
+        # Number of days to analyze.
+        #
+        # Returns
+        # dict
+        # Complete report with metrics per provider+symbol.
         providers = providers or ["alpaca", "yahoo", "bybit", "tastytrade"]
         symbols = symbols or ["IBIT", "BITO"]
         

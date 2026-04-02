@@ -1,8 +1,9 @@
-"""Headline ingestion for news sentiment.
+# Created by Oliver Meihls
 
-Fetches headlines from RSS feeds (required) and optionally NewsAPI when a key is
-configured. Output is deterministic and JSON-serialisable.
-"""
+# Headline ingestion for news sentiment.
+#
+# Fetches headlines from RSS feeds (required) and optionally NewsAPI when a key is
+# configured. Output is deterministic and JSON-serialisable.
 
 from __future__ import annotations
 
@@ -23,7 +24,7 @@ logger = logging.getLogger("argus.headline_fetcher")
 
 
 class HeadlineFetcher:
-    """Fetch and normalize headlines from configured providers."""
+    # Fetch and normalize headlines from configured providers.
 
     def __init__(
         self,
@@ -223,7 +224,7 @@ class HeadlineFetcher:
         return results
 
     async def fetch_headlines(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """Return deduplicated headlines."""
+        # Return deduplicated headlines.
         await self._throttle()
 
         cap = min(max(1, int(limit or self._max_headlines)), self._max_headlines)

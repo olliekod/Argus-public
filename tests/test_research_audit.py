@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import pytest
 import json
 from datetime import datetime, timedelta, timezone
@@ -27,7 +29,7 @@ class SimpleTrader(ReplayStrategy):
     def finalize(self): return {}
 
 def test_pnl_commission_accuracy():
-    """Verify that realized PnL is net of both entry and exit commissions."""
+    # Verify that realized PnL is net of both entry and exit commissions.
     port = VirtualPortfolio(starting_cash=1000.0)
     
     # Entry: Buy 1 @ 100, Comm = 1.0
@@ -45,7 +47,7 @@ def test_pnl_commission_accuracy():
     assert summary["expectancy"] == 7.0
 
 def test_experiment_determinism(tmp_path):
-    """Verify that identical runs produce identical IDs."""
+    # Verify that identical runs produce identical IDs.
     runner = ExperimentRunner(output_dir=str(tmp_path))
     pack_path = tmp_path / "pack.json"
     with open(pack_path, "w") as f:
@@ -69,7 +71,7 @@ def test_experiment_determinism(tmp_path):
     assert res1.portfolio_summary["total_realized_pnl"] == res2.portfolio_summary["total_realized_pnl"]
 
 def test_robust_walk_forward_weekend_gaps():
-    """Verify that unique trading days are counted correctly regardless of weekend gaps."""
+    # Verify that unique trading days are counted correctly regardless of weekend gaps.
     runner = ExperimentRunner()
     
     # Friday 2024-01-05
@@ -98,7 +100,7 @@ def test_robust_walk_forward_weekend_gaps():
     assert windows[1][1][0].timestamp_ms == tuesday_ts
 
 def test_sharpe_zero_movement():
-    """Verify that flat equity doesn't crash Sharpe calculation."""
+    # Verify that flat equity doesn't crash Sharpe calculation.
     port = VirtualPortfolio(starting_cash=1000.0)
     # 5 bars of flat equity
     for i in range(5):

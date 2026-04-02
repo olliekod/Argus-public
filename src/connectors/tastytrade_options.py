@@ -1,14 +1,13 @@
-"""
-Tastytrade Options Snapshot Connector
-======================================
+# Created by Oliver Meihls
 
-REST-based snapshot polling for option chain data via Tastytrade API.
-Uses TastytradeRestClient for authentication and nested chain fetching,
-then normalizes into OptionChainSnapshotEvents compatible with the
-existing schema used by ReplayHarness.
-
-This does NOT replace DXLink streaming — it is for snapshot polling only.
-"""
+# Tastytrade Options Snapshot Connector
+#
+# REST-based snapshot polling for option chain data via Tastytrade API.
+# Uses TastytradeRestClient for authentication and nested chain fetching,
+# then normalizes into OptionChainSnapshotEvents compatible with the
+# existing schema used by ReplayHarness.
+#
+# This does NOT replace DXLink streaming — it is for snapshot polling only.
 
 from __future__ import annotations
 
@@ -35,32 +34,31 @@ logger = logging.getLogger(__name__)
 
 
 def _now_ms() -> int:
-    """Current time as int milliseconds."""
+    # Current time as int milliseconds.
     return int(time.time() * 1000)
 
 
 def _poll_time_ms() -> int:
-    """Poll time normalized to minute boundary (for timestamp_ms uniqueness).
-    Matches Alpaca so both providers use the same granularity for
-    ON CONFLICT(provider, symbol, timestamp_ms). recv_ts_ms stays _now_ms()."""
+    # Poll time normalized to minute boundary (for timestamp_ms uniqueness).
+    # Matches Alpaca so both providers use the same granularity for
+    # ON CONFLICT(provider, symbol, timestamp_ms). recv_ts_ms stays _now_ms().
     return (_now_ms() // 60_000) * 60_000
 
 
 def _date_to_ms(date_str: str) -> int:
-    """Convert date string (YYYY-MM-DD) to UTC midnight milliseconds."""
+    # Convert date string (YYYY-MM-DD) to UTC midnight milliseconds.
     dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     return int(dt.timestamp() * 1000)
 
 
 def _compute_contract_id(option_symbol: str) -> str:
-    """Compute deterministic contract ID from option symbol."""
+    # Compute deterministic contract ID from option symbol.
     return hashlib.sha256(option_symbol.encode()).hexdigest()[:16]
 
 
 def _underlying_price_from_raw_chain(raw: Dict[str, Any]) -> float:
-    """Extract underlying price from Tastytrade nested chain response if present.
-    Tries common keys in data or first item. Returns 0.0 if not found.
-    """
+    # Extract underlying price from Tastytrade nested chain response if present.
+    # Tries common keys in data or first item. Returns 0.0 if not found.
     if not raw or not isinstance(raw, dict):
         return 0.0
     data = raw.get("data", raw)
@@ -75,6 +73,7 @@ def _underlying_price_from_raw_chain(raw: Dict[str, Any]) -> float:
                     return p
             except (TypeError, ValueError):
                 pass
+
     items = data.get("items") or data.get("item")
     if isinstance(items, list) and items:
         first = items[0] if isinstance(items[0], dict) else None
@@ -88,12 +87,13 @@ def _underlying_price_from_raw_chain(raw: Dict[str, Any]) -> float:
                             return p
                     except (TypeError, ValueError):
                         pass
+
     return 0.0
 
 
 @dataclass
 class TastytradeOptionsConfig:
-    """Configuration for Tastytrade options snapshot connector."""
+    # Configuration for Tastytrade options snapshot connector.
     username: str = ""
     password: str = ""
     environment: str = "live"
@@ -112,15 +112,14 @@ class TastytradeOptionsConfig:
 
 
 class TastytradeOptionsConnector:
-    """Tastytrade options snapshot connector.
-
-    Fetches nested option chains via REST, normalizes them, and builds
-    OptionChainSnapshotEvents compatible with option_chain_snapshots table
-    and ReplayHarness.
-
-    Thread-safety: all methods are synchronous (the REST client is sync).
-    The orchestrator wraps calls in ``asyncio.to_thread`` or similar.
-    """
+    # Tastytrade options snapshot connector.
+    #
+    # Fetches nested option chains via REST, normalizes them, and builds
+    # OptionChainSnapshotEvents compatible with option_chain_snapshots table
+    # and ReplayHarness.
+    #
+    # Thread-safety: all methods are synchronous (the REST client is sync).
+    # The orchestrator wraps calls in ``asyncio.to_thread`` or similar.
 
     PROVIDER = "tastytrade"
 
@@ -158,17 +157,16 @@ class TastytradeOptionsConnector:
         self._last_latency_ms = 0.0
 
     def _next_sequence_id(self) -> int:
-        """Get next monotonic sequence ID."""
+        # Get next monotonic sequence ID.
         self._sequence_id += 1
         return self._sequence_id
 
     def _ensure_client(self) -> TastytradeRestClient:
-        """Create and authenticate client if needed.
-
-        Prefers OAuth 2.0 when oauth_client_id/secret/refresh_token are set
-        (Tastytrade deprecated session auth; option-chain endpoints require OAuth).
-        Respects a cooldown period after auth failures to avoid spamming the API.
-        """
+        # Create and authenticate client if needed.
+        #
+        # Prefers OAuth 2.0 when oauth_client_id/secret/refresh_token are set
+        # (Tastytrade deprecated session auth; option-chain endpoints require OAuth).
+        # Respects a cooldown period after auth failures to avoid spamming the API.
         now = _now_ms()
 
         # OAuth path: refresh token and ensure client has valid Bearer token
@@ -276,10 +274,9 @@ class TastytradeOptionsConnector:
         return self._client
 
     def fetch_nested_chain(self, symbol: str) -> Dict[str, Any]:
-        """Fetch raw nested option chain for a symbol.
-
-        Returns raw API response dict (or empty dict on failure).
-        """
+        # Fetch raw nested option chain for a symbol.
+        #
+        # Returns raw API response dict (or empty dict on failure).
         start_ms = _now_ms()
         self._request_count += 1
         try:
@@ -308,7 +305,7 @@ class TastytradeOptionsConnector:
             return {}
 
     def _fetch_underlying_spot(self, symbol: str) -> Optional[float]:
-        """Fetch underlying price from Tastytrade market-data snapshot. Returns None on failure."""
+        # Fetch underlying price from Tastytrade market-data snapshot. Returns None on failure.
         try:
             client = self._ensure_client()
             snap = client.get_equity_snapshot(symbol)
@@ -323,6 +320,7 @@ class TastytradeOptionsConnector:
                             return p
                     except (TypeError, ValueError):
                         pass
+
             return None
         except Exception:
             return None
@@ -334,19 +332,18 @@ class TastytradeOptionsConnector:
         max_dte: int = 21,
         max_total: int = 80,
     ) -> List[str]:
-        """Return option symbols in DXLink streamer format for Greeks subscription.
-
-        DXLink sends Greeks per option contract; subscribing to underlying symbols
-        (e.g. SPY) does not yield Greeks. This fetches chains, normalizes, and
-        samples streamer_symbol (e.g. .SPY250321P590) for near-ATM options in
-        the given DTE range.
-
-        max_total is an application cap only. dxFeed allows up to 100,000
-        concurrent subscriptions; typical use is a few hundred symbols.
-
-        Returns:
-            List of symbols suitable for TastytradeStreamer(symbols=..., event_types=["Greeks"]).
-        """
+        # Return option symbols in DXLink streamer format for Greeks subscription.
+        #
+        # DXLink sends Greeks per option contract; subscribing to underlying symbols
+        # (e.g. SPY) does not yield Greeks. This fetches chains, normalizes, and
+        # samples streamer_symbol (e.g. .SPY250321P590) for near-ATM options in
+        # the given DTE range.
+        #
+        # max_total is an application cap only. dxFeed allows up to 100,000
+        # concurrent subscriptions; typical use is a few hundred symbols.
+        #
+        # Returns:
+        # List of symbols suitable for TastytradeStreamer(symbols=..., event_types=["Greeks"]).
         result: List[str] = []
         seen: set = set()
         today = datetime.now(timezone.utc).date()
@@ -403,16 +400,15 @@ class TastytradeOptionsConnector:
         min_dte: int = 7,
         max_dte: int = 21,
     ) -> List[Tuple[str, int]]:
-        """Filter normalized contracts to expirations within DTE range.
-
-        Args:
-            normalized: Output from normalize_tastytrade_nested_chain.
-            min_dte: Minimum days to expiration.
-            max_dte: Maximum days to expiration.
-
-        Returns:
-            List of (expiry_date_str, dte) tuples.
-        """
+        # Filter normalized contracts to expirations within DTE range.
+        #
+        # Args:
+        # normalized: Output from normalize_tastytrade_nested_chain.
+        # min_dte: Minimum days to expiration.
+        # max_dte: Maximum days to expiration.
+        #
+        # Returns:
+        # List of (expiry_date_str, dte) tuples.
         today = datetime.now(timezone.utc).date()
         expirations = sorted({
             c["expiry"] for c in normalized
@@ -436,17 +432,16 @@ class TastytradeOptionsConnector:
         normalized: List[Dict[str, Any]],
         underlying_price: float = 0.0,
     ) -> Optional[OptionChainSnapshotEvent]:
-        """Build an OptionChainSnapshotEvent from normalized contracts.
-
-        Args:
-            symbol: Underlying symbol (e.g. "SPY").
-            expiration: Expiration date string (YYYY-MM-DD).
-            normalized: Full normalized chain from normalize_tastytrade_nested_chain.
-            underlying_price: Current underlying price (0.0 if unavailable).
-
-        Returns:
-            OptionChainSnapshotEvent or None if chain is empty.
-        """
+        # Build an OptionChainSnapshotEvent from normalized contracts.
+        #
+        # Args:
+        # symbol: Underlying symbol (e.g. "SPY").
+        # expiration: Expiration date string (YYYY-MM-DD).
+        # normalized: Full normalized chain from normalize_tastytrade_nested_chain.
+        # underlying_price: Current underlying price (0.0 if unavailable).
+        #
+        # Returns:
+        # OptionChainSnapshotEvent or None if chain is empty.
         recv_ts_ms = _now_ms()  # Actual receipt time (for replay gating)
         timestamp_ms = _poll_time_ms()  # Minute-aligned for DB uniqueness
         expiration_ms = _date_to_ms(expiration)
@@ -557,19 +552,18 @@ class TastytradeOptionsConnector:
         max_dte: int = 21,
         underlying_price: float = 0.0,
     ) -> List[OptionChainSnapshotEvent]:
-        """Fetch chain and build all snapshots within DTE range for a symbol.
-
-        This is the main entry point for the orchestrator.
-
-        Args:
-            symbol: Underlying symbol.
-            min_dte: Minimum days to expiration.
-            max_dte: Maximum days to expiration.
-            underlying_price: Current underlying price.
-
-        Returns:
-            List of OptionChainSnapshotEvents (may be empty on failure).
-        """
+        # Fetch chain and build all snapshots within DTE range for a symbol.
+        #
+        # This is the main entry point for the orchestrator.
+        #
+        # Args:
+        # symbol: Underlying symbol.
+        # min_dte: Minimum days to expiration.
+        # max_dte: Maximum days to expiration.
+        # underlying_price: Current underlying price.
+        #
+        # Returns:
+        # List of OptionChainSnapshotEvents (may be empty on failure).
         raw = self.fetch_nested_chain(symbol)
         if not raw:
             logger.warning(
@@ -633,7 +627,7 @@ class TastytradeOptionsConnector:
         return snapshots
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Get connector health metrics."""
+        # Get connector health metrics.
         return {
             "provider": self.PROVIDER,
             "request_count": self._request_count,
@@ -647,7 +641,7 @@ class TastytradeOptionsConnector:
         }
 
     def close(self) -> None:
-        """Close the connector and release resources."""
+        # Close the connector and release resources.
         if self._client is not None:
             try:
                 self._client.close()

@@ -1,17 +1,16 @@
-"""
-Soak Guardian — Fail-Fast / Fail-Loud Threshold Guards
-=======================================================
+# Created by Oliver Meihls
 
-Periodically evaluates system health metrics against configurable
-thresholds and fires rate-limited alerts when correctness is
-threatened.
-
-All guards update a ``health_status`` dict that the soak summary
-and dashboard consume.  Alerts go through a callback (typically
-wired to Telegram).
-
-Guards never crash ingestion — they only observe and alert.
-"""
+# Soak Guardian — Fail-Fast / Fail-Loud Threshold Guards
+#
+# Periodically evaluates system health metrics against configurable
+# thresholds and fires rate-limited alerts when correctness is
+# threatened.
+#
+# All guards update a ``health_status`` dict that the soak summary
+# and dashboard consume.  Alerts go through a callback (typically
+# wired to Telegram).
+#
+# Guards never crash ingestion — they only observe and alert.
 
 from __future__ import annotations
 
@@ -80,16 +79,14 @@ _DEFAULTS: Dict[str, Any] = {
 
 
 class SoakGuardian:
-    """Evaluates soak guards and fires rate-limited alerts.
-
-    Parameters
-    ----------
-    config : dict
-        Threshold overrides (merged with _DEFAULTS).
-    alert_callback : callable or None
-        ``async def(severity, guard_name, message) -> None``
-        Called on threshold breach (rate-limited).
-    """
+    # Evaluates soak guards and fires rate-limited alerts.
+    #
+    # Parameters
+    # config : dict
+    # Threshold overrides (merged with _DEFAULTS).
+    # alert_callback : callable or None
+    # ``async def(severity, guard_name, message) -> None``
+    # Called on threshold breach (rate-limited).
 
     def __init__(
         self,
@@ -133,18 +130,18 @@ class SoakGuardian:
 
     @property
     def health_status(self) -> Dict[str, str]:
-        """Current health per guard."""
+        # Current health per guard.
         with self._lock:
             return dict(self._health)
 
     @property
     def guard_messages(self) -> Dict[str, str]:
-        """Last message per guard."""
+        # Last message per guard.
         with self._lock:
             return dict(self._guard_messages)
 
     def get_overall_health(self) -> str:
-        """Return worst-case health across all guards."""
+        # Return worst-case health across all guards.
         with self._lock:
             statuses = list(self._health.values())
         if any(s == "alert" for s in statuses):
@@ -163,26 +160,23 @@ class SoakGuardian:
         resource_snapshot: Dict[str, Any],
         component_heartbeats: Optional[Dict[str, float]] = None,
     ) -> List[Dict[str, Any]]:
-        """Run all guards and return list of triggered alerts.
-
-        Parameters
-        ----------
-        bus_stats
-            From ``EventBus.get_status_summary()``.
-        bar_builder_status
-            From ``BarBuilder.get_status()``.
-        persistence_status
-            From ``PersistenceManager.get_status()``.
-        resource_snapshot
-            From ``ResourceMonitor.get_full_snapshot()``.
-        component_heartbeats
-            ``{component_name: last_heartbeat_epoch}`` or None.
-
-        Returns
-        -------
-        list of dicts
-            Each dict: ``{"severity", "guard", "message"}``.
-        """
+        # Run all guards and return list of triggered alerts.
+        #
+        # Parameters
+        # bus_stats
+        # From ``EventBus.get_status_summary()``.
+        # bar_builder_status
+        # From ``BarBuilder.get_status()``.
+        # persistence_status
+        # From ``PersistenceManager.get_status()``.
+        # resource_snapshot
+        # From ``ResourceMonitor.get_full_snapshot()``.
+        # component_heartbeats
+        # ``{component_name: last_heartbeat_epoch}`` or None.
+        #
+        # Returns
+        # list of dicts
+        # Each dict: ``{"severity", "guard", "message"}``.
         triggered: List[Dict[str, Any]] = []
         now = time.time()
 
@@ -405,7 +399,7 @@ class SoakGuardian:
     def _check_bar_flush_failures(
         self, persist_status: Dict, now: float
     ) -> List[Dict[str, Any]]:
-        """Alert when persistence has bar flush failures. error_count is cumulative (lifetime)."""
+        # Alert when persistence has bar flush failures. error_count is cumulative (lifetime).
         guard = "bar_flush_failures"
         error_count = persist_status.get("counters", {}).get("error_count", 0)
         last_error = persist_status.get("last_error")
@@ -422,8 +416,8 @@ class SoakGuardian:
     def _check_log_flood(
         self, resource: Dict, now: float
     ) -> List[Dict[str, Any]]:
-        """Alert when ERROR log rate (last hour / 60) exceeds threshold.
-        Recoverable/hot-path failures should be logged as WARNING to avoid flooding."""
+        # Alert when ERROR log rate (last hour / 60) exceeds threshold.
+        # Recoverable/hot-path failures should be logged as WARNING to avoid flooding.
         guard = "log_flood"
         log = resource.get("log_entropy", {})
         errors_last_hour = log.get("errors_last_hour", 0)
@@ -596,7 +590,7 @@ class SoakGuardian:
     def _fire(
         self, severity: str, guard: str, message: str, now: float
     ) -> List[Dict[str, Any]]:
-        """Fire an alert if cooldown allows."""
+        # Fire an alert if cooldown allows.
         cooldown = self._cfg["alert_cooldown_s"]
         last = self._last_alert_ts.get(guard, 0)
 

@@ -1,12 +1,11 @@
-"""
-Argus Option Event Types
-========================
+# Created by Oliver Meihls
 
-Deterministic event schemas for options data ingestion.
-All timestamps are int milliseconds (UTC epoch).
-
-Schema versioning: every event carries ``v`` (schema version).
-"""
+# Argus Option Event Types
+#
+# Deterministic event schemas for options data ingestion.
+# All timestamps are int milliseconds (UTC epoch).
+#
+# Schema versioning: every event carries ``v`` (schema version).
 
 from __future__ import annotations
 
@@ -21,29 +20,26 @@ OPTIONS_SCHEMA_VERSION = 1
 
 
 def _now_ms() -> int:
-    """Current time as int milliseconds."""
+    # Current time as int milliseconds.
     return int(time.time() * 1000)
 
 
 def _to_ms(ts: float) -> int:
-    """Convert float seconds to int milliseconds."""
+    # Convert float seconds to int milliseconds.
     if ts < 2e10:  # Seconds
         return int(ts * 1000)
     return int(ts)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Option Contract Event (Static Metadata)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 @dataclass(frozen=True, slots=True)
 class OptionContractEvent:
-    """Static options contract metadata.
-    
-    Published to: options.contracts
-    Changes infrequently — only on new listings or contract updates.
-    """
+    # Static options contract metadata.
+    #
+    # Published to: options.contracts
+    # Changes infrequently — only on new listings or contract updates.
     symbol: str              # Underlying: "IBIT", "BITO"
     contract_id: str         # OCC/Exchange standardized ID
     option_symbol: str       # Full option symbol (OCC format)
@@ -58,18 +54,15 @@ class OptionContractEvent:
     v: int = OPTIONS_SCHEMA_VERSION
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Option Quote Event (Live Quote + Greeks)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 @dataclass(frozen=True, slots=True)
 class OptionQuoteEvent:
-    """Real-time options quote with optional Greeks.
-    
-    Published to: options.quotes
-    Contains bid/ask/last with optional IV and Greeks.
-    """
+    # Real-time options quote with optional Greeks.
+    #
+    # Published to: options.quotes
+    # Contains bid/ask/last with optional IV and Greeks.
     contract_id: str         # FK to OptionContractEvent
     symbol: str              # Underlying: "IBIT", "BITO"
     strike: float
@@ -103,18 +96,15 @@ class OptionQuoteEvent:
     v: int = OPTIONS_SCHEMA_VERSION
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Option Chain Snapshot Event (Atomic Chain)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 @dataclass(frozen=True, slots=True)
 class OptionChainSnapshotEvent:
-    """Atomic snapshot of an options chain for one expiration.
-    
-    Published to: options.chains
-    Contains entire put/call chain as frozen tuples for determinism.
-    """
+    # Atomic snapshot of an options chain for one expiration.
+    #
+    # Published to: options.chains
+    # Contains entire put/call chain as frozen tuples for determinism.
     symbol: str                    # "IBIT" | "BITO"
     expiration_ms: int             # Expiration as UTC ms
     underlying_price: float        # Spot price at snapshot time
@@ -140,13 +130,11 @@ class OptionChainSnapshotEvent:
     v: int = OPTIONS_SCHEMA_VERSION
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Serialization Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def option_contract_to_dict(c: OptionContractEvent, sequence_id: int = 0) -> Dict[str, Any]:
-    """Serialize OptionContractEvent to dict for tape/persistence."""
+    # Serialize OptionContractEvent to dict for tape/persistence.
     return {
         "event_type": "option_contract",
         "type": "option_contract",  # Alias for backward compat
@@ -167,7 +155,7 @@ def option_contract_to_dict(c: OptionContractEvent, sequence_id: int = 0) -> Dic
 
 
 def dict_to_option_contract(d: Dict[str, Any]) -> OptionContractEvent:
-    """Deserialize dict to OptionContractEvent."""
+    # Deserialize dict to OptionContractEvent.
     return OptionContractEvent(
         symbol=d["symbol"],
         contract_id=d["contract_id"],
@@ -185,7 +173,7 @@ def dict_to_option_contract(d: Dict[str, Any]) -> OptionContractEvent:
 
 
 def option_quote_to_dict(q: OptionQuoteEvent, sequence_id: int = 0) -> Dict[str, Any]:
-    """Serialize OptionQuoteEvent to dict for tape/persistence."""
+    # Serialize OptionQuoteEvent to dict for tape/persistence.
     return {
         "event_type": "option_quote",
         "type": "option_quote",  # Alias for backward compat
@@ -215,7 +203,7 @@ def option_quote_to_dict(q: OptionQuoteEvent, sequence_id: int = 0) -> Dict[str,
 
 
 def dict_to_option_quote(d: Dict[str, Any]) -> OptionQuoteEvent:
-    """Deserialize dict to OptionQuoteEvent."""
+    # Deserialize dict to OptionQuoteEvent.
     return OptionQuoteEvent(
         contract_id=d["contract_id"],
         symbol=d["symbol"],
@@ -243,7 +231,7 @@ def dict_to_option_quote(d: Dict[str, Any]) -> OptionQuoteEvent:
 
 
 def option_chain_to_dict(s: OptionChainSnapshotEvent, sequence_id: int = 0) -> Dict[str, Any]:
-    """Serialize OptionChainSnapshotEvent to dict for tape/persistence."""
+    # Serialize OptionChainSnapshotEvent to dict for tape/persistence.
     return {
         "event_type": "option_chain",
         "type": "option_chain",  # Alias for backward compat
@@ -267,7 +255,7 @@ def option_chain_to_dict(s: OptionChainSnapshotEvent, sequence_id: int = 0) -> D
 
 
 def dict_to_option_chain(d: Dict[str, Any]) -> OptionChainSnapshotEvent:
-    """Deserialize dict to OptionChainSnapshotEvent."""
+    # Deserialize dict to OptionChainSnapshotEvent.
     puts = tuple(dict_to_option_quote(q) for q in d.get("puts", []))
     calls = tuple(dict_to_option_quote(q) for q in d.get("calls", []))
     
@@ -291,18 +279,16 @@ def dict_to_option_chain(d: Dict[str, Any]) -> OptionChainSnapshotEvent:
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helper Functions
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def compute_snapshot_id(symbol: str, expiration_ms: int, timestamp_ms: int) -> str:
-    """Compute deterministic snapshot ID."""
+    # Compute deterministic snapshot ID.
     return f"{symbol}_{expiration_ms}_{timestamp_ms}"
 
 
 def compute_chain_hash(snapshot: OptionChainSnapshotEvent) -> str:
-    """Compute deterministic hash of chain snapshot for deduplication."""
+    # Compute deterministic hash of chain snapshot for deduplication.
     key_data = {
         "symbol": snapshot.symbol,
         "expiration_ms": snapshot.expiration_ms,
@@ -315,9 +301,7 @@ def compute_chain_hash(snapshot: OptionChainSnapshotEvent) -> str:
     return hashlib.sha256(key_str.encode()).hexdigest()[:16]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Topic Constants
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 TOPIC_OPTIONS_CONTRACTS = "options.contracts"

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Prune old rows from option_chain_snapshots by timestamp_ms.
+# Created by Oliver Meihls
 
-Used for replay packs (SPY, QQQ, IBIT, BITO, etc.). Retention is also applied
-hourly by the orchestrator when data_retention.option_chain_snapshots_days is set
-in config.yaml.
-
-Usage:
-  python scripts/prune_option_chain_snapshots.py --days 30
-  python scripts/prune_option_chain_snapshots.py --days 30 --db data/argus.db
-"""
+# Prune old rows from option_chain_snapshots by timestamp_ms.
+#
+# Used for replay packs (SPY, QQQ, IBIT, BITO, etc.). Retention is also applied
+# hourly by the orchestrator when data_retention.option_chain_snapshots_days is set
+# in config.yaml.
+#
+# Usage:
+# python scripts/prune_option_chain_snapshots.py --days 30
+# python scripts/prune_option_chain_snapshots.py --days 30 --db data/argus.db
 
 from __future__ import annotations
 

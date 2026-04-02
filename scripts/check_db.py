@@ -1,9 +1,8 @@
-"""
-Database Verification Script
-============================
+# Created by Oliver Meihls
 
-Test that the SQLite database is working and view stored data.
-"""
+# Database Verification Script
+#
+# Test that the SQLite database is working and view stored data.
 
 import asyncio
 import sqlite3
@@ -12,7 +11,7 @@ from datetime import datetime
 
 
 def check_database():
-    """Check database and display stored data."""
+    # Check database and display stored data.
     db_path = Path("data/argus.db")
     
     if not db_path.exists():

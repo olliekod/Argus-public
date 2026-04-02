@@ -1,14 +1,13 @@
-"""
-Tests for Allocation Engine
-==============================
+# Created by Oliver Meihls
 
-Verifies:
-- Per-play cap enforcement (7% max per strategy)
-- Aggregate exposure cap
-- Zero allocation for edge-less strategies
-- Correct contract computation for options
-- Equity update
-"""
+# Tests for Allocation Engine
+#
+# Verifies:
+# - Per-play cap enforcement (7% max per strategy)
+# - Aggregate exposure cap
+# - Zero allocation for edge-less strategies
+# - Correct contract computation for options
+# - Equity update
 
 from __future__ import annotations
 
@@ -49,7 +48,7 @@ class TestAllocationEngine:
         assert allocs[0].weight > 0
 
     def test_per_play_cap(self):
-        """No allocation should exceed per_play_cap."""
+        # No allocation should exceed per_play_cap.
         config = AllocationConfig(
             kelly_fraction=0.50,  # aggressive
             per_play_cap=0.07,
@@ -64,7 +63,7 @@ class TestAllocationEngine:
             assert abs(a.weight) <= 0.07 + 1e-8
 
     def test_aggregate_cap(self):
-        """Sum of absolute weights should not exceed aggregate cap."""
+        # Sum of absolute weights should not exceed aggregate cap.
         config = AllocationConfig(
             kelly_fraction=0.50,
             per_play_cap=0.07,
@@ -81,7 +80,7 @@ class TestAllocationEngine:
         assert total <= 0.10 + 1e-6
 
     def test_zero_edge_strategy(self):
-        """Strategy with mu <= cost should get 0 allocation."""
+        # Strategy with mu <= cost should get 0 allocation.
         engine = AllocationEngine(equity=100_000.0)
         forecasts = [
             self._make_forecast("edge", mu=0.005, sigma=0.15, cost=0.001),
@@ -93,7 +92,7 @@ class TestAllocationEngine:
                 assert a.weight == 0.0
 
     def test_contracts_computation(self):
-        """Options strategies should get contract counts."""
+        # Options strategies should get contract counts.
         engine = AllocationEngine(equity=100_000.0)
         forecasts = [self._make_forecast("opt_strat", mu=0.005, sigma=0.15)]
         max_loss = {"opt_strat": 300.0}

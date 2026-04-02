@@ -1,8 +1,9 @@
-"""Tests for the Kalshi farm optimization redesign components.
+# Created by Oliver Meihls
 
-Covers: decision_context v2, context_policy, edge_tracker, population_scaler,
-backward compatibility, and bounded data structures.
-"""
+# Tests for the Kalshi farm optimization redesign components.
+#
+# Covers: decision_context v2, context_policy, edge_tracker, population_scaler,
+# backward compatibility, and bounded data structures.
 
 from __future__ import annotations
 
@@ -27,9 +28,7 @@ from argus_kalshi.decision_context import (
 from argus_kalshi.models import MarketMetadata, OrderbookState, TradeSignal
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 def _make_cfg(**overrides):
     defaults = {
@@ -95,9 +94,7 @@ def _make_orderbook(**overrides):
     return OrderbookState(**defaults)
 
 
-# ===========================================================================
 # 1. Decision context v2 fields
-# ===========================================================================
 
 class TestStrikeDistancePct:
     def test_binary_market(self):
@@ -240,7 +237,7 @@ class TestBuildDecisionContext:
         assert ctx.get("nm") is False
 
     def test_spot_zero_sdp_absent(self):
-        """When spot_price=0, sdp/sdb/nm should be None-stripped or defaults."""
+        # When spot_price=0, sdp/sdb/nm should be None-stripped or defaults.
         signal = _make_signal()
         meta = _make_metadata()
         ctx = build_decision_context(
@@ -283,9 +280,7 @@ class TestBuildDecisionContext:
         assert ctx["lb"] == "na"
 
 
-# ===========================================================================
 # 2. Context policy engine
-# ===========================================================================
 
 from argus_kalshi.context_policy import (
     AdaptiveCapEngine,
@@ -520,9 +515,7 @@ class TestAdaptiveCapEngine:
         assert engine.get_cap_multiplier(key, time.time()) == 1.0
 
 
-# ===========================================================================
 # 3. Edge tracker
-# ===========================================================================
 
 from argus_kalshi.edge_tracker import EdgeTracker
 
@@ -585,7 +578,7 @@ class TestEdgeTracker:
         assert tracker.get_weight_multiplier(key) == 1.0
 
     def test_clamp_extreme_realized(self):
-        """Extreme PnL values should not blow up retention ratio."""
+        # Extreme PnL values should not blow up retention ratio.
         tracker = self._tracker()
         key = "fam|yes|lt_0.05|lt_40|na|far"
         for _ in range(5):
@@ -607,9 +600,7 @@ class TestEdgeTracker:
         assert tracker.get_retention_ratio(key) == 1.0
 
 
-# ===========================================================================
 # 4. Population scaler
-# ===========================================================================
 
 from argus_kalshi.population_scaler import PopulationScaler, ScaleEvent, ScaleGateResult
 
@@ -764,13 +755,11 @@ class TestPopulationScaler:
             scaler.force_stage(-1)
 
 
-# ===========================================================================
 # 5. Backward compatibility
-# ===========================================================================
 
 class TestBackwardCompatibility:
     def test_default_config_no_new_fields_needed(self):
-        """KalshiConfig with only required fields still works."""
+        # KalshiConfig with only required fields still works.
         cfg = _make_cfg()
         assert cfg.bot_id == "test"
 
@@ -804,9 +793,7 @@ class TestBackwardCompatibility:
         assert _tts_bucket(3600) == "ge_30m"
 
 
-# ===========================================================================
 # 6. Bounded data structures
-# ===========================================================================
 
 class TestBoundedStructures:
     def test_context_policy_window_bounded(self):

@@ -1,18 +1,16 @@
-"""
-Argus Event Bus
-===============
+# Created by Oliver Meihls
 
-Central Pub/Sub event bus with dedicated worker threads per topic.
-
-Design constraints
-------------------
-* ``publish()`` is **O(1)** — it only appends to a ``collections.deque``
-  and **never** calls handlers directly.
-* Each topic has its own worker thread that drains the queue and calls
-  registered handlers sequentially.
-* Back-pressure uses ``deque(maxlen=…)`` with DROP_OLD semantics for
-  ``market.*`` topics (newest data wins).
-"""
+# Argus Event Bus
+#
+# Central Pub/Sub event bus with dedicated worker threads per topic.
+#
+# Design constraints
+# * ``publish()`` is **O(1)** — it only appends to a ``collections.deque``
+# and **never** calls handlers directly.
+# * Each topic has its own worker thread that drains the queue and calls
+# registered handlers sequentially.
+# * Back-pressure uses ``deque(maxlen=…)`` with DROP_OLD semantics for
+# ``market.*`` topics (newest data wins).
 
 from __future__ import annotations
 
@@ -36,7 +34,7 @@ _STOP = object()
 
 
 def _maxlen_for(topic: str) -> int:
-    """Choose a deque maxlen based on topic prefix."""
+    # Choose a deque maxlen based on topic prefix.
     for prefix, maxlen in _DEFAULT_MAXLEN.items():
         if topic.startswith(prefix):
             return maxlen
@@ -44,17 +42,16 @@ def _maxlen_for(topic: str) -> int:
 
 
 class EventBus:
-    """Thread-safe Pub/Sub event bus with async worker drains.
-
-    Usage::
-
-        bus = EventBus()
-        bus.subscribe("market.quotes", my_handler)
-        bus.start()
-        bus.publish("market.quotes", quote_event)
-        ...
-        bus.stop()                # graceful shutdown
-    """
+    # Thread-safe Pub/Sub event bus with async worker drains.
+    #
+    # Usage::
+    #
+    # bus = EventBus()
+    # bus.subscribe("market.quotes", my_handler)
+    # bus.start()
+    # bus.publish("market.quotes", quote_event)
+    # ...
+    # bus.stop()                # graceful shutdown
 
     # After this many consecutive errors a handler is automatically
     # disabled (circuit-broken) to prevent unbounded error-log growth.
@@ -77,10 +74,9 @@ class EventBus:
     # ──── public API ────────────────────────────────────────
 
     def subscribe(self, topic: str, handler: Callable) -> None:
-        """Register *handler* for *topic*.
-
-        Must be called **before** :meth:`start`.
-        """
+        # Register *handler* for *topic*.
+        #
+        # Must be called **before** :meth:`start`.
         with self._lock:
             if topic not in self._subscribers:
                 self._subscribers[topic] = []
@@ -101,12 +97,11 @@ class EventBus:
         logger.debug("subscribed %s to %s", handler.__qualname__, topic)
 
     def publish(self, topic: str, event: Any) -> None:
-        """Enqueue *event* on *topic*.
-
-        O(1) — never blocks, never calls handlers.
-        If the deque is full the oldest item is silently dropped
-        (DROP_OLD back-pressure for ``market.*``).
-        """
+        # Enqueue *event* on *topic*.
+        #
+        # O(1) — never blocks, never calls handlers.
+        # If the deque is full the oldest item is silently dropped
+        # (DROP_OLD back-pressure for ``market.*``).
         q = self._queues.get(topic)
         if q is None:
             return  # no subscribers for this topic
@@ -124,7 +119,7 @@ class EventBus:
             ev.set()
 
     def start(self) -> None:
-        """Spawn a worker thread for every registered topic."""
+        # Spawn a worker thread for every registered topic.
         if self._running:
             return
         self._running = True
@@ -145,7 +140,7 @@ class EventBus:
         )
 
     def stop(self, timeout: float = 5.0) -> None:
-        """Signal all workers to drain and exit."""
+        # Signal all workers to drain and exit.
         if not self._running:
             return
         self._running = False
@@ -164,15 +159,15 @@ class EventBus:
         logger.info("EventBus stopped")
 
     def get_stats(self) -> Dict[str, Dict[str, int]]:
-        """Return per-topic publish / processed / dropped counters."""
+        # Return per-topic publish / processed / dropped counters.
         return dict(self._stats)
 
     def get_queue_depths(self) -> Dict[str, int]:
-        """Current number of events waiting in each topic queue."""
+        # Current number of events waiting in each topic queue.
         return {topic: len(q) for topic, q in self._queues.items()}
 
     def get_status_summary(self) -> Dict[str, Any]:
-        """Return enriched per-topic status metrics for /status."""
+        # Return enriched per-topic status metrics for /status.
         summary: Dict[str, Any] = {}
         for topic, stats in self._stats.items():
             summary[topic] = {
@@ -188,13 +183,13 @@ class EventBus:
         return summary
 
     def is_running(self) -> bool:
-        """Return True if the bus workers are running."""
+        # Return True if the bus workers are running.
         return self._running
 
     # ──── internal ──────────────────────────────────────────
 
     def _worker_loop(self, topic: str) -> None:
-        """Drain the queue for *topic*, calling handlers for each event."""
+        # Drain the queue for *topic*, calling handlers for each event.
         q = self._queues[topic]
         ev = self._events[topic]
         handlers = self._subscribers.get(topic, [])
@@ -270,7 +265,7 @@ class EventBus:
         handlers: List[Callable],
         stats: Dict[str, int],
     ) -> None:
-        """Process any events still in the queue before shutdown."""
+        # Process any events still in the queue before shutdown.
         while q:
             try:
                 item = q.popleft()

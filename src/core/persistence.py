@@ -1,34 +1,29 @@
-"""
-Argus Persistence Module
-========================
+# Created by Oliver Meihls
 
-Subscribes to bus topics and writes data to the database.
-
-Priority rules
---------------
-* **Market bars** (HIGH priority) are batched and flushed every 1 second
-  (or on heartbeat / shutdown).  Bars are **never dropped**: on flush
-  failure they are returned to the buffer for retry.
-* **SignalEvents** (MEDIUM priority) are persisted via a dedicated queue.
-* **Metrics / Heartbeats** (LOW priority) share a separate queue and
-  are the first to be dropped under overload.
-
-Flush triggers
---------------
-1. Periodic 1-second timer inside the bar-batch writer.
-2. ``system.heartbeat`` events (flush on heartbeat boundaries).
-3. ``SIGINT / Ctrl-C`` — the orchestrator calls :meth:`shutdown` which
-   flushes all remaining buffered bars.
-
-Storage optimisation
---------------------
-Only 1-minute bars are logged.
-
-Lag tracking (Stream 2.1)
--------------------------
-Computes ``persist_lag_ms = now - source_ts`` for every bar flush and
-exposes it via status / heartbeat telemetry.
-"""
+# Argus Persistence Module
+#
+# Subscribes to bus topics and writes data to the database.
+#
+# Priority rules
+# * **Market bars** (HIGH priority) are batched and flushed every 1 second
+# (or on heartbeat / shutdown).  Bars are **never dropped**: on flush
+# failure they are returned to the buffer for retry.
+# * **SignalEvents** (MEDIUM priority) are persisted via a dedicated queue.
+# * **Metrics / Heartbeats** (LOW priority) share a separate queue and
+# are the first to be dropped under overload.
+#
+# Flush triggers
+# 1. Periodic 1-second timer inside the bar-batch writer.
+# 2. ``system.heartbeat`` events (flush on heartbeat boundaries).
+# 3. ``SIGINT / Ctrl-C`` — the orchestrator calls :meth:`shutdown` which
+# flushes all remaining buffered bars.
+#
+# Storage optimisation
+# Only 1-minute bars are logged.
+#
+# Lag tracking (Stream 2.1)
+# Computes ``persist_lag_ms = now - source_ts`` for every bar flush and
+# exposes it via status / heartbeat telemetry.
 
 from __future__ import annotations
 
@@ -164,18 +159,16 @@ def _compute_persist_lag_ms(source_ts_values: List[float], now: float) -> Option
 
 
 class PersistenceManager:
-    """Async-safe persistence subscriber for the event bus.
-
-    Parameters
-    ----------
-    bus : EventBus
-        Shared event bus.
-    db : Database
-        The Argus async SQLite database instance.
-    loop : asyncio.AbstractEventLoop
-        The running asyncio loop (needed to bridge bus worker threads
-        into the async database layer).
-    """
+    # Async-safe persistence subscriber for the event bus.
+    #
+    # Parameters
+    # bus : EventBus
+    # Shared event bus.
+    # db : Database
+    # The Argus async SQLite database instance.
+    # loop : asyncio.AbstractEventLoop
+    # The running asyncio loop (needed to bridge bus worker threads
+    # into the async database layer).
 
     def __init__(
         self,
@@ -287,7 +280,7 @@ class PersistenceManager:
     # ── lifecycle ───────────────────────────────────────────
 
     def start(self) -> None:
-        """Start the background flush and write threads."""
+        # Start the background flush and write threads.
         self._running = True
         self._flush_thread = threading.Thread(
             target=self._flush_loop,
@@ -312,11 +305,10 @@ class PersistenceManager:
         logger.info("PersistenceManager flush + write threads started")
 
     def shutdown(self) -> None:
-        """Flush all remaining bars and stop the flush thread.
-
-        Called on SIGINT / Ctrl-C from the orchestrator.
-        Idempotent: safe to call multiple times.
-        """
+        # Flush all remaining bars and stop the flush thread.
+        #
+        # Called on SIGINT / Ctrl-C from the orchestrator.
+        # Idempotent: safe to call multiple times.
         self._running = False
         # Final flush
         self._do_flush()
@@ -327,6 +319,7 @@ class PersistenceManager:
                 q.put_nowait(_WRITE_STOP)
             except Exception:
                 pass
+
         if self._flush_thread and self._flush_thread.is_alive():
             self._flush_thread.join(timeout=5.0)
         if self._signal_write_thread and self._signal_write_thread.is_alive():
@@ -338,7 +331,7 @@ class PersistenceManager:
     # ── spool management ────────────────────────────────────
 
     def _recover_spool(self) -> None:
-        """Detect and recover a leftover spool file from a previous crash."""
+        # Detect and recover a leftover spool file from a previous crash.
         try:
             if self._spool_path.exists():
                 size = self._spool_path.stat().st_size
@@ -363,12 +356,11 @@ class PersistenceManager:
             logger.warning("Failed to recover spool: %s", e)
 
     def _spool_bar(self, bar: BarEvent) -> None:
-        """Write a single bar to the disk spool (JSONL). Called under _bar_lock.
-        
-        Uses per-append open/write/close pattern for Windows compatibility.
-        This ensures no file handle is held open between calls, preventing
-        WinError 32 (file in use) during temp directory cleanup in tests.
-        """
+        # Write a single bar to the disk spool (JSONL). Called under _bar_lock.
+        #
+        # Uses per-append open/write/close pattern for Windows compatibility.
+        # This ensures no file handle is held open between calls, preventing
+        # WinError 32 (file in use) during temp directory cleanup in tests.
         try:
             self._spool_dir.mkdir(parents=True, exist_ok=True)
 
@@ -418,7 +410,7 @@ class PersistenceManager:
             )
 
     def _drain_spool_batch(self) -> List[BarEvent]:
-        """Read a batch of bars from the spool file. Called under _bar_lock."""
+        # Read a batch of bars from the spool file. Called under _bar_lock.
         if not self._spool_active or self._spool_bars_pending <= 0:
             return []
 
@@ -447,6 +439,7 @@ class PersistenceManager:
                 self._spool_bars_pending = max(0, self._spool_bars_pending - 1)
             except OSError:
                 pass
+
         except (OSError, TypeError) as e:
             logger.error("Failed to read bar spool: %s", e)
 
@@ -460,7 +453,7 @@ class PersistenceManager:
         return bars
 
     def _drain_spool_to_db(self) -> None:
-        """Attempt to drain one batch from the disk spool to the database."""
+        # Attempt to drain one batch from the disk spool to the database.
         with self._bar_lock:
             spool_batch = self._drain_spool_batch()
 
@@ -488,11 +481,10 @@ class PersistenceManager:
                 self._bar_buffer = spool_batch + self._bar_buffer
 
     def _cleanup_spool(self) -> None:
-        """Remove the spool file after full drain. Called under _bar_lock.
-        
-        Note: spool file handles are closed after each write (per-append pattern)
-        so no file handle cleanup needed here.
-        """
+        # Remove the spool file after full drain. Called under _bar_lock.
+        #
+        # Note: spool file handles are closed after each write (per-append pattern)
+        # so no file handle cleanup needed here.
         try:
             if self._spool_path.exists():
                 self._spool_path.unlink()
@@ -508,7 +500,7 @@ class PersistenceManager:
     # ── safe-pause management ─────────────────────────────
 
     def _enter_pause(self, reason: str) -> None:
-        """Enter the ingestion-paused state.  Called under _bar_lock."""
+        # Enter the ingestion-paused state.  Called under _bar_lock.
         if not self._ingestion_paused:
             self._ingestion_paused = True
             self._pause_entered_ts = time.monotonic()
@@ -524,11 +516,10 @@ class PersistenceManager:
             )
 
     def _check_pause_recovery(self) -> None:
-        """Resume ingestion if spool has drained below the resume threshold.
-
-        Called after a successful DB write (buffer flush or spool drain).
-        Must NOT hold _bar_lock when called.
-        """
+        # Resume ingestion if spool has drained below the resume threshold.
+        #
+        # Called after a successful DB write (buffer flush or spool drain).
+        # Must NOT hold _bar_lock when called.
         with self._bar_lock:
             if not self._ingestion_paused:
                 return
@@ -645,19 +636,18 @@ class PersistenceManager:
 
     @property
     def ingestion_paused(self) -> bool:
-        """Whether bar ingestion is currently paused (thread-safe read)."""
+        # Whether bar ingestion is currently paused (thread-safe read).
         with self._bar_lock:
             return self._ingestion_paused
 
     # ── handlers (run on bus worker threads) ────────────────
 
     def _on_bar(self, event: BarEvent) -> None:
-        """Buffer bar for batched write. Bounded with disk spool overflow.
-
-        When ingestion is paused (spool full + DB unreachable), bars are
-        rejected at this boundary to keep memory bounded.  The paused state
-        is highly visible in health/status and triggers alerts.
-        """
+        # Buffer bar for batched write. Bounded with disk spool overflow.
+        #
+        # When ingestion is paused (spool full + DB unreachable), bars are
+        # rejected at this boundary to keep memory bounded.  The paused state
+        # is highly visible in health/status and triggers alerts.
         with self._bar_lock:
             if self._ingestion_paused:
                 self._bars_rejected_paused += 1
@@ -678,12 +668,11 @@ class PersistenceManager:
                 self._bar_buffer.append(event)
 
     def _on_signal(self, event: SignalEvent) -> None:
-        """Persist signal via medium-priority queue.
-
-        Uses a blocking put with a short timeout so that transient queue
-        pressure doesn't silently discard signals.  The signal is only
-        dropped after the timeout expires.
-        """
+        # Persist signal via medium-priority queue.
+        #
+        # Uses a blocking put with a short timeout so that transient queue
+        # pressure doesn't silently discard signals.  The signal is only
+        # dropped after the timeout expires.
         try:
             self._signal_queue.put(("signal", event), timeout=_SIGNAL_PUT_TIMEOUT_S)
         except Full:
@@ -697,10 +686,9 @@ class PersistenceManager:
             )
 
     def _on_signal_raw(self, event: Phase3SignalEvent) -> None:
-        """Persist Phase 3 signals via medium-priority queue.
-
-        Same backpressure strategy as ``_on_signal``.
-        """
+        # Persist Phase 3 signals via medium-priority queue.
+        #
+        # Same backpressure strategy as ``_on_signal``.
         try:
             self._signal_queue.put(("signal_raw", event), timeout=_SIGNAL_PUT_TIMEOUT_S)
         except Full:
@@ -714,11 +702,11 @@ class PersistenceManager:
             )
 
     def _on_heartbeat(self, event: HeartbeatEvent) -> None:
-        """Flush buffered bars on heartbeat boundary."""
+        # Flush buffered bars on heartbeat boundary.
         self._do_flush()
 
     def _on_metric(self, event: MetricEvent) -> None:
-        """Persist market metric via low-priority queue."""
+        # Persist market metric via low-priority queue.
         try:
             self._telemetry_queue.put_nowait(("metric", event))
         except Full:
@@ -727,7 +715,7 @@ class PersistenceManager:
             logger.debug("Telemetry queue full — dropping metric event")
 
     def _on_component_heartbeat(self, event: ComponentHeartbeatEvent) -> None:
-        """Persist component heartbeat via low-priority queue."""
+        # Persist component heartbeat via low-priority queue.
         try:
             self._telemetry_queue.put_nowait(("heartbeat", event))
         except Full:
@@ -736,12 +724,11 @@ class PersistenceManager:
             logger.debug("Telemetry queue full — dropping heartbeat event")
 
     def _on_option_chain(self, event: OptionChainSnapshotEvent) -> None:
-        """Persist option chain snapshot via idempotent upsert.
-
-        Writes directly to DB (async-safe via futures).
-        Uses upsert_option_chain_snapshot for restart idempotency.
-        Retries up to 3 times with exponential backoff on failure.
-        """
+        # Persist option chain snapshot via idempotent upsert.
+        #
+        # Writes directly to DB (async-safe via futures).
+        # Uses upsert_option_chain_snapshot for restart idempotency.
+        # Retries up to 3 times with exponential backoff on failure.
         if not self._running:
             return
 
@@ -794,12 +781,11 @@ class PersistenceManager:
                     )
 
     def _on_symbol_regime(self, event: SymbolRegimeEvent) -> None:
-        """Persist a symbol regime event via fire-and-forget async write.
-
-        Extracts all fields from the event — including the new liquidity
-        fields (``liquidity_regime``, ``spread_pct``, ``volume_pctile``) —
-        and packs remaining numeric metrics into ``metrics_json``.
-        """
+        # Persist a symbol regime event via fire-and-forget async write.
+        #
+        # Extracts all fields from the event — including the new liquidity
+        # fields (``liquidity_regime``, ``spread_pct``, ``volume_pctile``) —
+        # and packs remaining numeric metrics into ``metrics_json``.
         if not self._running:
             return
         metrics = {
@@ -834,7 +820,7 @@ class PersistenceManager:
         future.add_done_callback(lambda f: f.exception() if f.exception() else None)
 
     def _on_market_regime(self, event: MarketRegimeEvent) -> None:
-        """Persist a market regime event via fire-and-forget async write."""
+        # Persist a market regime event via fire-and-forget async write.
         if not self._running:
             return
         future = asyncio.run_coroutine_threadsafe(
@@ -857,13 +843,13 @@ class PersistenceManager:
     # ── flush logic ─────────────────────────────────────────
 
     def _flush_loop(self) -> None:
-        """Background thread: flush bar buffer every _FLUSH_INTERVAL seconds."""
+        # Background thread: flush bar buffer every _FLUSH_INTERVAL seconds.
         while self._running:
             time.sleep(_FLUSH_INTERVAL)
             self._do_flush()
 
     def _write_loop(self, queue: Queue, label: str) -> None:
-        """Background thread: serialize async DB writes for one priority queue."""
+        # Background thread: serialize async DB writes for one priority queue.
         while self._running or not queue.empty():
             try:
                 item = queue.get(timeout=0.5)
@@ -898,14 +884,13 @@ class PersistenceManager:
                 logger.exception("Failed to persist %s event via %s queue", kind, label)
 
     def _do_flush(self) -> None:
-        """Drain the bar buffer and write to DB.
-
-        On failure, bars are returned to the buffer for retry so that
-        bars are **never silently dropped**.
-
-        After a successful buffer flush, drains a batch from the disk
-        spool (if active) to steadily recover spooled bars.
-        """
+        # Drain the bar buffer and write to DB.
+        #
+        # On failure, bars are returned to the buffer for retry so that
+        # bars are **never silently dropped**.
+        #
+        # After a successful buffer flush, drains a batch from the disk
+        # spool (if active) to steadily recover spooled bars.
         # Periodic WAL checkpoint (every ~5 minutes if _FLUSH_INTERVAL=1s)
         self._flush_count += 1
         if self._flush_count >= 300:
@@ -1052,11 +1037,10 @@ class PersistenceManager:
     # ── async DB writers ────────────────────────────────────
 
     async def _write_bars(self, bars: List[BarEvent]) -> None:
-        """Batch-insert 1-minute bars into the ``market_bars`` table.
-        
-        Uses INSERT OR REPLACE for idempotent upsert behavior. Unique constraint
-        is on (source, symbol, bar_duration, timestamp).
-        """
+        # Batch-insert 1-minute bars into the ``market_bars`` table.
+        #
+        # Uses INSERT OR REPLACE for idempotent upsert behavior. Unique constraint
+        # is on (source, symbol, bar_duration, timestamp).
         rows = [
             (
                 datetime.fromtimestamp(b.timestamp, tz=timezone.utc).isoformat(),
@@ -1106,7 +1090,7 @@ class PersistenceManager:
 
 
     async def _write_signal(self, event: SignalEvent) -> None:
-        """Write a signal event immediately."""
+        # Write a signal event immediately.
         await self._db.execute(
             """INSERT OR IGNORE INTO signal_events
                (timestamp, detector, symbol, signal_type, priority, data)
@@ -1128,7 +1112,7 @@ class PersistenceManager:
         logger.debug("Persisted signal: %s %s", event.detector, event.signal_type)
 
     async def _write_phase3_signal(self, event: Phase3SignalEvent) -> None:
-        """Write a Phase 3 signal event immediately."""
+        # Write a Phase 3 signal event immediately.
         regime_snapshot = (
             normalize_snapshot(event.regime_snapshot)
             if event.regime_snapshot
@@ -1178,7 +1162,7 @@ class PersistenceManager:
         logger.debug("Persisted Phase 3 signal: %s", event.strategy_id)
 
     async def _write_metric(self, event: MetricEvent) -> None:
-        """Generic DB writer for market metrics."""
+        # Generic DB writer for market metrics.
         import json
         ts_iso = datetime.fromtimestamp(event.timestamp, tz=timezone.utc).isoformat()
 
@@ -1206,7 +1190,7 @@ class PersistenceManager:
         logger.debug("Persisted metric: %s:%s=%s", event.symbol, event.metric, event.value)
 
     async def _write_component_heartbeat(self, event: ComponentHeartbeatEvent) -> None:
-        """Write a structured component heartbeat to the DB."""
+        # Write a structured component heartbeat to the DB.
         import json
         ts_iso = datetime.fromtimestamp(event.timestamp, tz=timezone.utc).isoformat()
         extra_json = json.dumps(event.extra) if event.extra else None
@@ -1227,7 +1211,7 @@ class PersistenceManager:
         )
 
     def emit_heartbeat(self) -> ComponentHeartbeatEvent:
-        """Create and publish a structured heartbeat for PersistenceManager."""
+        # Create and publish a structured heartbeat for PersistenceManager.
         now = time.monotonic()
         with self._status_lock:
             total_writes = self._bars_writes_total + self._metrics_writes_total + self._signals_writes_total

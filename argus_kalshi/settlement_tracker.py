@@ -1,10 +1,9 @@
-"""
-Settlement Tracking for Argus Kalshi
-====================================
+# Created by Oliver Meihls
 
-Listens for fills and final BTC window averages to calculate and log
-the outcome of completed trades.
-"""
+# Settlement Tracking for Argus Kalshi
+#
+# Listens for fills and final BTC window averages to calculate and log
+# the outcome of completed trades.
 
 import asyncio
 import json
@@ -47,9 +46,7 @@ class Position:
 
 
 class SettlementTracker:
-    """
-    Watches the bus for fills and BTC window completions to report outcomes.
-    """
+    # Watches the bus for fills and BTC window completions to report outcomes.
 
     def __init__(self, bus: Bus, db: Optional[Any] = None):
         self._bus = bus
@@ -75,7 +72,7 @@ class SettlementTracker:
 
     @property
     def brier_score(self) -> Optional[float]:
-        """Running Brier score (lower is better). None if no settlements yet."""
+        # Running Brier score (lower is better). None if no settlements yet.
         if self._brier_count == 0:
             return None
         return self._brier_sum / self._brier_count
@@ -103,7 +100,7 @@ class SettlementTracker:
             task.cancel()
 
     def _load_open_fills(self):
-        """Scan the JSONL paper log to reconstruct open positions from previous runs."""
+        # Scan the JSONL paper log to reconstruct open positions from previous runs.
         if not os.path.exists(_PAPER_LOG_PATH):
             return
 
@@ -148,6 +145,7 @@ class SettlementTracker:
                                     settlement_time = settle_dt.timestamp()
                                 except (KeyError, TypeError, ValueError):
                                     pass
+
                             strike = record.get("strike", 0)
                             asset = record.get("asset", "BTC") or "BTC"
                             entry_fee_usd = float(record.get("estimated_taker_fee_usd", 0.0) or 0.0)
@@ -222,11 +220,10 @@ class SettlementTracker:
             log.warning(f"Error during paper fill recovery: {e}")
 
     async def _loop_metadata(self):
-        """Track market metadata so we know strikes and settlement times.
-
-        Also drains any buy fills that arrived before this metadata was
-        received — they were buffered in _pending_fills rather than dropped.
-        """
+        # Track market metadata so we know strikes and settlement times.
+        #
+        # Also drains any buy fills that arrived before this metadata was
+        # received — they were buffered in _pending_fills rather than dropped.
         q = await self._bus.subscribe("kalshi.market_metadata")
         try:
             while self._running:
@@ -244,7 +241,7 @@ class SettlementTracker:
             pass
 
     def _apply_buy_fill(self, fill: FillEvent, meta: MarketMetadata) -> None:
-        """Update position tracking for a single buy fill (metadata must be available)."""
+        # Update position tracking for a single buy fill (metadata must be available).
         ticker = fill.market_ticker
         bot_id = getattr(fill, "bot_id", "default")
         positions = self._positions_for_bot(bot_id)
@@ -296,7 +293,7 @@ class SettlementTracker:
         )
 
     async def _loop_fills(self):
-        """Track fills to build positions. Sell fills trigger immediate early-exit resolution."""
+        # Track fills to build positions. Sell fills trigger immediate early-exit resolution.
         q = await self._bus.subscribe("kalshi.fills")
         try:
             while self._running:
@@ -320,7 +317,7 @@ class SettlementTracker:
             pass
 
     async def _resolve_early_exit(self, fill: FillEvent) -> None:
-        """Resolve an early-exit sell fill: compute PnL and publish SettlementOutcome immediately."""
+        # Resolve an early-exit sell fill: compute PnL and publish SettlementOutcome immediately.
         ticker = fill.market_ticker
         bot_id = getattr(fill, "bot_id", "default")
         positions = self._positions_for_bot(bot_id)
@@ -413,7 +410,7 @@ class SettlementTracker:
                 log.error(f"Failed to persist early-exit outcome: {e}")
 
     async def _loop_fair_probs(self):
-        """Cache latest p_yes per ticker for Brier calibration at settlement."""
+        # Cache latest p_yes per ticker for Brier calibration at settlement.
         q = await self._bus.subscribe("kalshi.fair_prob")
         try:
             while self._running:
@@ -423,7 +420,7 @@ class SettlementTracker:
             pass
 
     async def _loop_windows(self):
-        """Watch for window completions to settle positions."""
+        # Watch for window completions to settle positions.
         topics = ["btc.window_state", "eth.window_state", "sol.window_state"]
         queues = [await self._bus.subscribe(t) for t in topics]
         tasks = [asyncio.create_task(q.get()) for q in queues]
@@ -451,7 +448,7 @@ class SettlementTracker:
                 t.cancel()
 
     async def _resolve_settlement(self, pos: Position, final_avg: float, bot_id: str):
-        """Calculate and log the final outcome of a position."""
+        # Calculate and log the final outcome of a position.
         # For KXBTC 15m: "Yes" wins if Avg > Strike?
         # Actually it depends on the specific contract ticker's definition.
         # KXBTC usually has markets for "Above X" (Yes) or "Below X" (Yes).

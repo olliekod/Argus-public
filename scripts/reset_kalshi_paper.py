@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""
-Reset Kalshi paper trading performance and balances.
+# Created by Oliver Meihls
 
-Clears the paper-trade log and Kalshi outcome tables so the bot starts
-as if new: balance from config (bankroll_usd), zero PnL, zero wins/losses.
-
-Usage:
-  python scripts/reset_kalshi_paper.py
-  python scripts/reset_kalshi_paper.py --no-backup --db data/kalshi.db
-"""
+# Reset Kalshi paper trading performance and balances.
+#
+# Clears the paper-trade log and Kalshi outcome tables so the bot starts
+# as if new: balance from config (bankroll_usd), zero PnL, zero wins/losses.
+#
+# Usage:
+# python scripts/reset_kalshi_paper.py
+# python scripts/reset_kalshi_paper.py --no-backup --db data/kalshi.db
 
 from __future__ import annotations
 

@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 import io
@@ -112,7 +114,7 @@ def test_leaderboard_sorts_by_alpha_score(monkeypatch) -> None:
 
 
 def test_unified_mode_no_primary_bot_shows_full_layout_and_null_promoted(monkeypatch) -> None:
-    """With no primary bot, full layout is shown: MARKETS, STATS, ORDERS, HISTORY, leaderboard."""
+    # With no primary bot, full layout is shown: MARKETS, STATS, ORDERS, HISTORY, leaderboard.
     vis = TerminalVisualizer(Bus(), dry_run=True, primary_bot_id=None, leaderboard_only=False)
     vis._frame = 10
     vis._ws_connected = True

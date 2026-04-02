@@ -1,10 +1,10 @@
-"""
-Configuration for the Argus Kalshi module.
+# Created by Oliver Meihls
 
-Reads a structured dict (injected by the Argus config loader) and exposes
-typed, validated settings.  Secrets are loaded separately by Argus — this
-module never touches env-vars or files for credentials directly.
-"""
+# Configuration for the Argus Kalshi module.
+#
+# Reads a structured dict (injected by the Argus config loader) and exposes
+# typed, validated settings.  Secrets are loaded separately by Argus — this
+# module never touches env-vars or files for credentials directly.
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class TruthFeedConfig:
 
 @dataclass(frozen=True, slots=True)
 class KalshiConfig:
-    """Immutable, validated configuration for one Kalshi trading session."""
+    # Immutable, validated configuration for one Kalshi trading session.
 
     # ── Bot identity ────────────────────────────────────────────────────
     bot_id: str = "default"
@@ -1069,11 +1069,10 @@ class KalshiConfig:
 
 
 def load_config(raw: dict[str, Any]) -> KalshiConfig:
-    """Build a *KalshiConfig* from an untyped dict.
-
-    Unknown keys are silently ignored so callers can pass a superset of
-    configuration (e.g. an entire Argus config block).
-    """
+    # Build a *KalshiConfig* from an untyped dict.
+    #
+    # Unknown keys are silently ignored so callers can pass a superset of
+    # configuration (e.g. an entire Argus config block).
     known = {f.name for f in KalshiConfig.__dataclass_fields__.values()}
     filtered = {k: v for k, v in raw.items() if k in known}
     if "risk_fraction_per_trade" not in filtered and "sizing_risk_fraction" in filtered:

@@ -1,13 +1,13 @@
-"""
-Tests for options snapshot retry / resilience (10.3).
+# Created by Oliver Meihls
 
-Verifies:
-- Retry logic: fails N times then succeeds, only one row persisted
-- snapshot_id is deterministic (provider+symbol+expiration_ms+timestamp_ms)
-- No duplicate rows for same (provider, symbol, timestamp_ms) minute
-- Alpaca and Tastytrade produce consistent snapshot_id formats
-- Retries do not create duplicate snapshot_id collisions
-"""
+# Tests for options snapshot retry / resilience (10.3).
+#
+# Verifies:
+# - Retry logic: fails N times then succeeds, only one row persisted
+# - snapshot_id is deterministic (provider+symbol+expiration_ms+timestamp_ms)
+# - No duplicate rows for same (provider, symbol, timestamp_ms) minute
+# - Alpaca and Tastytrade produce consistent snapshot_id formats
+# - Retries do not create duplicate snapshot_id collisions
 
 from __future__ import annotations
 
@@ -19,10 +19,10 @@ import pytest
 
 
 class TestSnapshotIdDeterminism:
-    """snapshot_id must be provider+symbol+expiration_ms+timestamp_ms based."""
+    # snapshot_id must be provider+symbol+expiration_ms+timestamp_ms based.
 
     def test_alpaca_snapshot_id_format(self):
-        """Alpaca snapshot_id follows provider_symbol_expMs_tsMs pattern."""
+        # Alpaca snapshot_id follows provider_symbol_expMs_tsMs pattern.
         from src.connectors.alpaca_options import AlpacaOptionsConnector, AlpacaOptionsConfig
 
         connector = AlpacaOptionsConnector(AlpacaOptionsConfig())
@@ -34,28 +34,28 @@ class TestSnapshotIdDeterminism:
         assert len(parts) == 4, "snapshot_id should have 4 parts: provider_symbol_expMs_tsMs"
 
     def test_tastytrade_snapshot_id_format(self):
-        """Tastytrade snapshot_id follows same provider_symbol_expMs_tsMs pattern."""
+        # Tastytrade snapshot_id follows same provider_symbol_expMs_tsMs pattern.
         sid = f"tastytrade_SPY_1708560000000_1708473600000"
         assert sid.startswith("tastytrade_")
         parts = sid.split("_")
         assert len(parts) == 4
 
     def test_same_inputs_same_id(self):
-        """Same provider+symbol+exp+ts always produce the same snapshot_id."""
+        # Same provider+symbol+exp+ts always produce the same snapshot_id.
         fmt = "{provider}_{symbol}_{exp_ms}_{ts_ms}"
         id1 = fmt.format(provider="alpaca", symbol="SPY", exp_ms=100, ts_ms=200)
         id2 = fmt.format(provider="alpaca", symbol="SPY", exp_ms=100, ts_ms=200)
         assert id1 == id2
 
     def test_different_provider_different_id(self):
-        """Different providers produce different snapshot_ids for same symbol+time."""
+        # Different providers produce different snapshot_ids for same symbol+time.
         fmt = "{provider}_{symbol}_{exp_ms}_{ts_ms}"
         id1 = fmt.format(provider="alpaca", symbol="SPY", exp_ms=100, ts_ms=200)
         id2 = fmt.format(provider="tastytrade", symbol="SPY", exp_ms=100, ts_ms=200)
         assert id1 != id2
 
     def test_different_timestamp_different_id(self):
-        """Different poll times produce different snapshot_ids."""
+        # Different poll times produce different snapshot_ids.
         fmt = "{provider}_{symbol}_{exp_ms}_{ts_ms}"
         id1 = fmt.format(provider="alpaca", symbol="SPY", exp_ms=100, ts_ms=200)
         id2 = fmt.format(provider="alpaca", symbol="SPY", exp_ms=100, ts_ms=260)
@@ -63,7 +63,7 @@ class TestSnapshotIdDeterminism:
 
 
 class TestPollTimeAlignment:
-    """Verify _poll_time_ms aligns to minute boundaries."""
+    # Verify _poll_time_ms aligns to minute boundaries.
 
     def test_alpaca_poll_time_minute_floor(self):
         from src.connectors.alpaca_options import _poll_time_ms, _now_ms
@@ -77,7 +77,7 @@ class TestPollTimeAlignment:
         assert ts % 60_000 == 0
 
     def test_poll_time_same_minute_same_value(self):
-        """Two calls within the same minute produce the same value."""
+        # Two calls within the same minute produce the same value.
         from src.connectors.alpaca_options import _poll_time_ms
         with patch("src.connectors.alpaca_options.time") as mock_time:
             mock_time.time.return_value = 1705329030.123  # 30 seconds into minute
@@ -87,7 +87,7 @@ class TestPollTimeAlignment:
             assert t1 == t2
 
     def test_poll_time_different_minute_different_value(self):
-        """Calls in different minutes produce different values."""
+        # Calls in different minutes produce different values.
         from src.connectors.alpaca_options import _poll_time_ms
         with patch("src.connectors.alpaca_options.time") as mock_time:
             mock_time.time.return_value = 1705329030.0  # minute X
@@ -98,10 +98,10 @@ class TestPollTimeAlignment:
 
 
 class TestRecvTsVsTimestampMs:
-    """Ensure timestamp_ms is minute-floored and recv_ts_ms is actual receipt time."""
+    # Ensure timestamp_ms is minute-floored and recv_ts_ms is actual receipt time.
 
     def test_recv_ts_ms_is_actual_time(self):
-        """recv_ts_ms should be actual current time, not minute-floored."""
+        # recv_ts_ms should be actual current time, not minute-floored.
         from src.connectors.alpaca_options import _now_ms, _poll_time_ms
         with patch("src.connectors.alpaca_options.time") as mock_time:
             mock_time.time.return_value = 1705329045.678  # 45.678s into minute
@@ -113,7 +113,7 @@ class TestRecvTsVsTimestampMs:
 
 
 class TestTastytradeRetryBehavior:
-    """Test TastytradeRestClient retry config and behavior."""
+    # Test TastytradeRestClient retry config and behavior.
 
     def test_retry_config_defaults(self):
         from src.connectors.tastytrade_rest import RetryConfig
@@ -123,14 +123,14 @@ class TestTastytradeRetryBehavior:
         assert cfg.backoff_multiplier == 2.0
 
     def test_backoff_exponential(self):
-        """Verify backoff calculation: delay = base * multiplier^attempt."""
+        # Verify backoff calculation: delay = base * multiplier^attempt.
         from src.connectors.tastytrade_rest import RetryConfig
         cfg = RetryConfig(backoff_seconds=1.0, backoff_multiplier=2.0)
         delays = [cfg.backoff_seconds * (cfg.backoff_multiplier ** attempt) for attempt in range(3)]
         assert delays == [1.0, 2.0, 4.0]
 
     def test_retry_on_500_errors(self):
-        """REST client retries on 500+ status codes."""
+        # REST client retries on 500+ status codes.
         import requests
         from src.connectors.tastytrade_rest import TastytradeRestClient, TastytradeError, RetryConfig
 
@@ -161,7 +161,7 @@ class TestTastytradeRetryBehavior:
         assert mock_session.request.call_count == 3
 
     def test_retry_on_429(self):
-        """REST client retries on 429 rate limit."""
+        # REST client retries on 429 rate limit.
         from src.connectors.tastytrade_rest import TastytradeRestClient, RetryConfig
 
         mock_session = MagicMock()
@@ -190,7 +190,7 @@ class TestTastytradeRetryBehavior:
         assert mock_session.request.call_count == 2
 
     def test_no_retry_on_400(self):
-        """REST client does NOT retry on 400 client errors (non-retriable)."""
+        # REST client does NOT retry on 400 client errors (non-retriable).
         from src.connectors.tastytrade_rest import TastytradeRestClient, TastytradeError, RetryConfig
 
         mock_session = MagicMock()
@@ -217,11 +217,11 @@ class TestTastytradeRetryBehavior:
 
 
 class TestSnapshotDeduplication:
-    """Verify that the UNIQUE(provider, symbol, timestamp_ms) constraint
-    prevents duplicate snapshots per minute per provider."""
+    # Verify that the UNIQUE(provider, symbol, timestamp_ms) constraint
+    # prevents duplicate snapshots per minute per provider.
 
     def test_unique_constraint_key(self):
-        """Two snapshots from same provider+symbol in same minute should share timestamp_ms."""
+        # Two snapshots from same provider+symbol in same minute should share timestamp_ms.
         from src.connectors.alpaca_options import _poll_time_ms
         with patch("src.connectors.alpaca_options.time") as mock_time:
             mock_time.time.return_value = 1705329030.0
@@ -231,7 +231,7 @@ class TestSnapshotDeduplication:
             assert ts1 == ts2, "Same minute should produce same timestamp_ms for dedup"
 
     def test_contract_id_is_deterministic(self):
-        """contract_id from option_symbol is deterministic."""
+        # contract_id from option_symbol is deterministic.
         from src.connectors.alpaca_options import _compute_contract_id
         id1 = _compute_contract_id("SPY250221P00450000")
         id2 = _compute_contract_id("SPY250221P00450000")

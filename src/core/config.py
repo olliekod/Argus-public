@@ -1,9 +1,8 @@
-"""
-Argus Configuration Loader
-==========================
+# Created by Oliver Meihls
 
-Loads and validates YAML configuration files.
-"""
+# Argus Configuration Loader
+#
+# Loads and validates YAML configuration files.
 
 import os
 from dataclasses import dataclass, field
@@ -13,13 +12,13 @@ import yaml
 
 
 class ConfigurationError(Exception):
-    """Raised when configuration is invalid."""
+    # Raised when configuration is invalid.
     pass
 
 
 @dataclass(frozen=True)
 class ZeusConfig:
-    """Deterministic governance configuration for the Zeus policy layer."""
+    # Deterministic governance configuration for the Zeus policy layer.
 
     monthly_budget_cap: float = 15.0
     high_risk_tools: List[str] = field(default_factory=lambda: [
@@ -32,13 +31,13 @@ class ZeusConfig:
 
 
 def load_yaml(path: str) -> Dict[str, Any]:
-    """Load a YAML file."""
+    # Load a YAML file.
     with open(path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f) or {}
 
 
 def find_repo_root(start: Optional[Path] = None) -> Path:
-    """Locate the repo root by walking upward for known anchors."""
+    # Locate the repo root by walking upward for known anchors.
     start_path = (start or Path.cwd()).resolve()
     for current in [start_path, *start_path.parents]:
         if (current / ".git").exists() or (current / "config" / "config.yaml").exists():
@@ -55,15 +54,13 @@ def _resolve_path(path: str) -> Path:
 
 
 def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
-    """
-    Load main configuration file.
-    
-    Args:
-        config_path: Path to config.yaml
-        
-    Returns:
-        Configuration dictionary
-    """
+    # Load main configuration file.
+    #
+    # Args:
+    # config_path: Path to config.yaml
+    #
+    # Returns:
+    # Configuration dictionary
     path = _resolve_path(config_path)
     if not path.exists():
         raise ConfigurationError(f"Config file not found: {config_path}")
@@ -72,15 +69,13 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
 
 
 def load_secrets(secrets_path: str = "config/secrets.yaml") -> Dict[str, Any]:
-    """
-    Load secrets configuration file.
-    
-    Args:
-        secrets_path: Path to secrets.yaml
-        
-    Returns:
-        Secrets dictionary
-    """
+    # Load secrets configuration file.
+    #
+    # Args:
+    # secrets_path: Path to secrets.yaml
+    #
+    # Returns:
+    # Secrets dictionary
     override_path = os.getenv("ARGUS_SECRETS")
     if override_path:
         secrets_path = override_path
@@ -96,7 +91,7 @@ def load_secrets(secrets_path: str = "config/secrets.yaml") -> Dict[str, Any]:
 
 
 def resolve_secrets_path(secrets_path: str = "config/secrets.yaml") -> Path:
-    """Resolve the secrets path, honoring ARGUS_SECRETS overrides."""
+    # Resolve the secrets path, honoring ARGUS_SECRETS overrides.
     override_path = os.getenv("ARGUS_SECRETS")
     if override_path:
         secrets_path = override_path
@@ -104,16 +99,14 @@ def resolve_secrets_path(secrets_path: str = "config/secrets.yaml") -> Path:
 
 
 def save_secrets(secrets: Dict[str, Any], secrets_path: str = "config/secrets.yaml") -> Path:
-    """
-    Persist secrets to disk.
-
-    Args:
-        secrets: Secrets dictionary to write.
-        secrets_path: Path to secrets.yaml (ARGUS_SECRETS overrides).
-
-    Returns:
-        Path to the written secrets file.
-    """
+    # Persist secrets to disk.
+    #
+    # Args:
+    # secrets: Secrets dictionary to write.
+    # secrets_path: Path to secrets.yaml (ARGUS_SECRETS overrides).
+    #
+    # Returns:
+    # Path to the written secrets file.
     path = resolve_secrets_path(secrets_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, 'w', encoding='utf-8') as f:
@@ -123,15 +116,13 @@ def save_secrets(secrets: Dict[str, Any], secrets_path: str = "config/secrets.ya
 
 
 def load_thresholds(thresholds_path: str = "config/thresholds.yaml") -> Dict[str, Any]:
-    """
-    Load detection thresholds configuration.
-    
-    Args:
-        thresholds_path: Path to thresholds.yaml
-        
-    Returns:
-        Thresholds dictionary
-    """
+    # Load detection thresholds configuration.
+    #
+    # Args:
+    # thresholds_path: Path to thresholds.yaml
+    #
+    # Returns:
+    # Thresholds dictionary
     path = _resolve_path(thresholds_path)
     if not path.exists():
         raise ConfigurationError(f"Thresholds file not found: {thresholds_path}")
@@ -142,12 +133,10 @@ def load_thresholds(thresholds_path: str = "config/thresholds.yaml") -> Dict[str
 def load_all_config(
     config_dir: str = "config"
 ) -> Dict[str, Any]:
-    """
-    Load all configuration files and merge them.
-    
-    Returns:
-        Merged configuration with keys: 'system', 'secrets', 'thresholds'
-    """
+    # Load all configuration files and merge them.
+    #
+    # Returns:
+    # Merged configuration with keys: 'system', 'secrets', 'thresholds'
     config_dir = Path(config_dir)
     
     config = load_config(str(config_dir / "config.yaml"))
@@ -162,12 +151,10 @@ def load_all_config(
 
 
 def validate_secrets(secrets: Dict[str, Any]) -> list:
-    """
-    Validate that required secrets are present.
-    
-    Returns:
-        List of missing/invalid secret names
-    """
+    # Validate that required secrets are present.
+    #
+    # Returns:
+    # List of missing/invalid secret names
     issues = []
     
     # Required secrets for observation mode
@@ -192,15 +179,15 @@ def validate_secrets(secrets: Dict[str, Any]) -> list:
 
 
 def get_exchange_config(config: Dict, exchange: str) -> Dict[str, Any]:
-    """Get configuration for a specific exchange."""
+    # Get configuration for a specific exchange.
     return config.get('exchanges', {}).get(exchange, {})
 
 
 def get_threshold_config(config: Dict, detector: str) -> Dict[str, Any]:
-    """Get threshold configuration for a specific detector."""
+    # Get threshold configuration for a specific detector.
     return config.get('thresholds', {}).get(detector, {})
 
 
 def get_secret(secrets: Dict, service: str, key: str) -> Optional[str]:
-    """Safely get a secret value."""
+    # Safely get a secret value.
     return secrets.get(service, {}).get(key)

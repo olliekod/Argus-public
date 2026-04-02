@@ -1,9 +1,10 @@
-"""Probe Tastytrade nested option chains.
+# Created by Oliver Meihls
 
-Usage:
-  python scripts/tastytrade_option_chain_probe.py --underlying IBIT
-  python scripts/tastytrade_option_chain_probe.py --symbol SPY
-"""
+# Probe Tastytrade nested option chains.
+#
+# Usage:
+# python scripts/tastytrade_option_chain_probe.py --underlying IBIT
+# python scripts/tastytrade_option_chain_probe.py --symbol SPY
 
 import argparse
 import sys

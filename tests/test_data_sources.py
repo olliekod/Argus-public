@@ -1,15 +1,14 @@
-"""
-Tests for Data Source Policy
-=============================
+# Created by Oliver Meihls
 
-Verifies:
-- DataSourcePolicy defaults match the canonical config values
-- get_data_source_policy() reads from config correctly
-- Replay pack composition follows data_sources policy
-- VRP strategy chooses Tastytrade IV by default
-- VRP strategy falls back to derived IV when atm_iv is missing
-- VRP strategy never uses Alpaca for IV (Alpaca is bars/outcomes only)
-"""
+# Tests for Data Source Policy
+#
+# Verifies:
+# - DataSourcePolicy defaults match the canonical config values
+# - get_data_source_policy() reads from config correctly
+# - Replay pack composition follows data_sources policy
+# - VRP strategy chooses Tastytrade IV by default
+# - VRP strategy falls back to derived IV when atm_iv is missing
+# - VRP strategy never uses Alpaca for IV (Alpaca is bars/outcomes only)
 
 from __future__ import annotations
 
@@ -34,9 +33,7 @@ from src.core.outcome_engine import BarData
 from src.analysis.replay_harness import MarketDataSnapshot
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # DataSourcePolicy defaults
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestDataSourcePolicyDefaults:
     def test_default_bars_primary(self):
@@ -91,9 +88,7 @@ class TestDataSourcePolicyDefaults:
             policy.bars_primary = "yahoo"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # get_data_source_policy() from config
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestGetDataSourcePolicy:
     def test_from_explicit_config(self):
@@ -140,9 +135,7 @@ class TestGetDataSourcePolicy:
         assert policy.options_snapshots_secondary == ["public"]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Pack metadata records provider info
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestPackMetadataProviders:
     def _build_pack_metadata(
@@ -184,12 +177,10 @@ class TestPackMetadataProviders:
         assert pack["metadata"]["provider"] == "alpaca"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # VRP IV Source Selection
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestVRPIVSourceSelection:
-    """Verify the VRP strategy's IV source selection logic."""
+    # Verify the VRP strategy's IV source selection logic.
 
     def _make_snapshot(
         self,
@@ -207,7 +198,7 @@ class TestVRPIVSourceSelection:
         )
 
     def test_tastytrade_iv_preferred(self):
-        """Tastytrade snapshot with atm_iv should be selected first."""
+        # Tastytrade snapshot with atm_iv should be selected first.
         snaps = [
             self._make_snapshot(provider="alpaca", atm_iv=0.30),
             self._make_snapshot(provider="tastytrade", atm_iv=0.20),
@@ -216,7 +207,7 @@ class TestVRPIVSourceSelection:
         assert iv == 0.20
 
     def test_alpaca_iv_never_used(self):
-        """Alpaca is bars/outcomes only; IV from Alpaca snapshots is never selected."""
+        # Alpaca is bars/outcomes only; IV from Alpaca snapshots is never selected.
         snaps = [
             self._make_snapshot(provider="alpaca", atm_iv=0.30),
             self._make_snapshot(provider="tastytrade", atm_iv=None),
@@ -229,7 +220,7 @@ class TestVRPIVSourceSelection:
         assert iv is None
 
     def test_latest_tastytrade_wins(self):
-        """Most recent Tastytrade snapshot with IV should be used."""
+        # Most recent Tastytrade snapshot with IV should be used.
         older = MarketDataSnapshot(
             symbol="SPY", recv_ts_ms=1_700_000_060_000,
             underlying_price=450.0, atm_iv=0.15, source="tastytrade",
@@ -242,7 +233,7 @@ class TestVRPIVSourceSelection:
         assert iv == 0.25
 
     def test_dict_snapshots_work(self):
-        """IV selection should also work with dict-format snapshots."""
+        # IV selection should also work with dict-format snapshots.
         snaps = [
             {"provider": "tastytrade", "atm_iv": 0.22, "underlying_price": 450.0},
         ]
@@ -251,7 +242,7 @@ class TestVRPIVSourceSelection:
 
 
 class TestDerivedIV:
-    """Test the derived IV fallback from quotes."""
+    # Test the derived IV fallback from quotes.
 
     def test_derive_iv_with_valid_quotes(self):
         snapshot = {
@@ -293,7 +284,7 @@ class TestDerivedIV:
 
 
 class TestVRPStrategyIVIntegration:
-    """Verify the full VRP strategy respects provider selection."""
+    # Verify the full VRP strategy respects provider selection.
 
     def _make_bar(self, ts_ms: int = 1_700_000_000_000, close: float = 450.0) -> BarData:
         return BarData(
@@ -324,7 +315,7 @@ class TestVRPStrategyIVIntegration:
         assert strategy.last_iv == 0.20
 
     def test_strategy_never_uses_alpaca_iv(self):
-        """Alpaca is bars/outcomes only; strategy never uses Alpaca for IV."""
+        # Alpaca is bars/outcomes only; strategy never uses Alpaca for IV.
         strategy = VRPCreditSpreadStrategy()
         snap_alp = MarketDataSnapshot(
             symbol="SPY", recv_ts_ms=100, underlying_price=450.0,

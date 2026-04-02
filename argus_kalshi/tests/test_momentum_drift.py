@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import pytest
 from argus_kalshi.kalshi_probability import estimate_momentum
 

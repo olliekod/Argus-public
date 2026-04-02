@@ -1,23 +1,20 @@
-"""
-Alpaca Data Client
-==================
+# Created by Oliver Meihls
 
-REST-based polling client for IBIT/BITO 1-minute bars.
-Runs in ALL modes (collector, paper, live) — only data ingestion, no execution.
-
-DETERMINISM REQUIREMENTS
-------------------------
-- Fixed interval polling (no market-hours-aware gating)
-- Overlap window for bar requests (covers restart scenarios)
-- Bars emitted in strict bar_ts order
-- Startup init from DB to prevent duplicate bars on restart
-
-TIMESTAMP CONVENTION
---------------------
-- Internal: int milliseconds (UTC epoch ms)
-- BarEvent.timestamp: float seconds (for compatibility with BarBuilder)
-- bar_ts used for deduplication is int milliseconds
-"""
+# Alpaca Data Client
+#
+# REST-based polling client for IBIT/BITO 1-minute bars.
+# Runs in ALL modes (collector, paper, live) — only data ingestion, no execution.
+#
+# DETERMINISM REQUIREMENTS
+# - Fixed interval polling (no market-hours-aware gating)
+# - Overlap window for bar requests (covers restart scenarios)
+# - Bars emitted in strict bar_ts order
+# - Startup init from DB to prevent duplicate bars on restart
+#
+# TIMESTAMP CONVENTION
+# - Internal: int milliseconds (UTC epoch ms)
+# - BarEvent.timestamp: float seconds (for compatibility with BarBuilder)
+# - bar_ts used for deduplication is int milliseconds
 
 from __future__ import annotations
 
@@ -49,15 +46,13 @@ DEFAULT_OVERLAP_SECONDS = 120
 
 
 def _parse_rfc3339_to_ms(ts_str: str) -> int:
-    """
-    Parse RFC3339 timestamp to UTC epoch milliseconds (int).
-
-    Alpaca returns timestamps like: 2024-01-15T14:30:00Z
-
-    If the parsed datetime is naive (no timezone info), it is assumed
-    to be UTC.  This prevents .timestamp() from silently using the
-    local timezone.
-    """
+    # Parse RFC3339 timestamp to UTC epoch milliseconds (int).
+    #
+    # Alpaca returns timestamps like: 2024-01-15T14:30:00Z
+    #
+    # If the parsed datetime is naive (no timezone info), it is assumed
+    # to be UTC.  This prevents .timestamp() from silently using the
+    # local timezone.
     if ts_str.endswith("Z"):
         ts_str = ts_str[:-1] + "+00:00"
     dt = datetime.fromisoformat(ts_str)
@@ -68,37 +63,33 @@ def _parse_rfc3339_to_ms(ts_str: str) -> int:
 
 
 class AlpacaDataClient:
-    """
-    Alpaca market data client for equity bars.
-    
-    Fetches 1-minute bars via Alpaca Data API v2.
-    Designed for IBIT/BITO ETF data ingestion.
-    
-    DETERMINISM GUARANTEES
-    ----------------------
-    - Poll at fixed interval regardless of market hours
-    - Each poll requests bars with overlap window for robustness
-    - Bars are emitted in strict increasing bar_ts order
-    - Dedupe by bar_ts (int ms) prevents duplicate bars
-    - On startup, initializes last_bar_ts from DB persistence
-    
-    Parameters
-    ----------
-    api_key : str
-        Alpaca API key.
-    api_secret : str
-        Alpaca API secret.
-    symbols : list[str]
-        Symbols to fetch (e.g., ["IBIT", "BITO"]).
-    event_bus : EventBus
-        Event bus for publishing BarEvents.
-    db : Database, optional
-        Database for startup init (get_latest_bar_ts).
-    poll_interval : int
-        Seconds between polls (default 60). Fixed interval, no market-hours gating.
-    overlap_seconds : int
-        Overlap window for bar requests (default 120 = 2 bars).
-    """
+    # Alpaca market data client for equity bars.
+    #
+    # Fetches 1-minute bars via Alpaca Data API v2.
+    # Designed for IBIT/BITO ETF data ingestion.
+    #
+    # DETERMINISM GUARANTEES
+    # - Poll at fixed interval regardless of market hours
+    # - Each poll requests bars with overlap window for robustness
+    # - Bars are emitted in strict increasing bar_ts order
+    # - Dedupe by bar_ts (int ms) prevents duplicate bars
+    # - On startup, initializes last_bar_ts from DB persistence
+    #
+    # Parameters
+    # api_key : str
+    # Alpaca API key.
+    # api_secret : str
+    # Alpaca API secret.
+    # symbols : list[str]
+    # Symbols to fetch (e.g., ["IBIT", "BITO"]).
+    # event_bus : EventBus
+    # Event bus for publishing BarEvents.
+    # db : Database, optional
+    # Database for startup init (get_latest_bar_ts).
+    # poll_interval : int
+    # Seconds between polls (default 60). Fixed interval, no market-hours gating.
+    # overlap_seconds : int
+    # Overlap window for bar requests (default 120 = 2 bars).
     
     def __init__(
         self,
@@ -142,12 +133,10 @@ class AlpacaDataClient:
         )
     
     async def init_from_db(self) -> None:
-        """
-        Initialize last_bar_ts from database persistence.
-        
-        Called on startup to prevent duplicate bars after restart.
-        Must be called before polling starts.
-        """
+        # Initialize last_bar_ts from database persistence.
+        #
+        # Called on startup to prevent duplicate bars after restart.
+        # Must be called before polling starts.
         if self._db is None:
             logger.warning("AlpacaDataClient: no database provided, skipping init_from_db")
             self._initialized = True
@@ -180,7 +169,7 @@ class AlpacaDataClient:
         self._initialized = True
     
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session with auth headers."""
+        # Get or create HTTP session with auth headers.
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(
                 headers={
@@ -191,27 +180,23 @@ class AlpacaDataClient:
         return self._session
     
     async def close(self) -> None:
-        """Close HTTP session and stop polling."""
+        # Close HTTP session and stop polling.
         self._running = False
         if self._session and not self._session.closed:
             await self._session.close()
             logger.info("AlpacaDataClient closed")
     
     async def fetch_bars(self, symbol: str, limit: int = 5) -> List[Dict[str, Any]]:
-        """
-        Fetch recent bars for a symbol.
-        
-        Parameters
-        ----------
-        symbol : str
-            Stock symbol (e.g., "IBIT").
-        limit : int
-            Number of bars to fetch (default 5, enough for dedup + overlap).
-        
-        Returns
-        -------
-        list of bar dicts with keys: t, o, h, l, c, v
-        """
+        # Fetch recent bars for a symbol.
+        #
+        # Parameters
+        # symbol : str
+        # Stock symbol (e.g., "IBIT").
+        # limit : int
+        # Number of bars to fetch (default 5, enough for dedup + overlap).
+        #
+        # Returns
+        # list of bar dicts with keys: t, o, h, l, c, v
         session = await self._get_session()
         url = f"{ALPACA_DATA_URL}/stocks/{symbol}/bars"
         
@@ -259,12 +244,10 @@ class AlpacaDataClient:
             return []
     
     def _bar_to_event(self, symbol: str, bar: Dict[str, Any]) -> BarEvent:
-        """
-        Convert Alpaca bar dict to BarEvent.
-        
-        BarEvent.timestamp = bar OPEN time (UTC epoch seconds).
-        Internal tracking uses int milliseconds.
-        """
+        # Convert Alpaca bar dict to BarEvent.
+        #
+        # BarEvent.timestamp = bar OPEN time (UTC epoch seconds).
+        # Internal tracking uses int milliseconds.
         bar_ts_ms = _parse_rfc3339_to_ms(bar["t"])
         bar_ts_sec = bar_ts_ms / 1000.0  # Convert to seconds for BarEvent
         
@@ -286,15 +269,12 @@ class AlpacaDataClient:
         )
     
     async def poll_once(self) -> int:
-        """
-        Run a single poll cycle for all symbols.
-        
-        Returns number of new bars emitted.
-        
-        ORDERING GUARANTEE
-        ------------------
-        Bars are collected, sorted by bar_ts, then emitted in strict order.
-        """
+        # Run a single poll cycle for all symbols.
+        #
+        # Returns number of new bars emitted.
+        #
+        # ORDERING GUARANTEE
+        # Bars are collected, sorted by bar_ts, then emitted in strict order.
         if not self._initialized:
             await self.init_from_db()
         
@@ -347,13 +327,11 @@ class AlpacaDataClient:
         return total_emitted
     
     async def poll(self) -> None:
-        """
-        Continuously poll for bar updates.
-        
-        FIXED INTERVAL: No market-hours-aware gating. Polls at constant interval.
-        
-        Runs until close() is called.
-        """
+        # Continuously poll for bar updates.
+        #
+        # FIXED INTERVAL: No market-hours-aware gating. Polls at constant interval.
+        #
+        # Runs until close() is called.
         self._running = True
         
         # Initialize from DB before starting
@@ -377,7 +355,7 @@ class AlpacaDataClient:
             await asyncio.sleep(self._poll_interval)
     
     def get_health_status(self) -> Dict[str, Any]:
-        """Return health status for dashboard."""
+        # Return health status for dashboard.
         now = time.time()
         age = (now - self._last_success_ts) if self._last_success_ts else None
         

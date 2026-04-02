@@ -1,9 +1,8 @@
-"""
-Coinglass API Client
-====================
+# Created by Oliver Meihls
 
-REST client for Coinglass liquidation data.
-"""
+# Coinglass API Client
+#
+# REST client for Coinglass liquidation data.
 
 import asyncio
 import time
@@ -17,25 +16,21 @@ logger = get_connector_logger('coinglass')
 
 
 class CoinglassClient:
-    """
-    Coinglass API client for liquidation data.
-    
-    Provides:
-    - Liquidation events across exchanges
-    - Aggregated liquidation statistics
-    
-    Requires API key (free tier available).
-    """
+    # Coinglass API client for liquidation data.
+    #
+    # Provides:
+    # - Liquidation events across exchanges
+    # - Aggregated liquidation statistics
+    #
+    # Requires API key (free tier available).
     
     BASE_URL = "https://open-api.coinglass.com/public/v2"
     
     def __init__(self, api_key: str):
-        """
-        Initialize Coinglass client.
-        
-        Args:
-            api_key: Coinglass API key
-        """
+        # Initialize Coinglass client.
+        #
+        # Args:
+        # api_key: Coinglass API key
         self.api_key = api_key
         self._session: Optional[aiohttp.ClientSession] = None
         self._upgrade_warning_shown = False  # Only show upgrade warning once
@@ -54,18 +49,18 @@ class CoinglassClient:
         logger.info("Coinglass client initialized")
     
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session."""
+        # Get or create HTTP session.
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=10))
         return self._session
     
     async def close(self) -> None:
-        """Close HTTP session."""
+        # Close HTTP session.
         if self._session and not self._session.closed:
             await self._session.close()
     
     async def _request(self, endpoint: str, params: Dict = None) -> Dict:
-        """Make an API request."""
+        # Make an API request.
         session = await self._get_session()
         url = f"{self.BASE_URL}/{endpoint}"
         start = asyncio.get_running_loop().time()
@@ -120,16 +115,14 @@ class CoinglassClient:
         symbol: str = "BTC",
         time_type: str = "h1"  # h1, h4, h12, h24
     ) -> List[Dict]:
-        """
-        Get liquidation history.
-        
-        Args:
-            symbol: Coin symbol (BTC, ETH, etc.)
-            time_type: Time interval
-            
-        Returns:
-            List of liquidation records
-        """
+        # Get liquidation history.
+        #
+        # Args:
+        # symbol: Coin symbol (BTC, ETH, etc.)
+        # time_type: Time interval
+        #
+        # Returns:
+        # List of liquidation records
         data = await self._request(
             'liquidation_history',
             {'symbol': symbol, 'time_type': time_type}
@@ -151,15 +144,13 @@ class CoinglassClient:
         self,
         symbol: str = "BTC"
     ) -> Optional[Dict]:
-        """
-        Get aggregated liquidation data across exchanges.
-        
-        Args:
-            symbol: Coin symbol
-            
-        Returns:
-            Aggregated liquidation data
-        """
+        # Get aggregated liquidation data across exchanges.
+        #
+        # Args:
+        # symbol: Coin symbol
+        #
+        # Returns:
+        # Aggregated liquidation data
         data = await self._request('liquidation_info', {'symbol': symbol})
         
         if data.get('data'):
@@ -199,16 +190,14 @@ class CoinglassClient:
         symbol: str = "BTC",
         interval: str = "h1"
     ) -> List[Dict]:
-        """
-        Get liquidation chart data.
-        
-        Args:
-            symbol: Coin symbol
-            interval: Time interval
-            
-        Returns:
-            Chart data points
-        """
+        # Get liquidation chart data.
+        #
+        # Args:
+        # symbol: Coin symbol
+        # interval: Time interval
+        #
+        # Returns:
+        # Chart data points
         data = await self._request(
             'liquidation_chart',
             {'symbol': symbol, 'interval': interval}
@@ -232,17 +221,15 @@ class CoinglassClient:
         threshold_usd: float = 5_000_000,
         time_window_minutes: int = 5
     ) -> Optional[Dict]:
-        """
-        Check if a liquidation cascade is occurring.
-        
-        Args:
-            symbol: Coin symbol
-            threshold_usd: Minimum liquidation amount to trigger
-            time_window_minutes: Time window to check
-            
-        Returns:
-            Cascade info if detected, None otherwise
-        """
+        # Check if a liquidation cascade is occurring.
+        #
+        # Args:
+        # symbol: Coin symbol
+        # threshold_usd: Minimum liquidation amount to trigger
+        # time_window_minutes: Time window to check
+        #
+        # Returns:
+        # Cascade info if detected, None otherwise
         history = await self.get_liquidation_history(symbol, 'h1')
         
         if not history:
@@ -273,14 +260,12 @@ class CoinglassClient:
         interval_seconds: int = 30,
         callback=None
     ) -> None:
-        """
-        Continuously poll for liquidation cascades.
-        
-        Args:
-            symbols: Symbols to monitor
-            interval_seconds: Polling interval
-            callback: Function to call when cascade detected
-        """
+        # Continuously poll for liquidation cascades.
+        #
+        # Args:
+        # symbols: Symbols to monitor
+        # interval_seconds: Polling interval
+        # callback: Function to call when cascade detected
         logger.info(f"Starting liquidation polling for {len(symbols)} symbols")
         
         while True:
@@ -298,7 +283,7 @@ class CoinglassClient:
             await asyncio.sleep(interval_seconds)
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Return health for dashboard."""
+        # Return health for dashboard.
         now = time.time()
         age = (now - self.last_message_ts) if self.last_message_ts else None
         if self.consecutive_failures > 0:

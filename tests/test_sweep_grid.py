@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import pytest
 
 from src.analysis.sweep_grid import expand_sweep_grid

@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""
-Argus - Crypto Market Monitor
-=============================
+# Created by Oliver Meihls
 
-Main entry point for running Argus.
-
-Usage:
-    python main.py
-    python main.py --log-level DEBUG    # full tracebacks and debug lines (console + file)
-
-To see debug logging (e.g. error tracebacks, bar-flush details):
-  - Run:  python main.py --log-level DEBUG
-  - Or set in config:  system.log_level: "DEBUG"
-  - Or set env:  set ARGUS_LOG_LEVEL=DEBUG   (Windows)  /  export ARGUS_LOG_LEVEL=DEBUG   (Unix)
-"""
+# Argus - Crypto Market Monitor
+#
+# Main entry point for running Argus.
+#
+# Usage:
+# python main.py
+# python main.py --log-level DEBUG    # full tracebacks and debug lines (console + file)
+#
+# To see debug logging (e.g. error tracebacks, bar-flush details):
+# - Run:  python main.py --log-level DEBUG
+# - Or set in config:  system.log_level: "DEBUG"
+# - Or set env:  set ARGUS_LOG_LEVEL=DEBUG   (Windows)  /  export ARGUS_LOG_LEVEL=DEBUG   (Unix)
 
 import argparse
 import asyncio

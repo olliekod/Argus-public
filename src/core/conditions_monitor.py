@@ -1,20 +1,19 @@
-"""
-Market Conditions Monitor
-=========================
+# Created by Oliver Meihls
 
-Synthesizes all data sources into a single "warmth" score (1-10)
-for proactive opportunity alerts.
-
-Inputs:
-- BTC IV (Deribit) → elevated = opportunity
-- Funding rate (Bybit) → extremes = contrarian signal
-- BTC price momentum (Bybit) → fear/relief context
-
-Output:
-- Composite score 1-10
-- Warmth label: cooling, neutral, warming, prime
-- Specific implications for IBIT/BITO trading
-"""
+# Market Conditions Monitor
+#
+# Synthesizes all data sources into a single "warmth" score (1-10)
+# for proactive opportunity alerts.
+#
+# Inputs:
+# - BTC IV (Deribit) → elevated = opportunity
+# - Funding rate (Bybit) → extremes = contrarian signal
+# - BTC price momentum (Bybit) → fear/relief context
+#
+# Output:
+# - Composite score 1-10
+# - Warmth label: cooling, neutral, warming, prime
+# - Specific implications for IBIT/BITO trading
 
 import asyncio
 from dataclasses import dataclass
@@ -28,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ConditionsSnapshot:
-    """Point-in-time market conditions."""
+    # Point-in-time market conditions.
     timestamp: datetime
     score: int  # 1-10
     label: str  # cooling, neutral, warming, prime
@@ -55,11 +54,9 @@ class ConditionsSnapshot:
 
 
 class ConditionsMonitor:
-    """
-    Synthesizes market data into actionable conditions score.
-    
-    Runs every 30 minutes and alerts on threshold crossings.
-    """
+    # Synthesizes market data into actionable conditions score.
+    #
+    # Runs every 30 minutes and alerts on threshold crossings.
     
     # Warmth thresholds
     COOLING_MAX = 3
@@ -75,13 +72,11 @@ class ConditionsMonitor:
         config: Dict[str, Any] = None,
         on_alert: Optional[Callable] = None,
     ):
-        """
-        Initialize conditions monitor.
-        
-        Args:
-            config: Configuration dict from thresholds.yaml
-            on_alert: Callback for sending alerts
-        """
+        # Initialize conditions monitor.
+        #
+        # Args:
+        # config: Configuration dict from thresholds.yaml
+        # on_alert: Callback for sending alerts
         config = config or {}
         
         self.poll_interval = config.get('poll_interval_minutes', 30) * 60
@@ -115,14 +110,14 @@ class ConditionsMonitor:
         get_btc_price: Optional[Callable] = None,
         get_risk_flow: Optional[Callable] = None,
     ):
-        """Set callbacks for fetching data from connectors."""
+        # Set callbacks for fetching data from connectors.
         self._get_btc_iv = get_btc_iv
         self._get_funding = get_funding
         self._get_btc_price = get_btc_price
         self._get_risk_flow = get_risk_flow
     
     def _is_market_open(self) -> bool:
-        """Check if US stock market is currently open."""
+        # Check if US stock market is currently open.
         eastern = ZoneInfo("America/New_York")
         now = datetime.now(eastern)
 
@@ -138,7 +133,7 @@ class ConditionsMonitor:
         return True
     
     def _calculate_iv_signal(self, iv: float) -> Tuple[str, int]:
-        """Calculate IV signal and score contribution."""
+        # Calculate IV signal and score contribution.
         if iv >= self.iv_high:
             return "high", 3  # Great for selling premium
         elif iv >= self.iv_elevated:
@@ -149,7 +144,7 @@ class ConditionsMonitor:
             return "low", 0  # Bad for selling premium
     
     def _calculate_funding_signal(self, rate: float) -> Tuple[str, int]:
-        """Calculate funding signal and score contribution."""
+        # Calculate funding signal and score contribution.
         if rate <= -self.funding_extreme:
             return "shorts_pay", 2  # Contrarian bullish
         elif rate >= self.funding_extreme:
@@ -158,7 +153,7 @@ class ConditionsMonitor:
             return "neutral", 1
     
     def _calculate_momentum_signal(self, change_24h: float) -> Tuple[str, int]:
-        """Calculate momentum signal and score contribution."""
+        # Calculate momentum signal and score contribution.
         if change_24h <= -3:
             return "bearish", 2  # Good for put spreads (collecting premium on fear)
         elif change_24h >= 3:
@@ -167,7 +162,7 @@ class ConditionsMonitor:
             return "neutral", 1
     
     def _get_warmth_label(self, score: int) -> str:
-        """Convert score to label."""
+        # Convert score to label.
         if score <= self.COOLING_MAX:
             return "cooling"
         elif score <= self.NEUTRAL_MAX:
@@ -185,7 +180,7 @@ class ConditionsMonitor:
         momentum_signal: str,
         market_open: bool,
     ) -> str:
-        """Generate human-readable implication."""
+        # Generate human-readable implication.
         if score >= 8:
             if market_open:
                 return "Prime conditions for put spreads. Check IBIT/BITO now."
@@ -204,7 +199,7 @@ class ConditionsMonitor:
             return "Conditions unfavorable. " + (", ".join(reasons) if reasons else "Wait for better setup.")
     
     async def calculate_conditions(self) -> ConditionsSnapshot:
-        """Calculate current market conditions."""
+        # Calculate current market conditions.
         now = datetime.now(timezone.utc)
         market_open = self._is_market_open()
         
@@ -290,7 +285,7 @@ class ConditionsMonitor:
         return snapshot
     
     async def check_and_alert(self) -> Optional[ConditionsSnapshot]:
-        """Check conditions and send alert if threshold crossed."""
+        # Check conditions and send alert if threshold crossed.
         snapshot = await self.calculate_conditions()
         
         old_score = self._last_score
@@ -325,7 +320,7 @@ class ConditionsMonitor:
         return snapshot
     
     async def get_current_conditions(self) -> Dict[str, Any]:
-        """Get current conditions as dict (for /status command)."""
+        # Get current conditions as dict (for /status command).
         if self._last_snapshot is None:
             await self.calculate_conditions()
         
@@ -356,10 +351,11 @@ class ConditionsMonitor:
                     res['risk_flow'] = "risk-on" if val > 0 else ("risk-off" if val < 0 else "neutral")
             except Exception:
                 pass
+
         return res
     
     async def start_monitoring(self) -> None:
-        """Start the monitoring loop."""
+        # Start the monitoring loop.
         self._running = True
         logger.info(f"Starting conditions monitoring (interval: {self.poll_interval}s)")
         
@@ -375,14 +371,14 @@ class ConditionsMonitor:
                     logger.error(f"Conditions check error: {e}")
     
     def stop_monitoring(self) -> None:
-        """Stop the monitoring loop."""
+        # Stop the monitoring loop.
         self._running = False
         logger.info("Conditions monitoring stopped")
 
 
 # Self-test
 async def test_conditions_monitor():
-    """Test the conditions monitor."""
+    # Test the conditions monitor.
     print("Conditions Monitor Test")
     print("=" * 40)
     

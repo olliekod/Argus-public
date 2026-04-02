@@ -1,33 +1,31 @@
-"""
-Rolling 60-second ring-buffer for BTC mid-price (truth feed).
+# Created by Oliver Meihls
 
-The CF Benchmarks BRTI settlement uses the 60-second simple average of
-prices at 1-second resolution immediately prior to the settlement
-timestamp.  This module maintains that window in real time.
-
-Design
-------
-* **Ring buffer** of 60 slots, one per second.
-* Each slot stores the *last* price observed during that integer second.
-* When the wall-clock second advances, empty (un-ticked) slots are
-  forward-filled from the most recent observed price so the average is
-  always computed over a full 60-second span, matching BRTI methodology.
-* ``BtcWindowState`` messages are published on ``btc.window_state`` after
-  each tick or second rollover.
-
-Determinism under irregular ticks
----------------------------------
-* Multiple ticks within the same second: only the last one is kept.
-* No tick for a given second: forward-fill from the previous second.
-* Ticks arriving out of order (old timestamp): silently ignored.
-
-Complexity
-----------
-* ``on_tick``: O(gap) where *gap* is the number of seconds since the
-  last tick — bounded by 60 in the worst case.  Amortised O(1) under
-  normal 1-second feed cadence.
-* Sum/average retrieval: maintained incrementally — O(1).
-"""
+# Rolling 60-second ring-buffer for BTC mid-price (truth feed).
+#
+# The CF Benchmarks BRTI settlement uses the 60-second simple average of
+# prices at 1-second resolution immediately prior to the settlement
+# timestamp.  This module maintains that window in real time.
+#
+# Design
+# ------
+# * **Ring buffer** of 60 slots, one per second.
+# * Each slot stores the *last* price observed during that integer second.
+# * When the wall-clock second advances, empty (un-ticked) slots are
+# forward-filled from the most recent observed price so the average is
+# always computed over a full 60-second span, matching BRTI methodology.
+# * ``BtcWindowState`` messages are published on ``btc.window_state`` after
+# each tick or second rollover.
+#
+# Determinism under irregular ticks
+# * Multiple ticks within the same second: only the last one is kept.
+# * No tick for a given second: forward-fill from the previous second.
+# * Ticks arriving out of order (old timestamp): silently ignored.
+#
+# Complexity
+# * ``on_tick``: O(gap) where *gap* is the number of seconds since the
+# last tick — bounded by 60 in the worst case.  Amortised O(1) under
+# normal 1-second feed cadence.
+# * Sum/average retrieval: maintained incrementally — O(1).
 
 from __future__ import annotations
 
@@ -46,7 +44,7 @@ _WINDOW_SIZE = 60  # seconds
 
 
 class BtcWindowEngine:
-    """Maintains a 60-second rolling average of per-asset mid prices."""
+    # Maintains a 60-second rolling average of per-asset mid prices.
 
     def __init__(self, bus: Bus, truth_topic: str = "btc.mid_price", asset: str = "BTC") -> None:
         self._bus = bus
@@ -83,7 +81,7 @@ class BtcWindowEngine:
                 pass
 
     async def _consume(self, q: asyncio.Queue) -> None:
-        """Read BtcMidPrice messages from the bus and process them."""
+        # Read BtcMidPrice messages from the bus and process them.
         try:
             while self._running:
                 msg: BtcMidPrice = await q.get()
@@ -96,11 +94,10 @@ class BtcWindowEngine:
     # -- core logic ----------------------------------------------------------
 
     async def on_tick(self, price: float, timestamp: float) -> None:
-        """Process a single price tick at the given epoch timestamp.
-
-        This is the main entry point — also usable directly in tests
-        without the bus.
-        """
+        # Process a single price tick at the given epoch timestamp.
+        #
+        # This is the main entry point — also usable directly in tests
+        # without the bus.
         tick_second = int(timestamp)
 
         if not self._initialised:
@@ -142,7 +139,7 @@ class BtcWindowEngine:
         await self._publish(timestamp)
 
     def _initialise(self, price: float, tick_second: int) -> None:
-        """Set up the ring buffer from the first tick."""
+        # Set up the ring buffer from the first tick.
         self._slots = [math.nan] * _WINDOW_SIZE
         idx = tick_second % _WINDOW_SIZE
         self._slots[idx] = price
@@ -153,7 +150,7 @@ class BtcWindowEngine:
         self._initialised = True
 
     def _advance(self, gap: int, new_price: float) -> None:
-        """Advance the ring buffer by *gap* seconds, forward-filling."""
+        # Advance the ring buffer by *gap* seconds, forward-filling.
         fill_price = self._last_price
 
         if gap >= _WINDOW_SIZE:
@@ -209,7 +206,7 @@ class BtcWindowEngine:
         return self._initialised
 
     def get_values(self) -> List[float]:
-        """Return the current window values in chronological order."""
+        # Return the current window values in chronological order.
         if not self._initialised:
             return []
         result: List[float] = []

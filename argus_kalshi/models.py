@@ -1,11 +1,11 @@
-"""
-Bus message dataclasses for the Argus Kalshi module.
+# Created by Oliver Meihls
 
-Every message on the internal pub/sub bus is an instance of one of these
-dataclasses.  Fields are restricted to JSON-serializable primitives
-(str, int, float, bool, dict, list) — no raw aiohttp objects, no
-datetime (use ISO-8601 strings or epoch floats instead).
-"""
+# Bus message dataclasses for the Argus Kalshi module.
+#
+# Every message on the internal pub/sub bus is an instance of one of these
+# dataclasses.  Fields are restricted to JSON-serializable primitives
+# (str, int, float, bool, dict, list) — no raw aiohttp objects, no
+# datetime (use ISO-8601 strings or epoch floats instead).
 
 from __future__ import annotations
 
@@ -14,18 +14,14 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
 
-# ---------------------------------------------------------------------------
 #  Helpers
-# ---------------------------------------------------------------------------
 
 def _to_json(obj: object) -> str:
-    """Serialize any of our dataclasses to a JSON string."""
+    # Serialize any of our dataclasses to a JSON string.
     return json.dumps(asdict(obj), separators=(",", ":"))  # type: ignore[arg-type]
 
 
-# ---------------------------------------------------------------------------
 #  Market metadata
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class MarketMetadata:
@@ -50,13 +46,11 @@ class MarketMetadata:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  BTC truth feed
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class BtcMidPrice:
-    """Single price tick from the truth feed."""
+    # Single price tick from the truth feed.
     price: float
     timestamp: float  # epoch seconds (float for sub-second precision)
     source: str = "unknown"
@@ -68,7 +62,7 @@ class BtcMidPrice:
 
 @dataclass(slots=True)
 class BtcWindowState:
-    """Rolling 60-second window state for BTC mid price."""
+    # Rolling 60-second window state for BTC mid price.
     last_60_sum: float
     last_60_avg: float
     count: int                     # how many valid seconds in the window
@@ -80,9 +74,7 @@ class BtcWindowState:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Probability
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class FairProbability:
@@ -95,9 +87,7 @@ class FairProbability:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Orderbook snapshot (bus message form)
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class OrderbookState:
@@ -119,9 +109,7 @@ class OrderbookState:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Trade signal & execution
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class TradeSignal:
@@ -143,7 +131,7 @@ class TradeSignal:
 
 @dataclass(slots=True)
 class OrderUpdate:
-    """Reported by the execution layer after placing / cancelling / filling."""
+    # Reported by the execution layer after placing / cancelling / filling.
     market_ticker: str
     order_id: str
     status: str          # "placed", "cancelled", "filled", "partial_fill", "error"
@@ -160,9 +148,7 @@ class OrderUpdate:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Ticker feed (from WS ticker channel)
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class TickerUpdate:
@@ -177,9 +163,7 @@ class TickerUpdate:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  WebSocket lifecycle
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class WsConnectionEvent:
@@ -191,9 +175,7 @@ class WsConnectionEvent:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Fill (from WS fill channel)
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class FillEvent:
@@ -216,13 +198,11 @@ class FillEvent:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Trade tape (executed trades from Kalshi WS trade channel)
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class KalshiTradeEvent:
-    """A single executed trade on a Kalshi market."""
+    # A single executed trade on a Kalshi market.
     market_ticker: str
     taker_side: str    # "yes" or "no"
     count: int         # contracts traded
@@ -234,7 +214,7 @@ class KalshiTradeEvent:
 
 @dataclass(slots=True)
 class KalshiOrderDeltaEvent:
-    """Orderbook delta-flow event derived from WS orderbook_delta updates."""
+    # Orderbook delta-flow event derived from WS orderbook_delta updates.
     market_ticker: str
     side: str          # "yes" or "no"
     is_add: bool       # True=order added, False=order cancelled/reduced
@@ -245,9 +225,7 @@ class KalshiOrderDeltaEvent:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Risk / kill switch
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class RiskEvent:
@@ -261,7 +239,7 @@ class RiskEvent:
 
 @dataclass(slots=True)
 class SettlementOutcome:
-    """Published when a position settles; used for UI PnL, win rate, and event log."""
+    # Published when a position settles; used for UI PnL, win rate, and event log.
     market_ticker: str
     side: str            # "yes" or "no"
     won: bool
@@ -283,13 +261,11 @@ class SettlementOutcome:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Market discovery
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class SelectedMarkets:
-    """Published when market discovery selects or refreshes the active ticker set."""
+    # Published when market discovery selects or refreshes the active ticker set.
     tickers: List[str]
     timestamp: float
 
@@ -299,7 +275,7 @@ class SelectedMarkets:
 
 @dataclass(slots=True)
 class ActiveTicker:
-    """Published by the strategy to tell the UI which single ticker to focus on."""
+    # Published by the strategy to tell the UI which single ticker to focus on.
     ticker: str
     timestamp: float
 
@@ -307,13 +283,11 @@ class ActiveTicker:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Account balance
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class AccountBalance:
-    """Published periodically by the balance poller in runner.py."""
+    # Published periodically by the balance poller in runner.py.
     balance_cents: int      # raw API value in cents
     timestamp: float
 
@@ -327,7 +301,7 @@ class AccountBalance:
 
 @dataclass(slots=True)
 class KalshiRtt:
-    """Kalshi round-trip time in ms. source is 'rest' (REST /exchange/status) or 'ws' (WebSocket subscribe→subscribed)."""
+    # Kalshi round-trip time in ms. source is 'rest' (REST /exchange/status) or 'ws' (WebSocket subscribe→subscribed).
     rtt_ms: float
     timestamp: float = 0.0  # epoch seconds when measured
     source: Optional[str] = None  # "rest" | "ws"; None for backward compat
@@ -336,13 +310,11 @@ class KalshiRtt:
         return _to_json(self)
 
 
-# ---------------------------------------------------------------------------
 #  Logging and Analytics
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True)
 class TerminalEvent:
-    """A log message intended for the UI terminal and/or database tracking."""
+    # A log message intended for the UI terminal and/or database tracking.
     level: str           # "INFO", "WARN", "ALERT", "ERROR"
     message: str
     timestamp: float
@@ -354,7 +326,7 @@ class TerminalEvent:
 
 @dataclass(slots=True)
 class StrategyDecision:
-    """A record of a strategy tick evaluation, even if no trade was taken."""
+    # A record of a strategy tick evaluation, even if no trade was taken.
     market_ticker: str
     p_yes: float
     yes_ask: int

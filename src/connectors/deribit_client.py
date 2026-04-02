@@ -1,10 +1,9 @@
-"""
-Deribit REST API Client
-=======================
+# Created by Oliver Meihls
 
-Public REST client for Deribit options data.
-No authentication required for public endpoints.
-"""
+# Deribit REST API Client
+#
+# Public REST client for Deribit options data.
+# No authentication required for public endpoints.
 
 import asyncio
 from datetime import datetime, timezone
@@ -19,28 +18,24 @@ logger = get_connector_logger('deribit')
 
 
 class DeribitClient:
-    """
-    Deribit public API client for options data.
-    
-    Provides:
-    - Options IV data
-    - Greeks
-    - Volatility index
-    
-    Uses public endpoints - no API key required for US users.
-    """
+    # Deribit public API client for options data.
+    #
+    # Provides:
+    # - Options IV data
+    # - Greeks
+    # - Volatility index
+    #
+    # Uses public endpoints - no API key required for US users.
     
     MAINNET_URL = "https://www.deribit.com/api/v2"
     TESTNET_URL = "https://test.deribit.com/api/v2"
     
     def __init__(self, testnet: bool = True, event_bus=None):
-        """
-        Initialize Deribit client.
-
-        Args:
-            testnet: Use testnet endpoint (recommended for testing)
-            event_bus: Optional EventBus for publishing QuoteEvents
-        """
+        # Initialize Deribit client.
+        #
+        # Args:
+        # testnet: Use testnet endpoint (recommended for testing)
+        # event_bus: Optional EventBus for publishing QuoteEvents
         self.base_url = self.TESTNET_URL if testnet else self.MAINNET_URL
         self._session: Optional[aiohttp.ClientSession] = None
         self._rate_limit = 20  # public rate limit: 20/min unauthenticated
@@ -62,18 +57,18 @@ class DeribitClient:
         logger.info(f"Deribit client initialized ({'testnet' if testnet else 'mainnet'})")
     
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session."""
+        # Get or create HTTP session.
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=10))
         return self._session
     
     async def close(self) -> None:
-        """Close HTTP session."""
+        # Close HTTP session.
         if self._session and not self._session.closed:
             await self._session.close()
     
     async def _request(self, method: str, params: Dict = None) -> Dict:
-        """Make a public API request."""
+        # Make a public API request.
         # Simple rate limiting: 20 requests per 60-second window.
         # Uses total_seconds() (not .seconds) to correctly handle intervals > 60s.
         now = datetime.now(timezone.utc)
@@ -130,7 +125,7 @@ class DeribitClient:
 
     @staticmethod
     def _normalize_source_ts(raw: Optional[float]) -> Tuple[Optional[float], Optional[str]]:
-        """Normalize Deribit timestamps to epoch seconds."""
+        # Normalize Deribit timestamps to epoch seconds.
         if raw is None:
             return None, "missing"
         try:
@@ -169,7 +164,7 @@ class DeribitClient:
 
     @classmethod
     def _extract_source_ts(cls, data: Any) -> Tuple[Optional[float], Optional[str], Optional[str], Optional[float]]:
-        """Extract a source timestamp from a Deribit API response."""
+        # Extract a source timestamp from a Deribit API response.
         data_dict = cls._get_dict(data, "source_ts")
         result = data_dict.get("result")
         result_dict = result if isinstance(result, dict) else {}
@@ -187,7 +182,7 @@ class DeribitClient:
 
     @classmethod
     def _coerce_result_list(cls, data: Any, context: str) -> List[Dict[str, Any]]:
-        """Return a list of result items, handling dict/list payloads safely."""
+        # Return a list of result items, handling dict/list payloads safely.
         if isinstance(data, list):
             logger.warning(
                 "Deribit %s response returned a list (%s)",
@@ -222,15 +217,13 @@ class DeribitClient:
         return []
     
     async def get_ticker(self, instrument_name: str) -> Optional[Dict]:
-        """
-        Get ticker data including IV for an option.
-        
-        Args:
-            instrument_name: Deribit instrument name (e.g., 'BTC-28JUN24-50000-C')
-            
-        Returns:
-            Ticker data with IV and Greeks or None
-        """
+        # Get ticker data including IV for an option.
+        #
+        # Args:
+        # instrument_name: Deribit instrument name (e.g., 'BTC-28JUN24-50000-C')
+        #
+        # Returns:
+        # Ticker data with IV and Greeks or None
         data = await self._request('ticker', {'instrument_name': instrument_name})
         data_dict = self._get_dict(data, "ticker")
         result = data_dict.get("result")
@@ -265,16 +258,14 @@ class DeribitClient:
         currency: str = "BTC",
         kind: str = "option"
     ) -> List[Dict]:
-        """
-        Get summary of all instruments for a currency.
-        
-        Args:
-            currency: 'BTC' or 'ETH'
-            kind: 'option' or 'future'
-            
-        Returns:
-            List of instrument summaries with IV data
-        """
+        # Get summary of all instruments for a currency.
+        #
+        # Args:
+        # currency: 'BTC' or 'ETH'
+        # kind: 'option' or 'future'
+        #
+        # Returns:
+        # List of instrument summaries with IV data
         data = await self._request(
             'get_book_summary_by_currency',
             {'currency': currency, 'kind': kind}
@@ -316,17 +307,15 @@ class DeribitClient:
         kind: str = "option",
         expired: bool = False
     ) -> List[Dict]:
-        """
-        Get all available instruments.
-        
-        Args:
-            currency: 'BTC' or 'ETH'
-            kind: 'option' or 'future'
-            expired: Include expired instruments
-            
-        Returns:
-            List of instrument definitions
-        """
+        # Get all available instruments.
+        #
+        # Args:
+        # currency: 'BTC' or 'ETH'
+        # kind: 'option' or 'future'
+        # expired: Include expired instruments
+        #
+        # Returns:
+        # List of instrument definitions
         data = await self._request(
             'get_instruments',
             {'currency': currency, 'kind': kind, 'expired': str(expired).lower()}
@@ -362,15 +351,13 @@ class DeribitClient:
         return result
     
     async def get_index_price(self, index_name: str = "btc_usd") -> Optional[Dict]:
-        """
-        Get current index price.
-        
-        Args:
-            index_name: Index name (e.g., 'btc_usd', 'eth_usd')
-            
-        Returns:
-            Index price data
-        """
+        # Get current index price.
+        #
+        # Args:
+        # index_name: Index name (e.g., 'btc_usd', 'eth_usd')
+        #
+        # Returns:
+        # Index price data
         data = await self._request('get_index_price', {'index_name': index_name})
         
         if isinstance(data, list):
@@ -398,15 +385,13 @@ class DeribitClient:
         self,
         currency: str = "BTC"
     ) -> Optional[Dict]:
-        """
-        Get historical volatility data.
-        
-        Args:
-            currency: 'BTC' or 'ETH'
-            
-        Returns:
-            Historical volatility data
-        """
+        # Get historical volatility data.
+        #
+        # Args:
+        # currency: 'BTC' or 'ETH'
+        #
+        # Returns:
+        # Historical volatility data
         data = await self._request(
             'get_historical_volatility',
             {'currency': currency}
@@ -423,15 +408,13 @@ class DeribitClient:
         return None
     
     async def get_atm_iv(self, currency: str = "BTC") -> Optional[Dict]:
-        """
-        Get ATM implied volatility by finding nearest strike options.
-        
-        Args:
-            currency: 'BTC' or 'ETH'
-            
-        Returns:
-            ATM IV data or None
-        """
+        # Get ATM implied volatility by finding nearest strike options.
+        #
+        # Args:
+        # currency: 'BTC' or 'ETH'
+        #
+        # Returns:
+        # ATM IV data or None
         # Get index price first
         index_data = await self.get_index_price(f"{currency.lower()}_usd")
         if not index_data:
@@ -576,14 +559,12 @@ class DeribitClient:
         interval_seconds: int = 60,
         callback=None
     ) -> None:
-        """
-        Continuously poll ATM IV.
-        
-        Args:
-            currency: Currency to monitor
-            interval_seconds: Polling interval
-            callback: Function to call with data
-        """
+        # Continuously poll ATM IV.
+        #
+        # Args:
+        # currency: Currency to monitor
+        # interval_seconds: Polling interval
+        # callback: Function to call with data
         logger.info(f"Starting options IV polling for {currency}")
         
         while True:
@@ -601,7 +582,7 @@ class DeribitClient:
             await asyncio.sleep(interval_seconds)
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Return health for dashboard."""
+        # Return health for dashboard.
         import time
         now = time.time()
         age = (now - self.last_message_ts) if self.last_message_ts else None

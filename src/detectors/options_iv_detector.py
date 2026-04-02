@@ -1,15 +1,14 @@
-"""
-Options IV Spike Detector
-=========================
+# Created by Oliver Meihls
 
-Detects implied volatility spikes for manual options trading.
-
-NOTE: This detector now LOGS data only, does NOT alert.
-User cannot trade on Deribit. IBIT/BITO opportunities use
-the IBITDetector which has its own alerts.
-
-This detector feeds IV data to the IBIT detector.
-"""
+# Options IV Spike Detector
+#
+# Detects implied volatility spikes for manual options trading.
+#
+# NOTE: This detector now LOGS data only, does NOT alert.
+# User cannot trade on Deribit. IBIT/BITO opportunities use
+# the IBITDetector which has its own alerts.
+#
+# This detector feeds IV data to the IBIT detector.
 
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
@@ -19,18 +18,16 @@ from ..core.utils import calculate_z_score, calculate_mean, calculate_std
 
 
 class OptionsIVDetector(BaseDetector):
-    """
-    Detector for options implied volatility spikes.
-    
-    Strategy: When IV spikes >80% during panic, sell premium
-    via put spreads or other strategies.
-    
-    CHANGED: This detector now LOGS IV data but does NOT send alerts.
-    The IBIT detector uses this IV data to make IBIT/BITO recommendations.
-    User cannot trade on Deribit directly.
-    
-    Alert spam fix: Added 4-hour cooldown per currency.
-    """
+    # Detector for options implied volatility spikes.
+    #
+    # Strategy: When IV spikes >80% during panic, sell premium
+    # via put spreads or other strategies.
+    #
+    # CHANGED: This detector now LOGS IV data but does NOT send alerts.
+    # The IBIT detector uses this IV data to make IBIT/BITO recommendations.
+    # User cannot trade on Deribit directly.
+    #
+    # Alert spam fix: Added 4-hour cooldown per currency.
     
     def __init__(self, config: Dict[str, Any], db):
         super().__init__(config, db)
@@ -62,7 +59,7 @@ class OptionsIVDetector(BaseDetector):
         )
     
     def _check_cooldown(self, currency: str) -> bool:
-        """Check if we're still in cooldown for this currency."""
+        # Check if we're still in cooldown for this currency.
         if currency not in self._last_alert_time:
             return False  # No cooldown
         
@@ -72,18 +69,16 @@ class OptionsIVDetector(BaseDetector):
         return elapsed < cooldown_delta
     
     async def analyze(self, market_data: Dict[str, Any]) -> Optional[Dict]:
-        """
-        Analyze ATM IV for spike opportunities.
-        
-        Args:
-            market_data: IV data from Deribit
-                - currency: BTC or ETH
-                - atm_iv: Current ATM implied volatility
-                - index_price: Current underlying price
-                
-        Returns:
-            Detection if IV spike found, with alert_tier=3 (log only, no Telegram)
-        """
+        # Analyze ATM IV for spike opportunities.
+        #
+        # Args:
+        # market_data: IV data from Deribit
+        # - currency: BTC or ETH
+        # - atm_iv: Current ATM implied volatility
+        # - index_price: Current underlying price
+        #
+        # Returns:
+        # Detection if IV spike found, with alert_tier=3 (log only, no Telegram)
         if not self.enabled:
             return None
         
@@ -165,7 +160,7 @@ class OptionsIVDetector(BaseDetector):
         return detection
     
     async def _update_history(self, currency: str, iv: float) -> None:
-        """Update IV history cache."""
+        # Update IV history cache.
         if currency not in self._iv_history:
             # Could load from database here
             self._iv_history[currency] = []
@@ -187,20 +182,20 @@ class OptionsIVDetector(BaseDetector):
         )
     
     def calculate_edge(self, detection: Dict) -> float:
-        """Edge calculation not applicable for manual trades."""
+        # Edge calculation not applicable for manual trades.
         return 100  # Placeholder
     
     def get_iv_history(self, currency: str) -> List[float]:
-        """Get cached IV history."""
+        # Get cached IV history.
         return self._iv_history.get(currency, [])
     
     def get_current_iv(self, currency: str) -> Optional[float]:
-        """Get most recent IV value."""
+        # Get most recent IV value.
         history = self._iv_history.get(currency, [])
         return history[-1] if history else None
     
     def get_cooldown_status(self) -> Dict[str, str]:
-        """Get cooldown status for each currency."""
+        # Get cooldown status for each currency.
         status = {}
         now = datetime.now(timezone.utc)
         

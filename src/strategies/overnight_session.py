@@ -1,23 +1,22 @@
-"""
-Overnight Session Momentum Strategy (V1).
+# Created by Oliver Meihls
 
-Replay-only strategy that trades session transitions in equities and
-crypto markets.  Uses forward-return outcomes to decide entry; emits
-explicit CLOSE intents after a configurable horizon.
-
-Deterministic: same bars + visible_outcomes → same intents.
-No wall-clock, no lookahead, no network calls.
-
-Config keys (all passed via ``params`` dict)
---------------------------------------------
-fwd_return_threshold : float    Minimum fwd_return to trigger entry (default 0.005)
-entry_window_minutes : int      Minutes for entry window (default 30)
-horizon_seconds      : int      Outcome horizon to read AND hold duration (default 14400)
-gate_on_risk_flow    : bool     Gate on GlobalRiskFlow (default False)
-min_global_risk_flow : float    Skip entry when risk flow < this (default -0.005)
-gate_on_news_sentiment: bool    Gate on news_sentiment score (default False)
-min_news_sentiment   : float    Skip entry when news sentiment < this (default -0.50)
-"""
+# Overnight Session Momentum Strategy (V1).
+#
+# Replay-only strategy that trades session transitions in equities and
+# crypto markets.  Uses forward-return outcomes to decide entry; emits
+# explicit CLOSE intents after a configurable horizon.
+#
+# Deterministic: same bars + visible_outcomes → same intents.
+# No wall-clock, no lookahead, no network calls.
+#
+# Config keys (all passed via ``params`` dict)
+# fwd_return_threshold : float    Minimum fwd_return to trigger entry (default 0.005)
+# entry_window_minutes : int      Minutes for entry window (default 30)
+# horizon_seconds      : int      Outcome horizon to read AND hold duration (default 14400)
+# gate_on_risk_flow    : bool     Gate on GlobalRiskFlow (default False)
+# min_global_risk_flow : float    Skip entry when risk flow < this (default -0.005)
+# gate_on_news_sentiment: bool    Gate on news_sentiment score (default False)
+# min_news_sentiment   : float    Skip entry when news sentiment < this (default -0.50)
 
 from __future__ import annotations
 
@@ -34,9 +33,7 @@ from src.core.sessions import (
 
 logger = logging.getLogger("argus.strategies.overnight_session")
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Default configuration
-# ═══════════════════════════════════════════════════════════════════════════
 
 _DEFAULT_CFG: Dict[str, Any] = {
     "fwd_return_threshold": 0.005,
@@ -59,40 +56,36 @@ _EQUITIES_ENTRY_SESSIONS = frozenset({"RTH", "PRE"})
 
 
 class OvernightSessionStrategy(ReplayStrategy):
-    """Replay strategy for overnight/session-transition momentum.
-
-    Entry rules
-    -----------
-    **EQUITIES** — enter during:
-      • Last ``entry_window_minutes`` of RTH, or
-      • First ``entry_window_minutes`` of PRE.
-
-    **CRYPTO** — enter at session transitions:
-      • ASIA → EU, EU → US.
-
-    In both cases, the forward return at ``horizon_seconds`` from
-    ``visible_outcomes`` must exceed ``fwd_return_threshold``.
-
-    Exit rules
-    ----------
-    Emit an explicit ``CLOSE`` intent when ``(sim_ts - entry_ts) >=
-    horizon_seconds * 1000``.  This keeps experiments comparable and
-    removes hidden coupling to harness TTL settings.
-
-    Risk-flow/news-sentiment gating
-    --------------------------------
-    When ``gate_on_risk_flow`` is ``True``, entry is suppressed if the
-    ``global_risk_flow`` metric from ``visible_regimes`` is below
-    ``min_global_risk_flow``.
-
-    When ``gate_on_news_sentiment`` is ``True``, entry is suppressed if the
-    ``news_sentiment.score`` metric from ``visible_regimes`` is below
-    ``min_news_sentiment``.
-
-    V1 is **long-only**.  Symmetric overnight shorts on equities are
-    unsafe during overnight gaps; a future V2 may add them with
-    additional gap-risk guards.
-    """
+    # Replay strategy for overnight/session-transition momentum.
+    #
+    # Entry rules
+    # **EQUITIES** — enter during:
+    # • Last ``entry_window_minutes`` of RTH, or
+    # • First ``entry_window_minutes`` of PRE.
+    #
+    # **CRYPTO** — enter at session transitions:
+    # • ASIA → EU, EU → US.
+    #
+    # In both cases, the forward return at ``horizon_seconds`` from
+    # ``visible_outcomes`` must exceed ``fwd_return_threshold``.
+    #
+    # Exit rules
+    # Emit an explicit ``CLOSE`` intent when ``(sim_ts - entry_ts) >=
+    # horizon_seconds * 1000``.  This keeps experiments comparable and
+    # removes hidden coupling to harness TTL settings.
+    #
+    # Risk-flow/news-sentiment gating
+    # When ``gate_on_risk_flow`` is ``True``, entry is suppressed if the
+    # ``global_risk_flow`` metric from ``visible_regimes`` is below
+    # ``min_global_risk_flow``.
+    #
+    # When ``gate_on_news_sentiment`` is ``True``, entry is suppressed if the
+    # ``news_sentiment.score`` metric from ``visible_regimes`` is below
+    # ``min_news_sentiment``.
+    #
+    # V1 is **long-only**.  Symmetric overnight shorts on equities are
+    # unsafe during overnight gaps; a future V2 may add them with
+    # additional gap-risk guards.
 
     def __init__(self, params: Optional[Dict[str, Any]] = None) -> None:
         self._cfg: Dict[str, Any] = {**_DEFAULT_CFG, **(params or {})}
@@ -117,9 +110,7 @@ class OvernightSessionStrategy(ReplayStrategy):
         self._last_bar: Optional[BarData] = None
         self._last_sim_ts_ms: int = 0
 
-    # ───────────────────────────────────────────────────────────────────
     # ReplayStrategy interface
-    # ───────────────────────────────────────────────────────────────────
 
     @property
     def strategy_id(self) -> str:
@@ -258,12 +249,10 @@ class OvernightSessionStrategy(ReplayStrategy):
             "params": dict(self._cfg),
         }
 
-    # ───────────────────────────────────────────────────────────────────
     # Internal helpers
-    # ───────────────────────────────────────────────────────────────────
 
     def _is_entry_window(self, sim_ts_ms: int, session: str) -> bool:
-        """Check whether the current bar falls in an entry window."""
+        # Check whether the current bar falls in an entry window.
         n = self._cfg["entry_window_minutes"]
 
         if self._market == "EQUITIES":
@@ -295,11 +284,10 @@ class OvernightSessionStrategy(ReplayStrategy):
         self,
         visible_outcomes: Dict[int, OutcomeResult],
     ) -> Optional[float]:
-        """Find the best forward return at our target horizon.
-
-        Scans visible outcomes for the most recent one whose
-        ``horizon_seconds`` matches our configured horizon.
-        """
+        # Find the best forward return at our target horizon.
+        #
+        # Scans visible outcomes for the most recent one whose
+        # ``horizon_seconds`` matches our configured horizon.
         target_hz = self._cfg["horizon_seconds"]
         best_ts = float('-inf')
         best_fwd: Optional[float] = None
@@ -316,11 +304,10 @@ class OvernightSessionStrategy(ReplayStrategy):
     def _extract_global_risk_flow(
         visible_regimes: Optional[Dict[str, Dict[str, Any]]],
     ) -> Optional[float]:
-        """Extract global_risk_flow from the EQUITIES market regime.
-
-        Access path: visible_regimes["EQUITIES"]["metrics_json"] → parse
-        JSON → "global_risk_flow".
-        """
+        # Extract global_risk_flow from the EQUITIES market regime.
+        #
+        # Access path: visible_regimes["EQUITIES"]["metrics_json"] → parse
+        # JSON → "global_risk_flow".
         if not visible_regimes:
             return None
 
@@ -343,7 +330,7 @@ class OvernightSessionStrategy(ReplayStrategy):
     def _extract_news_sentiment(
         visible_regimes: Optional[Dict[str, Dict[str, Any]]],
     ) -> Optional[float]:
-        """Extract ``news_sentiment.score`` from EQUITIES metrics_json."""
+        # Extract ``news_sentiment.score`` from EQUITIES metrics_json.
         if not visible_regimes:
             return None
 

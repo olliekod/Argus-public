@@ -1,20 +1,20 @@
-"""
-Kalshi runpack readiness gate — strict PASS/FAIL from JSON artifacts only.
+# Created by Oliver Meihls
 
-Reads metrics_summary.json (and optionally rollup JSON) from one or more runpack
-directories. Applies hard threshold checks; prints a structured PASS/FAIL report
-with exact failed checks and remediation hints.
-
-Usage:
-    python scripts/kalshi_readiness_gate.py logs/analysis/runpack_20260308_1600_abc12345
-    python scripts/kalshi_readiness_gate.py --rollup logs/analysis/rollup/rollup_summary_*.json
-    python scripts/kalshi_readiness_gate.py --dir logs/analysis --hours 8 --min-settlements 200
-
-Exit codes:
-    0 — PASS
-    1 — FAIL
-    2 — Usage/config error
-"""
+# Kalshi runpack readiness gate — strict PASS/FAIL from JSON artifacts only.
+#
+# Reads metrics_summary.json (and optionally rollup JSON) from one or more runpack
+# directories. Applies hard threshold checks; prints a structured PASS/FAIL report
+# with exact failed checks and remediation hints.
+#
+# Usage:
+# python scripts/kalshi_readiness_gate.py logs/analysis/runpack_20260308_1600_abc12345
+# python scripts/kalshi_readiness_gate.py --rollup logs/analysis/rollup/rollup_summary_*.json
+# python scripts/kalshi_readiness_gate.py --dir logs/analysis --hours 8 --min-settlements 200
+#
+# Exit codes:
+# 0 — PASS
+# 1 — FAIL
+# 2 — Usage/config error
 
 from __future__ import annotations
 
@@ -26,12 +26,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 
-# ---------------------------------------------------------------------------
 #  Thresholds (all configurable via --config JSON)
-# ---------------------------------------------------------------------------
 
 DEFAULT_THRESHOLDS: Dict[str, Any] = {
-    # -------------------------------------------------------------------------
     # Sample size
     # Derivation: statistical power for a binary outcome.
     # To distinguish a 55% win rate from 50% at 95% confidence requires
@@ -40,7 +37,6 @@ DEFAULT_THRESHOLDS: Dict[str, Any] = {
     # *** PENDING CALIBRATION: tighten once we have 10+ runs of real data. ***
     "min_settlements": 200,
 
-    # -------------------------------------------------------------------------
     # PnL quality
     # min_avg_pnl_usd: must be strictly positive — pending calibration for a
     # meaningful floor (need empirical distribution from real runs).
@@ -57,7 +53,6 @@ DEFAULT_THRESHOLDS: Dict[str, Any] = {
     # *** PENDING CALIBRATION: set a meaningful floor from real run distribution. ***
     "min_robust_score": 0.0,
 
-    # -------------------------------------------------------------------------
     # Risk
     # max_drawdown_usd: derived from risk budget.
     # Daily drawdown limit = 5% × $5,000 = $250 (from config).
@@ -74,7 +69,6 @@ DEFAULT_THRESHOLDS: Dict[str, Any] = {
     "max_top_concentration_share": 0.40,
     "max_market_side_hhi": 0.20,
 
-    # -------------------------------------------------------------------------
     # Context / sleeve health
     # *** ALL PENDING CALIBRATION: entirely system-specific, no first-principles
     # derivation available. Placeholders only. ***
@@ -82,7 +76,6 @@ DEFAULT_THRESHOLDS: Dict[str, Any] = {
     "max_edge_retention_poor_keys": 5,
     "min_promotable_contexts": 1,
 
-    # -------------------------------------------------------------------------
     # Rollup consistency (only checked when --rollup is provided)
     # *** PENDING CALIBRATION ***
     "max_rollup_rank": 3,
@@ -90,9 +83,7 @@ DEFAULT_THRESHOLDS: Dict[str, Any] = {
 }
 
 
-# ---------------------------------------------------------------------------
 #  Data structures
-# ---------------------------------------------------------------------------
 
 @dataclass
 class CheckResult:
@@ -117,9 +108,7 @@ class GateReport:
         return [c for c in self.checks if not c.passed]
 
 
-# ---------------------------------------------------------------------------
 #  Helpers
-# ---------------------------------------------------------------------------
 
 def _load_json(path: Path) -> Optional[Dict[str, Any]]:
     try:
@@ -150,9 +139,7 @@ def _robust_score(w: Dict[str, Any]) -> float:
     return avg * (1.0 - 0.5 * dd_penalty) * (1.0 - conc_penalty)
 
 
-# ---------------------------------------------------------------------------
 #  Gate checks
-# ---------------------------------------------------------------------------
 
 def _check_sample_size(w: Dict[str, Any], t: Dict[str, Any]) -> CheckResult:
     n = int(w.get("settlements", 0))
@@ -273,9 +260,7 @@ def _check_promotable_contexts(w: Dict[str, Any], t: Dict[str, Any]) -> CheckRes
     )
 
 
-# ---------------------------------------------------------------------------
 #  Rollup consistency check
-# ---------------------------------------------------------------------------
 
 def _check_rollup_rank(run_id: str, rollup: Dict[str, Any], t: Dict[str, Any]) -> Optional[CheckResult]:
     runs = rollup.get("runs", [])
@@ -305,9 +290,7 @@ def _check_rollup_rank(run_id: str, rollup: Dict[str, Any], t: Dict[str, Any]) -
     )
 
 
-# ---------------------------------------------------------------------------
 #  Core gate logic
-# ---------------------------------------------------------------------------
 
 def run_gate(
     runpack_dir: Path,
@@ -368,9 +351,7 @@ def run_gate(
     return report
 
 
-# ---------------------------------------------------------------------------
 #  Reporting
-# ---------------------------------------------------------------------------
 
 _PASS = "\033[32mPASS\033[0m"
 _FAIL = "\033[31mFAIL\033[0m"
@@ -404,9 +385,7 @@ def _render_report(report: GateReport) -> str:
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
 #  CLI
-# ---------------------------------------------------------------------------
 
 def main() -> None:
     ap = argparse.ArgumentParser(

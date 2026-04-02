@@ -1,20 +1,21 @@
-"""Verify option chain snapshot ingestion from policy providers.
+# Created by Oliver Meihls
 
-Uses data_sources from config: options_snapshots_primary (Tastytrade) and
-options_snapshots_secondary (Public when public_options.enabled). Does not
-assume Alpaca options (Alpaca is bars-only in the modern setup).
-
-Shows recent snapshots grouped by provider, stats per symbol, and validates:
-- Fresh option_chain_snapshots for target symbols (from config)
-- Primary provider present; when secondary enabled, both present for at least one symbol
-- timestamp_ms minute-aligned (floored)
-- recv_ts_ms now-ish (within tolerance)
-
-Usage:
-  python scripts/verify_ingestion_debug.py
-  python scripts/verify_ingestion_debug.py --limit 50
-  python scripts/verify_ingestion_debug.py --validate   # exit 0 if all checks pass
-"""
+# Verify option chain snapshot ingestion from policy providers.
+#
+# Uses data_sources from config: options_snapshots_primary (Tastytrade) and
+# options_snapshots_secondary (Public when public_options.enabled). Does not
+# assume Alpaca options (Alpaca is bars-only in the modern setup).
+#
+# Shows recent snapshots grouped by provider, stats per symbol, and validates:
+# - Fresh option_chain_snapshots for target symbols (from config)
+# - Primary provider present; when secondary enabled, both present for at least one symbol
+# - timestamp_ms minute-aligned (floored)
+# - recv_ts_ms now-ish (within tolerance)
+#
+# Usage:
+# python scripts/verify_ingestion_debug.py
+# python scripts/verify_ingestion_debug.py --limit 50
+# python scripts/verify_ingestion_debug.py --validate   # exit 0 if all checks pass
 
 import argparse
 import asyncio
@@ -31,7 +32,7 @@ RECV_TOLERANCE_SEC = 120            # recv_ts_ms within this many seconds of "no
 
 
 def _get_target_symbols_and_providers():
-    """Read target symbols and options providers from config/data_sources."""
+    # Read target symbols and options providers from config/data_sources.
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
         from src.core.config import load_config
@@ -52,7 +53,7 @@ def _get_target_symbols_and_providers():
 
 
 def _run_validation(cursor, target_symbols: tuple, expected_providers: list) -> tuple[bool, list[str]]:
-    """Run validation checks. Returns (all_passed, list of failure messages)."""
+    # Run validation checks. Returns (all_passed, list of failure messages).
     now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
     failures = []
     placeholders = ",".join("?" for _ in target_symbols)
@@ -145,7 +146,6 @@ async def verify_ingestion(limit: int = 30, validate_only: bool = False):
         for f in failures:
             print(f"FAIL: {f}")
         sys.exit(1)
-    # --------
 
     print("=" * 90)
     print("Option Chain Snapshot Ingestion Report (policy: primary + secondary)")

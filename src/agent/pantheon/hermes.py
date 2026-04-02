@@ -1,4 +1,6 @@
-"""Hermes Router: hand promoted Pantheon strategies to the Hades queue."""
+# Created by Oliver Meihls
+
+# Hermes Router: hand promoted Pantheon strategies to the Hades queue.
 
 from __future__ import annotations
 
@@ -14,7 +16,7 @@ from src.core.manifests import StrategyManifest
 
 @dataclass
 class HadesBacktestConfig:
-    """Queue payload consumed by the autonomous experiment runner."""
+    # Queue payload consumed by the autonomous experiment runner.
 
     case_id: str
     strategy_name: str
@@ -23,7 +25,7 @@ class HadesBacktestConfig:
 
 
 class HermesRouter:
-    """Routes PROMOTE outcomes from Athena to a filesystem queue."""
+    # Routes PROMOTE outcomes from Athena to a filesystem queue.
 
     def __init__(self, queue_dir: str = "data/backtest_queue") -> None:
         self.queue_dir = Path(queue_dir)
@@ -43,6 +45,7 @@ class HermesRouter:
                     fallback_manifest = parse_manifest_response(content)
                 except Exception:
                     pass
+
             if role == "athena":
                 try:
                     verdict = parse_verdict_response(content)

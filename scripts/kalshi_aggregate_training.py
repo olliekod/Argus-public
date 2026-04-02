@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""
-kalshi_aggregate_training.py — Merge Kalshi training run archives into a classifier-ready dataset.
+# Created by Oliver Meihls
 
-Reads all logs/training_data/run_*.jsonl files, deduplicates by order_id,
-extracts classifier features, and writes:
-  - logs/training_data/aggregate_TIMESTAMP.jsonl  (full records, one per line)
-  - logs/training_data/labeled_TIMESTAMP.csv      (flat CSV with feature columns)
-
-Usage:
-  python scripts/kalshi_aggregate_training.py
-  python scripts/kalshi_aggregate_training.py --input-dir logs/training_data --output-dir logs/training_data
-"""
+# kalshi_aggregate_training.py — Merge Kalshi training run archives into a classifier-ready dataset.
+#
+# Reads all logs/training_data/run_*.jsonl files, deduplicates by order_id,
+# extracts classifier features, and writes:
+# - logs/training_data/aggregate_TIMESTAMP.jsonl  (full records, one per line)
+# - logs/training_data/labeled_TIMESTAMP.csv      (flat CSV with feature columns)
+#
+# Usage:
+# python scripts/kalshi_aggregate_training.py
+# python scripts/kalshi_aggregate_training.py --input-dir logs/training_data --output-dir logs/training_data
 
 from __future__ import annotations
 
@@ -45,14 +45,12 @@ def _ts() -> str:
 
 
 def aggregate(input_dir: Path, output_dir: Path) -> dict:
-    """
-    Merge all run_*.jsonl files in input_dir, deduplicate by order_id,
-    and write aggregate JSONL + labeled CSV to output_dir.
-
-    Returns a summary dict with keys:
-      total_files, total_records_raw, unique_records,
-      aggregate_path (str or None), csv_path (str or None)
-    """
+    # Merge all run_*.jsonl files in input_dir, deduplicate by order_id,
+    # and write aggregate JSONL + labeled CSV to output_dir.
+    #
+    # Returns a summary dict with keys:
+    # total_files, total_records_raw, unique_records,
+    # aggregate_path (str or None), csv_path (str or None)
     run_files = sorted(input_dir.glob("run_*.jsonl"))
     if not run_files:
         return {

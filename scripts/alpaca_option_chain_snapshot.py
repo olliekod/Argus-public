@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""
-Options Data Quality Probe for Alpaca.
+# Created by Oliver Meihls
 
-How to run:
-  python scripts/alpaca_option_chain_snapshot.py --underlying IBIT --limit 200
-  python scripts/alpaca_option_chain_snapshot.py --underlying BITO --limit 200 --batch-size 50
-  python scripts/alpaca_option_chain_snapshot.py --underlying IBIT --limit 200 --json-out reports/ibit.json
-  python scripts/alpaca_option_chain_snapshot.py --underlying IBIT --sqlite-path reports/options_quality.sqlite
-"""
+# Options Data Quality Probe for Alpaca.
+#
+# How to run:
+# python scripts/alpaca_option_chain_snapshot.py --underlying IBIT --limit 200
+# python scripts/alpaca_option_chain_snapshot.py --underlying BITO --limit 200 --batch-size 50
+# python scripts/alpaca_option_chain_snapshot.py --underlying IBIT --limit 200 --json-out reports/ibit.json
+# python scripts/alpaca_option_chain_snapshot.py --underlying IBIT --sqlite-path reports/options_quality.sqlite
 from __future__ import annotations
 
 from collections import Counter
@@ -61,7 +61,7 @@ class TradableCandidateResult:
 
 
 def parse_rfc3339_to_datetime(ts_str: str) -> datetime:
-    """Parse RFC3339 timestamps with nanoseconds and Z suffix."""
+    # Parse RFC3339 timestamps with nanoseconds and Z suffix.
     if ts_str.endswith("Z"):
         ts_str = ts_str[:-1] + "+00:00"
     if "." in ts_str:

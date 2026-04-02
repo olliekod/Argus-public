@@ -1,4 +1,6 @@
-"""Runtime mode transition controller for deterministic resource orchestration."""
+# Created by Oliver Meihls
+
+# Runtime mode transition controller for deterministic resource orchestration.
 
 from __future__ import annotations
 
@@ -17,21 +19,21 @@ logger = logging.getLogger(__name__)
 
 
 class ResourceManager(Protocol):
-    """Minimal ResourceManager protocol required by RuntimeController."""
+    # Minimal ResourceManager protocol required by RuntimeController.
 
     gpu_enabled: bool
 
 
 @dataclass(frozen=True)
 class WorkerScope:
-    """Named worker scope and whether it can be paused."""
+    # Named worker scope and whether it can be paused.
 
     name: str
     pausable: bool = True
 
 
 class RuntimeController:
-    """Authority for physically applying Zeus-approved runtime transitions."""
+    # Authority for physically applying Zeus-approved runtime transitions.
 
     _DATA_UPDATERS = WorkerScope("data_updaters", pausable=False)
     _PANTHEON = WorkerScope("pantheon_roles")
@@ -52,7 +54,7 @@ class RuntimeController:
         }
 
     async def transition_to(self, mode: RuntimeMode) -> Dict[str, Any]:
-        """Transition into a runtime mode and return a structured execution report."""
+        # Transition into a runtime mode and return a structured execution report.
         if isinstance(mode, str):
             mode = RuntimeMode(mode)
 
@@ -123,7 +125,7 @@ class RuntimeController:
             return report
 
     def pause_workers(self, scope: str) -> Dict[str, List[str]]:
-        """Signal workers to gracefully pause by scope while preserving data updaters."""
+        # Signal workers to gracefully pause by scope while preserving data updaters.
         targets = self._resolve_scopes(scope)
         changed: List[str] = []
         already: List[str] = []
@@ -142,7 +144,7 @@ class RuntimeController:
         return {"paused": changed, "already_paused": already, "skipped": skipped}
 
     def resume_workers(self, scope: str) -> Dict[str, List[str]]:
-        """Resume worker loops by scope."""
+        # Resume worker loops by scope.
         targets = self._resolve_scopes(scope)
         changed: List[str] = []
         already: List[str] = []
@@ -157,7 +159,7 @@ class RuntimeController:
         return {"resumed": changed, "already_running": already}
 
     def worker_status(self) -> Dict[str, str]:
-        """Get current worker state by scope."""
+        # Get current worker state by scope.
         return dict(self._worker_states)
 
     def _set_gpu_enabled(self, enabled: bool) -> None:
@@ -188,7 +190,7 @@ class RuntimeController:
         return tokens
 
     async def _stop_ollama(self) -> bool:
-        """Best-effort stop for Ollama, prioritizing service manager then process kill."""
+        # Best-effort stop for Ollama, prioritizing service manager then process kill.
 
         def _runner() -> bool:
             system = platform.system().lower()
@@ -199,7 +201,7 @@ class RuntimeController:
         return await asyncio.to_thread(_runner)
 
     async def _start_ollama(self) -> bool:
-        """Best-effort start for Ollama service/process."""
+        # Best-effort start for Ollama service/process.
 
         def _runner() -> bool:
             system = platform.system().lower()

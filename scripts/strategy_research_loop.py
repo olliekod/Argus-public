@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
-"""
-Strategy Research Loop
-=======================
+# Created by Oliver Meihls
 
-Single entry point that runs the full strategy research cycle:
-
-1. Resolve date range from config.
-2. Optionally backfill outcomes for the date range.
-3. Build replay packs (single-symbol or universe).
-4. Run experiments for each strategy (single or parameter sweep)
-   with optional MC/bootstrap and regime-stress.
-5. Evaluate experiments, persist rankings, killed list, and candidate set.
-
-Usage::
-
-    # One-shot cycle
-    python scripts/strategy_research_loop.py --config config/research_loop.yaml --once
-
-    # Daemon mode (runs every loop.interval_hours)
-    python scripts/strategy_research_loop.py --config config/research_loop.yaml
-
-    # Dry-run (validate config, log steps, no execution)
-    python scripts/strategy_research_loop.py --config config/research_loop.yaml --dry-run
-
-Authority: MASTER_PLAN.md §8.4, COMMANDS_AND_NEXT_STEPS.md §5-6.
-"""
+# Strategy Research Loop
+#
+# Single entry point that runs the full strategy research cycle:
+#
+# 1. Resolve date range from config.
+# 2. Optionally backfill outcomes for the date range.
+# 3. Build replay packs (single-symbol or universe).
+# 4. Run experiments for each strategy (single or parameter sweep)
+# with optional MC/bootstrap and regime-stress.
+# 5. Evaluate experiments, persist rankings, killed list, and candidate set.
+#
+# Usage::
+#
+# # One-shot cycle
+# python scripts/strategy_research_loop.py --config config/research_loop.yaml --once
+#
+# # Daemon mode (runs every loop.interval_hours)
+# python scripts/strategy_research_loop.py --config config/research_loop.yaml
+#
+# # Dry-run (validate config, log steps, no execution)
+# python scripts/strategy_research_loop.py --config config/research_loop.yaml --dry-run
+#
+# Authority: MASTER_PLAN.md §8.4, COMMANDS_AND_NEXT_STEPS.md §5-6.
 
 from __future__ import annotations
 
@@ -62,9 +61,7 @@ logging.basicConfig(
 logger = logging.getLogger("argus.research_loop")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Strategy class loader (same logic as run_experiment.py)
-# ═══════════════════════════════════════════════════════════════════════════
 
 _STRATEGY_MODULES = [
     "src.strategies.vrp_credit_spread",
@@ -74,7 +71,7 @@ _STRATEGY_MODULES = [
 
 
 def load_strategy_class(name: str):
-    """Dynamically load a ReplayStrategy class by name."""
+    # Dynamically load a ReplayStrategy class by name.
     for mod_name in _STRATEGY_MODULES:
         try:
             mod = importlib.import_module(mod_name)
@@ -85,17 +82,14 @@ def load_strategy_class(name: str):
     raise ImportError(f"Could not find strategy class '{name}' in known modules.")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Step 1: Outcomes backfill
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def run_outcomes_backfill(config: ResearchLoopConfig) -> None:
-    """Backfill outcomes for the configured date range.
-
-    Calls ``python -m src.outcomes backfill`` (single) or
-    ``python -m src.outcomes backfill-all`` (universe) as a subprocess.
-    """
+    # Backfill outcomes for the configured date range.
+    #
+    # Calls ``python -m src.outcomes backfill`` (single) or
+    # ``python -m src.outcomes backfill-all`` (universe) as a subprocess.
     if not config.outcomes.ensure_before_pack:
         logger.info("Outcomes backfill skipped (ensure_before_pack=false).")
         return
@@ -138,7 +132,7 @@ def run_outcomes_backfill(config: ResearchLoopConfig) -> None:
 
 
 def _read_bars_primary() -> str:
-    """Read data_sources.bars_primary from config/config.yaml."""
+    # Read data_sources.bars_primary from config/config.yaml.
     cfg_path = _REPO / "config" / "config.yaml"
     if cfg_path.exists():
         with open(cfg_path) as f:
@@ -148,7 +142,7 @@ def _read_bars_primary() -> str:
 
 
 def _run_subprocess(cmd: List[str]) -> None:
-    """Run a subprocess command and raise on non-zero exit."""
+    # Run a subprocess command and raise on non-zero exit.
     logger.debug("Subprocess: %s", " ".join(cmd))
     result = subprocess.run(
         cmd,
@@ -161,17 +155,14 @@ def _run_subprocess(cmd: List[str]) -> None:
         )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Recent-bars freshness check (loop.require_recent_bars_hours)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def _check_recent_bars_freshness(db_path: str, max_age_hours: float) -> bool:
-    """Return True if the most recent bar in the DB is within max_age_hours of now.
-
-    Queries market_bars via get_bar_inventory and parses max_ts (ISO format).
-    Returns False if the DB has no bars or the newest bar is older than max_age_hours.
-    """
+    # Return True if the most recent bar in the DB is within max_age_hours of now.
+    #
+    # Queries market_bars via get_bar_inventory and parses max_ts (ISO format).
+    # Returns False if the DB has no bars or the newest bar is older than max_age_hours.
     async def _check() -> bool:
         from src.core.database import Database
         db = Database(db_path)
@@ -205,16 +196,13 @@ def _check_recent_bars_freshness(db_path: str, max_age_hours: float) -> bool:
     return asyncio.run(_check())
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Step 2: Build replay packs
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def build_packs(config: ResearchLoopConfig) -> List[str]:
-    """Build replay packs and return a list of pack file paths.
-
-    Uses ``src.tools.replay_pack`` (async API) wrapped in ``asyncio.run()``.
-    """
+    # Build replay packs and return a list of pack file paths.
+    #
+    # Uses ``src.tools.replay_pack`` (async API) wrapped in ``asyncio.run()``.
     from src.tools.replay_pack import create_replay_pack, create_universe_packs
 
     start = config.pack.start_date
@@ -257,9 +245,7 @@ def build_packs(config: ResearchLoopConfig) -> List[str]:
         return paths
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Step 3: Run experiments
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def run_experiments(
@@ -267,14 +253,12 @@ def run_experiments(
     pack_paths: List[str],
     case_id: str = "",
 ) -> List[Dict[str, Any]]:
-    """Run experiments for each strategy in the config.
-
-    Returns
-    -------
-    list
-        A list of result summary dicts, each containing strategy_id and
-        the portfolio summary (pnl, sharpe, win_rate, etc.).
-    """
+    # Run experiments for each strategy in the config.
+    #
+    # Returns
+    # list
+    # A list of result summary dicts, each containing strategy_id and
+    # the portfolio summary (pnl, sharpe, win_rate, etc.).
     from src.analysis.experiment_runner import ExperimentRunner, ExperimentConfig
 
     runner = ExperimentRunner(output_dir=config.experiment.output_dir)
@@ -416,7 +400,7 @@ def _run_regime_stress(
     strategy_params: Dict[str, Any],
     config: ResearchLoopConfig,
 ) -> None:
-    """Run regime subset stress test for a strategy."""
+    # Run regime subset stress test for a strategy.
     try:
         from src.analysis.regime_stress import run_regime_subset_stress
         from src.core.outcome_engine import BarData
@@ -476,16 +460,13 @@ def _run_regime_stress(
         logger.warning("Regime stress failed for %s: %s", strat_cls.__name__, exc)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Step 4: Evaluate and persist
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def evaluate_and_persist(config: ResearchLoopConfig) -> str:
-    """Run strategy evaluation and persist rankings, killed list, candidates.
-
-    Returns the rankings output path.
-    """
+    # Run strategy evaluation and persist rankings, killed list, candidates.
+    #
+    # Returns the rankings output path.
     from src.analysis.strategy_evaluator import StrategyEvaluator
 
     input_dir = config.evaluation.input_dir
@@ -561,19 +542,16 @@ def evaluate_and_persist(config: ResearchLoopConfig) -> str:
     return rankings_path
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Step 5: Allocate (optional — closes the research → allocation loop)
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def run_allocation(
     config: ResearchLoopConfig,
     evaluator_rankings: List[Dict[str, Any]],
 ) -> Optional[str]:
-    """Build Forecasts from evaluator rankings, run AllocationEngine, persist.
-
-    Returns the allocations output path, or None if allocation is skipped.
-    """
+    # Build Forecasts from evaluator rankings, run AllocationEngine, persist.
+    #
+    # Returns the allocations output path, or None if allocation is skipped.
     alloc_opts = config.evaluation.allocation
     output_path = config.evaluation.allocations_output_path
 
@@ -828,9 +806,7 @@ def run_allocation(
     return str(out)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Cycle orchestrator
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def run_cycle(
@@ -838,16 +814,14 @@ def run_cycle(
     dry_run: bool = False,
     case_id: str = "",
 ) -> Optional[List[Dict[str, Any]]]:
-    """Execute one full research cycle.
-
-    Steps: outcomes -> packs -> experiments -> evaluate -> allocate.
-
-    Returns
-    -------
-    list or None
-        List of experiment result dicts (strategy_id + portfolio summary)
-        for every run in this cycle, or None when the cycle is aborted.
-    """
+    # Execute one full research cycle.
+    #
+    # Steps: outcomes -> packs -> experiments -> evaluate -> allocate.
+    #
+    # Returns
+    # list or None
+    # List of experiment result dicts (strategy_id + portfolio summary)
+    # for every run in this cycle, or None when the cycle is aborted.
     has_alloc = (
         config.evaluation.allocation is not None
         and config.evaluation.allocations_output_path is not None
@@ -930,9 +904,7 @@ def run_cycle(
 
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  CLI
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def main() -> None:

@@ -1,15 +1,14 @@
-"""
-Daily Review
-============
+# Created by Oliver Meihls
 
-Generates 4 PM ET daily summary including:
-- Paper trading P&L
-- Open positions
-- Month-to-date performance
-- Top 5 performers (90-day)
-- IV Regime Forecast
-- Market conditions summary
-"""
+# Daily Review
+#
+# Generates 4 PM ET daily summary including:
+# - Paper trading P&L
+# - Open positions
+# - Month-to-date performance
+# - Top 5 performers (90-day)
+# - IV Regime Forecast
+# - Market conditions summary
 
 import asyncio
 from dataclasses import dataclass, field
@@ -27,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TopPerformer:
-    """Top performing paper trader."""
+    # Top performing paper trader.
     trader_id: str
     strategy: str
     realized_pnl: float
@@ -38,7 +37,7 @@ class TopPerformer:
 
 @dataclass
 class IVRegimeForecast:
-    """IV regime analysis and forecast."""
+    # IV regime analysis and forecast.
     current_iv: float
     iv_percentile: float  # 0-100
     days_elevated: int  # Days IV has been above threshold
@@ -49,7 +48,7 @@ class IVRegimeForecast:
 
 @dataclass
 class DailyReviewData:
-    """Daily review data structure."""
+    # Daily review data structure.
     date: date
     
     # Paper trading
@@ -96,12 +95,10 @@ class DailyReviewData:
 
 
 class DailyReview:
-    """
-    Generates 4 PM ET daily summary.
-    
-    Pulls data from paper trader and conditions monitor.
-    Enhanced with top performers and IV regime forecast.
-    """
+    # Generates 4 PM ET daily summary.
+    #
+    # Pulls data from paper trader and conditions monitor.
+    # Enhanced with top performers and IV regime forecast.
     
     REVIEW_HOUR_ET = 16  # 4 PM ET
     ET_TIMEZONE = ZoneInfo("America/New_York")  # Proper DST handling
@@ -116,13 +113,11 @@ class DailyReview:
         starting_balance: float = 5000.0,
         on_send: Optional[Callable] = None,
     ):
-        """
-        Initialize daily review.
-        
-        Args:
-            starting_balance: Starting paper trading balance
-            on_send: Callback to send the review (e.g., Telegram)
-        """
+        # Initialize daily review.
+        #
+        # Args:
+        # starting_balance: Starting paper trading balance
+        # on_send: Callback to send the review (e.g., Telegram)
         self.starting_balance = starting_balance
         self.send_callback = on_send
         
@@ -153,7 +148,7 @@ class DailyReview:
         get_top_performers: Optional[Callable] = None,
         get_iv_history: Optional[Callable] = None,
     ):
-        """Set callbacks for fetching data."""
+        # Set callbacks for fetching data.
         self._get_trades = get_trades
         self._get_positions = get_positions
         self._get_conditions = get_conditions
@@ -163,11 +158,11 @@ class DailyReview:
         self._get_iv_history = get_iv_history
     
     def _is_market_day(self, d: date) -> bool:
-        """Check if date is a market day (weekday)."""
+        # Check if date is a market day (weekday).
         return d.weekday() < 5
     
     def _should_run_review(self) -> bool:
-        """Check if it's time for daily review (DST-aware)."""
+        # Check if it's time for daily review (DST-aware).
         # Get current time in ET with proper DST handling
         now_utc = datetime.now(timezone.utc).replace(tzinfo=ZoneInfo("UTC"))
         now_et = now_utc.astimezone(self.ET_TIMEZONE)
@@ -185,11 +180,9 @@ class DailyReview:
         return now_et.hour >= self.REVIEW_HOUR_ET
     
     def _calculate_iv_regime_forecast(self, current_iv: float) -> IVRegimeForecast:
-        """
-        Calculate IV regime and forecast.
-        
-        Based on current IV level and historical patterns.
-        """
+        # Calculate IV regime and forecast.
+        #
+        # Based on current IV level and historical patterns.
         # Determine regime
         if current_iv >= self.IV_HIGH:
             regime = "high"
@@ -241,7 +234,7 @@ class DailyReview:
         )
     
     async def generate_review(self) -> DailyReviewData:
-        """Generate daily review data."""
+        # Generate daily review data.
         today = date.today()
         month_start = today.replace(day=1)
         
@@ -420,7 +413,7 @@ class DailyReview:
         )
     
     def format_review(self, data: DailyReviewData) -> str:
-        """Format review data as Telegram message."""
+        # Format review data as Telegram message.
         # Emojis based on performance
         today_emoji = "🟢" if data.pnl_today >= 0 else "🔴"
         mtd_emoji = "🟢" if data.pnl_mtd >= 0 else "🔴"
@@ -506,7 +499,7 @@ class DailyReview:
         return "\n".join(lines)
     
     async def run_review(self) -> Optional[str]:
-        """Generate and send daily review."""
+        # Generate and send daily review.
         try:
             data = await self.generate_review()
             message = self.format_review(data)
@@ -523,7 +516,7 @@ class DailyReview:
             return None
     
     async def start_monitoring(self) -> None:
-        """Start monitoring for review time."""
+        # Start monitoring for review time.
         self._running = True
         logger.info("Daily review monitoring started")
         
@@ -535,14 +528,14 @@ class DailyReview:
             await asyncio.sleep(300)
     
     def stop_monitoring(self) -> None:
-        """Stop monitoring."""
+        # Stop monitoring.
         self._running = False
         logger.info("Daily review monitoring stopped")
 
 
 # For manual/immediate review
 async def get_pnl_summary(daily_review: DailyReview) -> Dict[str, Any]:
-    """Get P&L summary for /pnl command."""
+    # Get P&L summary for /pnl command.
     data = await daily_review.generate_review()
     return {
         'today_pnl': data.pnl_today,

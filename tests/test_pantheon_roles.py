@@ -1,4 +1,6 @@
-"""Tests for Pantheon Intelligence Engine — roles, context injection, and orchestrator integration."""
+# Created by Oliver Meihls
+
+# Tests for Pantheon Intelligence Engine — roles, context injection, and orchestrator integration.
 
 from __future__ import annotations
 
@@ -39,9 +41,7 @@ from src.core.manifests import (
 )
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 class _FakeResourceManager:
     gpu_enabled: bool = True
@@ -58,7 +58,7 @@ def _make_stack(tmp_path, **zeus_kwargs):
 
 
 def _valid_manifest_json() -> str:
-    """A valid strategy manifest as JSON."""
+    # A valid strategy manifest as JSON.
     return json.dumps({
         "name": "Test Momentum",
         "objective": "Capture momentum in uptrends",
@@ -85,13 +85,13 @@ def _valid_manifest_json() -> str:
 
 
 def _manifest_hash_for_test() -> str:
-    """Compute the hash of the canonical test manifest so critiques match."""
+    # Compute the hash of the canonical test manifest so critiques match.
     m = parse_manifest_response(f"<manifest>{_valid_manifest_json()}</manifest>")
     return m.compute_hash()
 
 
 def _valid_critique_json(manifest_hash: str = "") -> str:
-    """A valid Ares critique as JSON."""
+    # A valid Ares critique as JSON.
     if not manifest_hash:
         manifest_hash = _manifest_hash_for_test()
     return json.dumps({
@@ -124,7 +124,7 @@ def _valid_critique_json(manifest_hash: str = "") -> str:
 
 
 def _valid_verdict_json() -> str:
-    """A valid Athena verdict as JSON."""
+    # A valid Athena verdict as JSON.
     return json.dumps({
         "confidence": 0.72,
         "decision": "PROMOTE",
@@ -151,9 +151,7 @@ def _valid_verdict_json() -> str:
     })
 
 
-# ---------------------------------------------------------------------------
 # PantheonRole tests
-# ---------------------------------------------------------------------------
 
 class TestPantheonRole:
     def test_prometheus_defined(self):
@@ -196,9 +194,7 @@ class TestPantheonRole:
         assert "0.6" in prompt  # threshold
 
 
-# ---------------------------------------------------------------------------
 # ContextInjector tests
-# ---------------------------------------------------------------------------
 
 class TestContextInjector:
     def test_default_indicators(self):
@@ -255,9 +251,7 @@ class TestContextInjector:
         assert "TREND_DOWN" in prompt
 
 
-# ---------------------------------------------------------------------------
 # Stage mapping tests
-# ---------------------------------------------------------------------------
 
 class TestStageMapping:
     def test_stage_1_returns_prometheus(self):
@@ -280,9 +274,7 @@ class TestStageMapping:
             get_role_for_stage(99)
 
 
-# ---------------------------------------------------------------------------
 # build_stage_prompt tests
-# ---------------------------------------------------------------------------
 
 class TestBuildStagePrompt:
     def test_stage_1_prompt_contains_objective(self):
@@ -332,9 +324,7 @@ class TestBuildStagePrompt:
             assert indicator in system
 
 
-# ---------------------------------------------------------------------------
 # Response parser tests
-# ---------------------------------------------------------------------------
 
 class TestParseManifestResponse:
     def test_parse_valid_manifest_in_tags(self):
@@ -420,16 +410,14 @@ class TestParseVerdictResponse:
         assert verdict.confidence == 0.3
 
 
-# ---------------------------------------------------------------------------
 # Orchestrator integration tests — structured research
-# ---------------------------------------------------------------------------
 
 class TestOrchestratorStructuredResearch:
-    """Tests for the Pantheon-integrated research handler in ArgusOrchestrator."""
+    # Tests for the Pantheon-integrated research handler in ArgusOrchestrator.
 
     @pytest.mark.asyncio
     async def test_structured_research_runs_all_stages(self, tmp_path):
-        """Full debate produces output with all 5 stages."""
+        # Full debate produces output with all 5 stages.
         zeus, delphi, runtime = _make_stack(tmp_path)
 
         stage_counter = {"count": 0}
@@ -480,7 +468,7 @@ class TestOrchestratorStructuredResearch:
 
     @pytest.mark.asyncio
     async def test_structured_research_promote_verdict(self, tmp_path):
-        """A PROMOTE verdict includes backtest config in output."""
+        # A PROMOTE verdict includes backtest config in output.
         zeus, delphi, runtime = _make_stack(tmp_path)
 
         async def _promoting_llm(messages, model):
@@ -502,7 +490,7 @@ class TestOrchestratorStructuredResearch:
 
     @pytest.mark.asyncio
     async def test_structured_research_reject_verdict(self, tmp_path):
-        """A REJECT verdict is properly reported."""
+        # A REJECT verdict is properly reported.
         zeus, delphi, runtime = _make_stack(tmp_path)
 
         reject_verdict = json.dumps({
@@ -539,7 +527,7 @@ class TestOrchestratorStructuredResearch:
 
     @pytest.mark.asyncio
     async def test_invalid_prometheus_json_triggers_escalation(self, tmp_path):
-        """When Prometheus returns invalid JSON, orchestrator escalates to 32B."""
+        # When Prometheus returns invalid JSON, orchestrator escalates to 32B.
         zeus, delphi, runtime = _make_stack(tmp_path)
 
         calls: List[str] = []
@@ -570,7 +558,7 @@ class TestOrchestratorStructuredResearch:
 
     @pytest.mark.asyncio
     async def test_invalid_prometheus_json_logs_parse_warning(self, tmp_path):
-        """If manifest parse fails even after escalation, a warning is logged."""
+        # If manifest parse fails even after escalation, a warning is logged.
         zeus, delphi, runtime = _make_stack(tmp_path)
 
         async def _always_bad_prometheus_llm(messages, model):
@@ -591,7 +579,7 @@ class TestOrchestratorStructuredResearch:
 
     @pytest.mark.asyncio
     async def test_context_injector_used_in_research(self, tmp_path):
-        """Verify the orchestrator's context injector is used in research prompts."""
+        # Verify the orchestrator's context injector is used in research prompts.
         zeus, delphi, runtime = _make_stack(tmp_path)
 
         captured_systems: List[str] = []
@@ -616,7 +604,7 @@ class TestOrchestratorStructuredResearch:
 
     @pytest.mark.asyncio
     async def test_research_blocked_in_data_only(self, tmp_path):
-        """Research is blocked when system is in DATA_ONLY mode."""
+        # Research is blocked when system is in DATA_ONLY mode.
         zeus, delphi, runtime = _make_stack(tmp_path)
         await zeus.set_mode(RuntimeMode.DATA_ONLY)
         await runtime.transition_to(RuntimeMode.DATA_ONLY)
@@ -632,7 +620,7 @@ class TestOrchestratorStructuredResearch:
 
     @pytest.mark.asyncio
     async def test_escalation_priority_affects_model_selection(self, tmp_path):
-        """Roles with higher escalation_priority use more powerful models."""
+        # Roles with higher escalation_priority use more powerful models.
         zeus, delphi, runtime = _make_stack(tmp_path)
 
         models_used: List[str] = []
@@ -657,7 +645,7 @@ class TestOrchestratorStructuredResearch:
 
     @pytest.mark.asyncio
     async def test_active_case_cleared_after_research(self, tmp_path):
-        """active_case is None after research completes."""
+        # active_case is None after research completes.
         zeus, delphi, runtime = _make_stack(tmp_path)
 
         async def _simple_llm(messages, model):

@@ -1,7 +1,7 @@
-"""
-Virtual trade logging and tracking for ETF put spreads.
-Logs entries when signals fire, tracks open positions, calculates P&L.
-"""
+# Created by Oliver Meihls
+
+# Virtual trade logging and tracking for ETF put spreads.
+# Logs entries when signals fire, tracks open positions, calculates P&L.
 
 import asyncio
 import logging
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class TradeStatus(Enum):
-    """Status of a paper trade."""
+    # Status of a paper trade.
     OPEN = "OPEN"
     CLOSED_PROFIT = "CLOSED_PROFIT"
     CLOSED_LOSS = "CLOSED_LOSS"
@@ -25,7 +25,7 @@ class TradeStatus(Enum):
 
 @dataclass
 class PaperTrade:
-    """Represents a paper trade."""
+    # Represents a paper trade.
     id: Optional[int]
     entry_timestamp: str
     symbol: str
@@ -67,35 +67,31 @@ class PaperTrade:
 
 
 class PaperTrader:
-    """
-    Paper trading simulator for ETF put spreads.
-    
-    Features:
-    - Log virtual trades when signals fire
-    - Track open positions
-    - Auto-close at 50% profit target
-    - Close at time exit (e.g., 5 DTE)
-    - Calculate cumulative P&L
-    """
+    # Paper trading simulator for ETF put spreads.
+    #
+    # Features:
+    # - Log virtual trades when signals fire
+    # - Track open positions
+    # - Auto-close at 50% profit target
+    # - Close at time exit (e.g., 5 DTE)
+    # - Calculate cumulative P&L
     
     # Exit parameters
     PROFIT_TARGET_PCT = 0.50  # Close at 50% of max credit
     TIME_EXIT_DTE = 5         # Close at 5 DTE if not profitable
     
     def __init__(self, db):
-        """
-        Initialize paper trader.
-        
-        Args:
-            db: Database instance
-        """
+        # Initialize paper trader.
+        #
+        # Args:
+        # db: Database instance
         self.db = db
         self._open_trades: List[PaperTrade] = []
         self._initialized = False
         logger.info("Paper Trader initialized")
     
     async def initialize(self) -> None:
-        """Create paper trades table if needed and load open trades."""
+        # Create paper trades table if needed and load open trades.
         if self._initialized:
             return
         
@@ -104,7 +100,7 @@ class PaperTrader:
         self._initialized = True
     
     async def _create_table(self) -> None:
-        """Create paper_trades table."""
+        # Create paper_trades table.
         await self.db._connection.execute("""
             CREATE TABLE IF NOT EXISTS paper_trades (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -135,7 +131,7 @@ class PaperTrader:
         logger.debug("Paper trades table ready")
     
     async def _load_open_trades(self) -> None:
-        """Load open trades from database."""
+        # Load open trades from database.
         cursor = await self.db._connection.execute("""
             SELECT * FROM paper_trades WHERE status = 'OPEN'
         """)
@@ -149,7 +145,7 @@ class PaperTrader:
         logger.info(f"Loaded {len(self._open_trades)} open paper trades")
     
     def _row_to_trade(self, row) -> PaperTrade:
-        """Convert database row to PaperTrade object."""
+        # Convert database row to PaperTrade object.
         return PaperTrade(
             id=row[0],
             entry_timestamp=row[1],
@@ -180,16 +176,14 @@ class PaperTrader:
         recommendation,  # TradeRecommendation
         proxy_iv: float = 0,
     ) -> PaperTrade:
-        """
-        Open a new paper trade based on recommendation.
-        
-        Args:
-            recommendation: TradeRecommendation from TradeCalculator
-            proxy_iv: Current volatility proxy IV (BTC, etc.)
-            
-        Returns:
-            Created PaperTrade
-        """
+        # Open a new paper trade based on recommendation.
+        #
+        # Args:
+        # recommendation: TradeRecommendation from TradeCalculator
+        # proxy_iv: Current volatility proxy IV (BTC, etc.)
+        #
+        # Returns:
+        # Created PaperTrade
         await self.initialize()
         
         trade = PaperTrade(
@@ -246,17 +240,15 @@ class PaperTrader:
         exit_debit: float,
         reason: str = "manual",
     ) -> Optional[PaperTrade]:
-        """
-        Close a paper trade.
-        
-        Args:
-            trade_id: ID of trade to close
-            exit_debit: Cost to close the spread (buy back)
-            reason: Reason for closing
-            
-        Returns:
-            Updated PaperTrade or None
-        """
+        # Close a paper trade.
+        #
+        # Args:
+        # trade_id: ID of trade to close
+        # exit_debit: Cost to close the spread (buy back)
+        # reason: Reason for closing
+        #
+        # Returns:
+        # Updated PaperTrade or None
         await self.initialize()
         
         # Find trade
@@ -321,16 +313,14 @@ class PaperTrader:
         current_price: float,
         current_spread_value: Optional[float] = None,
     ) -> List[PaperTrade]:
-        """
-        Check if any open trades should be closed.
-        
-        Args:
-            current_price: Current underlying price
-            current_spread_value: Current value of spread (if available)
-            
-        Returns:
-            List of trades that were closed
-        """
+        # Check if any open trades should be closed.
+        #
+        # Args:
+        # current_price: Current underlying price
+        # current_spread_value: Current value of spread (if available)
+        #
+        # Returns:
+        # List of trades that were closed
         await self.initialize()
         
         closed_trades = []
@@ -388,12 +378,12 @@ class PaperTrader:
         return closed_trades
     
     async def get_open_trades(self) -> List[PaperTrade]:
-        """Get all open trades."""
+        # Get all open trades.
         await self.initialize()
         return self._open_trades.copy()
     
     async def get_all_trades(self, limit: int = 50) -> List[PaperTrade]:
-        """Get all trades (open and closed)."""
+        # Get all trades (open and closed).
         await self.initialize()
         
         cursor = await self.db._connection.execute("""
@@ -406,12 +396,10 @@ class PaperTrader:
         return [self._row_to_trade(row) for row in rows]
     
     async def get_statistics(self) -> Dict[str, Any]:
-        """
-        Get paper trading statistics.
-        
-        Returns:
-            Dict with win rate, total P&L, etc.
-        """
+        # Get paper trading statistics.
+        #
+        # Returns:
+        # Dict with win rate, total P&L, etc.
         await self.initialize()
         
         cursor = await self.db._connection.execute("""
@@ -468,7 +456,7 @@ class PaperTrader:
         }
     
     def format_statistics(self, stats: Dict) -> str:
-        """Format statistics for display."""
+        # Format statistics for display.
         return f"""
 📊 PAPER TRADING STATISTICS
 {'='*40}
@@ -496,7 +484,7 @@ Strategy:
 
 # Test function
 async def test_paper_trader():
-    """Test the paper trader."""
+    # Test the paper trader.
     print("=" * 60)
     print("PAPER TRADER TEST")
     print("=" * 60)

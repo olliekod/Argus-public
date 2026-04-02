@@ -1,23 +1,20 @@
-"""
-Allocation Engine
-==================
+# Created by Oliver Meihls
 
-Consumes a set of candidate strategies with forecasts and outputs target
-exposures (position weights) subject to risk constraints.
-
-Architecture
-------------
-1. **Input:** List of :class:`Forecast` objects from the candidate set.
-2. **Sizing:** Fractional Kelly with confidence shrinkage (per-strategy).
-3. **Overlay:** Optional vol-target overlay.
-4. **Caps:** Per-play cap (7% of equity), aggregate cap.
-5. **Output:** Dict mapping strategy_id -> target exposure.
-
-References
-----------
-- MASTER_PLAN.md §8.5 — Per-play cap.
-- MASTER_PLAN.md §9.3 — Sizing stack.
-"""
+# Allocation Engine
+#
+# Consumes a set of candidate strategies with forecasts and outputs target
+# exposures (position weights) subject to risk constraints.
+#
+# Architecture
+# 1. **Input:** List of :class:`Forecast` objects from the candidate set.
+# 2. **Sizing:** Fractional Kelly with confidence shrinkage (per-strategy).
+# 3. **Overlay:** Optional vol-target overlay.
+# 4. **Caps:** Per-play cap (7% of equity), aggregate cap.
+# 5. **Output:** Dict mapping strategy_id -> target exposure.
+#
+# References
+# - MASTER_PLAN.md §8.5 — Per-play cap.
+# - MASTER_PLAN.md §9.3 — Sizing stack.
 
 from __future__ import annotations
 
@@ -45,23 +42,21 @@ _DEFAULT_AGGREGATE_CAP = 1.0  # 100% of equity (sum of abs weights)
 
 @dataclass
 class AllocationConfig:
-    """Configuration for the allocation engine.
-
-    Attributes
-    ----------
-    kelly_fraction : float
-        Kelly fraction c in [0, 1] (default 0.25 = quarter-Kelly).
-    per_play_cap : float
-        Maximum position as fraction of equity (default 0.07 = 7%).
-    vol_target_annual : float, optional
-        Annualized volatility target for vol overlay (None = skip).
-    min_edge_over_cost : float
-        Minimum edge over cost to size (default 0.0).
-    aggregate_exposure_cap : float
-        Maximum sum of absolute weights (default 1.0 = 100% of equity).
-    apply_shrinkage : bool
-        Whether to apply confidence shrinkage to mu (default True).
-    """
+    # Configuration for the allocation engine.
+    #
+    # Attributes
+    # kelly_fraction : float
+    # Kelly fraction c in [0, 1] (default 0.25 = quarter-Kelly).
+    # per_play_cap : float
+    # Maximum position as fraction of equity (default 0.07 = 7%).
+    # vol_target_annual : float, optional
+    # Annualized volatility target for vol overlay (None = skip).
+    # min_edge_over_cost : float
+    # Minimum edge over cost to size (default 0.0).
+    # aggregate_exposure_cap : float
+    # Maximum sum of absolute weights (default 1.0 = 100% of equity).
+    # apply_shrinkage : bool
+    # Whether to apply confidence shrinkage to mu (default True).
     kelly_fraction: float = 0.25
     per_play_cap: float = _DEFAULT_PER_PLAY_CAP
     vol_target_annual: Optional[float] = None
@@ -72,25 +67,23 @@ class AllocationConfig:
 
 @dataclass
 class Allocation:
-    """Output allocation for a single strategy/instrument.
-
-    Attributes
-    ----------
-    strategy_id : str
-        Strategy identifier.
-    instrument : str
-        Instrument/symbol.
-    weight : float
-        Target weight as fraction of equity.
-    dollar_risk : float
-        Dollar risk (weight * equity).
-    kelly_raw : float
-        Pre-cap Kelly weight.
-    vol_adjusted : bool
-        Whether vol overlay was applied.
-    contracts : int
-        For options, number of contracts (0 for equity).
-    """
+    # Output allocation for a single strategy/instrument.
+    #
+    # Attributes
+    # strategy_id : str
+    # Strategy identifier.
+    # instrument : str
+    # Instrument/symbol.
+    # weight : float
+    # Target weight as fraction of equity.
+    # dollar_risk : float
+    # Dollar risk (weight * equity).
+    # kelly_raw : float
+    # Pre-cap Kelly weight.
+    # vol_adjusted : bool
+    # Whether vol overlay was applied.
+    # contracts : int
+    # For options, number of contracts (0 for equity).
     strategy_id: str
     instrument: str
     weight: float = 0.0
@@ -101,18 +94,17 @@ class Allocation:
 
 
 class AllocationEngine:
-    """Consumes forecasts, outputs target exposures under risk constraints.
-
-    Usage::
-
-        engine = AllocationEngine(
-            config=AllocationConfig(kelly_fraction=0.25, per_play_cap=0.07),
-            equity=100_000.0,
-        )
-        allocations = engine.allocate(forecasts)
-        for a in allocations:
-            print(f"{a.strategy_id}: {a.weight:.4f} ({a.dollar_risk:.2f})")
-    """
+    # Consumes forecasts, outputs target exposures under risk constraints.
+    #
+    # Usage::
+    #
+    # engine = AllocationEngine(
+    # config=AllocationConfig(kelly_fraction=0.25, per_play_cap=0.07),
+    # equity=100_000.0,
+    # )
+    # allocations = engine.allocate(forecasts)
+    # for a in allocations:
+    # print(f"{a.strategy_id}: {a.weight:.4f} ({a.dollar_risk:.2f})")
 
     def __init__(
         self,
@@ -131,7 +123,7 @@ class AllocationEngine:
         return self._equity
 
     def update_equity(self, equity: float) -> None:
-        """Update the portfolio equity level."""
+        # Update the portfolio equity level.
         self._equity = equity
 
     def allocate(
@@ -139,22 +131,19 @@ class AllocationEngine:
         forecasts: List[Forecast],
         max_loss_per_contract: Optional[Dict[str, float]] = None,
     ) -> List[Allocation]:
-        """Compute target allocations for a set of forecasts.
-
-        Parameters
-        ----------
-        forecasts : list of Forecast
-            One forecast per strategy/instrument pair.
-        max_loss_per_contract : dict[str, float], optional
-            For options strategies, maps strategy_id to max loss per
-            contract.  Used to compute contract counts.
-
-        Returns
-        -------
-        list of Allocation
-            Target allocations, one per forecast (zero-weight entries
-            included for transparency).
-        """
+        # Compute target allocations for a set of forecasts.
+        #
+        # Parameters
+        # forecasts : list of Forecast
+        # One forecast per strategy/instrument pair.
+        # max_loss_per_contract : dict[str, float], optional
+        # For options strategies, maps strategy_id to max loss per
+        # contract.  Used to compute contract counts.
+        #
+        # Returns
+        # list of Allocation
+        # Target allocations, one per forecast (zero-weight entries
+        # included for transparency).
         cfg = self._config
         max_loss = max_loss_per_contract or {}
 
@@ -208,11 +197,10 @@ class AllocationEngine:
         self,
         allocations: List[Allocation],
     ) -> List[Allocation]:
-        """Scale down allocations if aggregate exposure exceeds cap.
-
-        All weights are scaled proportionally so that the sum of
-        absolute weights equals the aggregate cap.
-        """
+        # Scale down allocations if aggregate exposure exceeds cap.
+        #
+        # All weights are scaled proportionally so that the sum of
+        # absolute weights equals the aggregate cap.
         cap = self._config.aggregate_exposure_cap
         total_abs = sum(abs(a.weight) for a in allocations)
 
@@ -251,24 +239,21 @@ class AllocationEngine:
         risk_config: "RiskEngineConfig",
         max_loss_per_contract: Optional[Dict[str, float]] = None,
     ) -> Tuple[List[Allocation], List["ClampReason"], "RiskAttribution"]:
-        """Compute allocations then clamp through the risk engine.
-
-        Parameters
-        ----------
-        forecasts : list of Forecast
-            One forecast per strategy/instrument pair.
-        portfolio_state : PortfolioState
-            Current portfolio snapshot.
-        risk_config : RiskEngineConfig
-            Risk engine configuration.
-        max_loss_per_contract : dict, optional
-            For options strategies, maps strategy_id to max loss per contract.
-
-        Returns
-        -------
-        tuple
-            (clamped_allocations, clamp_reasons, risk_attribution)
-        """
+        # Compute allocations then clamp through the risk engine.
+        #
+        # Parameters
+        # forecasts : list of Forecast
+        # One forecast per strategy/instrument pair.
+        # portfolio_state : PortfolioState
+        # Current portfolio snapshot.
+        # risk_config : RiskEngineConfig
+        # Risk engine configuration.
+        # max_loss_per_contract : dict, optional
+        # For options strategies, maps strategy_id to max loss per contract.
+        #
+        # Returns
+        # tuple
+        # (clamped_allocations, clamp_reasons, risk_attribution)
         from .risk_engine import RiskEngine
 
         # Step 1: Compute proposed allocations as before
@@ -293,7 +278,7 @@ class AllocationEngine:
         return clamped, reasons, attribution
 
     def summary(self, allocations: List[Allocation]) -> Dict[str, Any]:
-        """Generate a summary dict for logging/persistence."""
+        # Generate a summary dict for logging/persistence.
         active = [a for a in allocations if a.weight != 0]
         return {
             "equity": self._equity,

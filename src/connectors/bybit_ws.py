@@ -1,10 +1,9 @@
-"""
-Bybit WebSocket Connector
-=========================
+# Created by Oliver Meihls
 
-Public WebSocket client for Bybit perpetual futures data.
-No authentication required - uses public endpoints only.
-"""
+# Bybit WebSocket Connector
+#
+# Public WebSocket client for Bybit perpetual futures data.
+# No authentication required - uses public endpoints only.
 
 import asyncio
 import json
@@ -23,13 +22,12 @@ logger = get_connector_logger('bybit')
 
 
 def _ws_is_open(ws) -> bool:
-    """Check if a websocket connection is open across websockets versions.
-
-    Works with:
-    - websockets <13 where ``ws.open`` exists
-    - websockets >=13 where ``ws.closed`` exists but ``open`` does not
-    - Unexpected wrapper types where neither attribute is present
-    """
+    # Check if a websocket connection is open across websockets versions.
+    #
+    # Works with:
+    # - websockets <13 where ``ws.open`` exists
+    # - websockets >=13 where ``ws.closed`` exists but ``open`` does not
+    # - Unexpected wrapper types where neither attribute is present
     if ws is None:
         return False
     # Prefer .closed (available in all modern versions)
@@ -45,21 +43,20 @@ def _ws_is_open(ws) -> bool:
             return ws.state == State.OPEN
         except (ImportError, AttributeError):
             pass
+
     # Cannot determine - assume disconnected (will trigger reconnect)
     return False
 
 
 class BybitWebSocket:
-    """
-    Bybit public WebSocket client for perpetual futures.
-
-    Provides:
-    - Real-time price updates
-    - Funding rate data
-    - Order book depth
-
-    No API key required for public data.
-    """
+    # Bybit public WebSocket client for perpetual futures.
+    #
+    # Provides:
+    # - Real-time price updates
+    # - Funding rate data
+    # - Order book depth
+    #
+    # No API key required for public data.
 
     # Public WebSocket endpoints
     MAINNET_URL = "wss://stream.bybit.com/v5/public/linear"
@@ -132,7 +129,7 @@ class BybitWebSocket:
         return symbol.replace('/', '')
 
     async def connect(self) -> None:
-        """Start WebSocket connection and message loop."""
+        # Start WebSocket connection and message loop.
         self._running = True
 
         while self._running:
@@ -280,7 +277,7 @@ class BybitWebSocket:
             await self._handle_ticker(data)
 
     async def _handle_ticker(self, data: Dict[str, Any]) -> None:
-        """Handle ticker message. Only publish a quote when current message has valid bid and ask (no filling from stale data)."""
+        # Handle ticker message. Only publish a quote when current message has valid bid and ask (no filling from stale data).
         try:
             ticker_data = data.get('data', {})
             symbol = ticker_data.get('symbol', '')
@@ -492,11 +489,11 @@ class BybitWebSocket:
 
     @property
     def is_connected(self) -> bool:
-        """Check if WebSocket is connected (version-safe)."""
+        # Check if WebSocket is connected (version-safe).
         return _ws_is_open(self._ws)
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Return detailed health info for dashboards and health checks."""
+        # Return detailed health info for dashboards and health checks.
         now = time.time()
         connected = self.is_connected
         since_last_msg = None

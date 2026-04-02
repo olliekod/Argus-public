@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import pytest
 import asyncio
 import json
@@ -165,7 +167,7 @@ async def test_replay_pack_injection_determinism(tmp_path):
 
 @pytest.mark.asyncio
 async def test_bus_to_regime_integration():
-    """Prove signal exists end-to-end: Bus -> RegimeDetector -> Emitted Event."""
+    # Prove signal exists end-to-end: Bus -> RegimeDetector -> Emitted Event.
     bus = EventBus()
     detector = RegimeDetector(bus)
     
@@ -210,7 +212,7 @@ async def test_bus_to_regime_integration():
 
 @pytest.mark.asyncio
 async def test_news_sentiment_updater_and_regime_integration():
-    """News sentiment publishes ExternalMetricEvent and appears in metrics_json."""
+    # News sentiment publishes ExternalMetricEvent and appears in metrics_json.
     bus = EventBus()
     detector = RegimeDetector(bus)
 

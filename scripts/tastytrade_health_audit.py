@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import sys
 import asyncio
 import time
@@ -23,7 +25,7 @@ from src.analysis.greeks_engine import GreeksEngine
 
 
 def _ensure_snapshot_table(db_path: Path) -> None:
-    """Create option_quote_snapshots table and indexes if missing."""
+    # Create option_quote_snapshots table and indexes if missing.
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     try:
@@ -79,7 +81,7 @@ def select_spot(
     cli_spot: float | None,
     strike_medians: list[float],
 ) -> dict[str, Any]:
-    """Select spot using dxlink -> CLI -> median strike fallback."""
+    # Select spot using dxlink -> CLI -> median strike fallback.
     if dxlink_quote:
         bid = dxlink_quote.get("bidPrice", dxlink_quote.get("bid"))
         ask = dxlink_quote.get("askPrice", dxlink_quote.get("ask"))
@@ -109,7 +111,7 @@ def _select_sampled_contracts(
     strike_window: int = 5,
     max_contracts: int = 40,
 ) -> list[dict[str, Any]]:
-    """Deterministically sample contracts near spot from nearest expiries."""
+    # Deterministically sample contracts near spot from nearest expiries.
     if not chain:
         return []
 
@@ -219,7 +221,7 @@ def _percentile(values: list[float], pct: float) -> float | None:
 
 
 def audit_nested_chain(raw: dict[str, Any]) -> dict[str, Any]:
-    """Analyze the raw nested chain response for health."""
+    # Analyze the raw nested chain response for health.
     data = raw.get("data")
     if isinstance(data, dict) and isinstance(data.get("items"), list):
         chains = data.get("items", [])
@@ -266,7 +268,7 @@ def audit_nested_chain(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def _load_tasty_client(config: dict[str, Any], secrets: dict[str, Any]) -> TastytradeRestClient:
-    """Create TastytradeRestClient with session (username/password). Caller must call login()."""
+    # Create TastytradeRestClient with session (username/password). Caller must call login().
     tasty_secrets = secrets.get("tastytrade", {})
     username = tasty_secrets.get("username", "")
     password = tasty_secrets.get("password", "")
@@ -290,7 +292,7 @@ def _load_tasty_client(config: dict[str, Any], secrets: dict[str, Any]) -> Tasty
 
 
 def get_tastytrade_rest_client(config: dict[str, Any], secrets: dict[str, Any]) -> TastytradeRestClient:
-    """Return an authenticated TastytradeRestClient. Prefers OAuth when configured (session auth is deprecated)."""
+    # Return an authenticated TastytradeRestClient. Prefers OAuth when configured (session auth is deprecated).
     oauth_cfg = secrets.get("tastytrade_oauth2", {}) or {}
     cid = oauth_cfg.get("client_id", "")
     csec = oauth_cfg.get("client_secret", "")
@@ -314,6 +316,7 @@ def get_tastytrade_rest_client(config: dict[str, Any], secrets: dict[str, Any]) 
             return client
         except Exception:
             pass
+
     client = _load_tasty_client(config, secrets)
     client.login()
     return client
@@ -342,7 +345,7 @@ async def run_quotes_audit(
     duration: int,
     greeks: bool = False
 ) -> dict[str, Any]:
-    """Run a live quotes probe using TastytradeStreamer."""
+    # Run a live quotes probe using TastytradeStreamer.
     # 1. Get DXLink token
     quote_resp = requests.get(
         "https://api.tastytrade.com/api-quote-tokens",

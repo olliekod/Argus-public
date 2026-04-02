@@ -1,17 +1,16 @@
-"""
-Bybit REST API Client
-=====================
+# Created by Oliver Meihls
 
-Async REST client for Bybit v5 public endpoints.
-Used for:
-- Instrument discovery (GET /v5/market/instruments-info)
-- Historical kline backfill (GET /v5/market/kline)
-
-No authentication required - public endpoints only.
-Rate-limited to respect provider constraints.
-
-Reference: https://bybit-exchange.github.io/docs/v5/market/instrument
-"""
+# Bybit REST API Client
+#
+# Async REST client for Bybit v5 public endpoints.
+# Used for:
+# - Instrument discovery (GET /v5/market/instruments-info)
+# - Historical kline backfill (GET /v5/market/kline)
+#
+# No authentication required - public endpoints only.
+# Rate-limited to respect provider constraints.
+#
+# Reference: https://bybit-exchange.github.io/docs/v5/market/instrument
 
 from __future__ import annotations
 
@@ -26,9 +25,7 @@ import aiohttp
 
 logger = logging.getLogger(__name__)
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Constants
-# ═══════════════════════════════════════════════════════════════════════════════
 
 BYBIT_BASE_URL = "https://api.bybit.com"
 BYBIT_TESTNET_URL = "https://api-testnet.bybit.com"
@@ -41,14 +38,12 @@ DEFAULT_RATE_LIMIT_RPS = 10
 RATE_LIMIT_BUFFER = 0.15  # seconds between requests (safety)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Data classes
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 @dataclass
 class BybitInstrument:
-    """Parsed instrument from instruments-info endpoint."""
+    # Parsed instrument from instruments-info endpoint.
     symbol: str
     base_coin: str
     quote_coin: str
@@ -62,7 +57,7 @@ class BybitInstrument:
 
 @dataclass
 class BybitKline:
-    """Single kline (candlestick) bar from Bybit REST API."""
+    # Single kline (candlestick) bar from Bybit REST API.
     timestamp_ms: int    # open time in UTC ms
     open: float
     high: float
@@ -72,23 +67,19 @@ class BybitKline:
     turnover: float
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Client
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class BybitRestClient:
-    """Async Bybit v5 REST client for public market data.
-
-    Parameters
-    ----------
-    base_url : str
-        API base URL. Defaults to mainnet.
-    rate_limit_rps : int
-        Max requests per second.
-    session : aiohttp.ClientSession or None
-        Optional shared session. If None, creates one internally.
-    """
+    # Async Bybit v5 REST client for public market data.
+    #
+    # Parameters
+    # base_url : str
+    # API base URL. Defaults to mainnet.
+    # rate_limit_rps : int
+    # Max requests per second.
+    # session : aiohttp.ClientSession or None
+    # Optional shared session. If None, creates one internally.
 
     def __init__(
         self,
@@ -115,7 +106,7 @@ class BybitRestClient:
             await self._session.close()
 
     async def _throttle(self) -> None:
-        """Enforce rate limit between requests."""
+        # Enforce rate limit between requests.
         now = time.monotonic()
         elapsed = now - self._last_request_ts
         if elapsed < self._min_interval:
@@ -123,10 +114,9 @@ class BybitRestClient:
         self._last_request_ts = time.monotonic()
 
     async def _get(self, path: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Make a rate-limited GET request and return parsed JSON.
-
-        Raises ValueError on non-zero retCode.
-        """
+        # Make a rate-limited GET request and return parsed JSON.
+        #
+        # Raises ValueError on non-zero retCode.
         await self._throttle()
         session = await self._get_session()
         url = f"{self._base_url}{path}"
@@ -193,17 +183,15 @@ class BybitRestClient:
         category: str = "linear",
         status: Optional[str] = "Trading",
     ) -> List[BybitInstrument]:
-        """Fetch all instruments for a category.
-
-        Handles pagination via cursor automatically.
-
-        Parameters
-        ----------
-        category : str
-            "linear", "inverse", or "spot".
-        status : str or None
-            Filter by status. None = return all.
-        """
+        # Fetch all instruments for a category.
+        #
+        # Handles pagination via cursor automatically.
+        #
+        # Parameters
+        # category : str
+        # "linear", "inverse", or "spot".
+        # status : str or None
+        # Filter by status. None = return all.
         instruments: List[BybitInstrument] = []
         cursor = ""
 
@@ -246,16 +234,14 @@ class BybitRestClient:
         quote_coin: str = "USDT",
         base_coins: Optional[List[str]] = None,
     ) -> List[BybitInstrument]:
-        """Discover USDT-settled linear perpetuals.
-
-        Parameters
-        ----------
-        quote_coin : str
-            Filter by quote coin (default "USDT").
-        base_coins : list of str or None
-            If given, only return instruments with these base coins.
-            If None, return all trading instruments.
-        """
+        # Discover USDT-settled linear perpetuals.
+        #
+        # Parameters
+        # quote_coin : str
+        # Filter by quote coin (default "USDT").
+        # base_coins : list of str or None
+        # If given, only return instruments with these base coins.
+        # If None, return all trading instruments.
         all_instruments = await self.get_instruments(
             category="linear", status="Trading")
 
@@ -284,28 +270,25 @@ class BybitRestClient:
         limit: int = KLINE_LIMIT,
         category: str = "linear",
     ) -> List[BybitKline]:
-        """Fetch klines for a symbol.
-
-        Parameters
-        ----------
-        symbol : str
-            e.g. "BTCUSDT"
-        interval : str
-            "1" for 1 minute, "5", "15", "60", "240", "D", "W"
-        start_ms : int
-            Start time in UTC milliseconds. 0 = omit.
-        end_ms : int
-            End time in UTC milliseconds. 0 = omit.
-        limit : int
-            Max candles to return (1-200). Default 200.
-        category : str
-            "linear", "inverse", or "spot".
-
-        Returns
-        -------
-        List[BybitKline]
-            Sorted by timestamp ascending (oldest first).
-        """
+        # Fetch klines for a symbol.
+        #
+        # Parameters
+        # symbol : str
+        # e.g. "BTCUSDT"
+        # interval : str
+        # "1" for 1 minute, "5", "15", "60", "240", "D", "W"
+        # start_ms : int
+        # Start time in UTC milliseconds. 0 = omit.
+        # end_ms : int
+        # End time in UTC milliseconds. 0 = omit.
+        # limit : int
+        # Max candles to return (1-200). Default 200.
+        # category : str
+        # "linear", "inverse", or "spot".
+        #
+        # Returns
+        # List[BybitKline]
+        # Sorted by timestamp ascending (oldest first).
         params: Dict[str, Any] = {
             "category": category,
             "symbol": symbol,
@@ -350,29 +333,26 @@ class BybitRestClient:
         category: str = "linear",
         progress_callback=None,
     ) -> List[BybitKline]:
-        """Fetch klines for a date range, chunking automatically.
-
-        Handles the 200-candle limit by walking forward in time.
-        Never invents data: only returns what the exchange provides.
-
-        Parameters
-        ----------
-        symbol : str
-            e.g. "BTCUSDT"
-        start_ms, end_ms : int
-            UTC ms range.
-        interval : str
-            Kline interval. "1" = 1 minute.
-        category : str
-            Market category.
-        progress_callback : callable or None
-            Called with (fetched_count, chunk_count) after each chunk.
-
-        Returns
-        -------
-        List[BybitKline]
-            All klines in range, sorted ascending by timestamp. No duplicates.
-        """
+        # Fetch klines for a date range, chunking automatically.
+        #
+        # Handles the 200-candle limit by walking forward in time.
+        # Never invents data: only returns what the exchange provides.
+        #
+        # Parameters
+        # symbol : str
+        # e.g. "BTCUSDT"
+        # start_ms, end_ms : int
+        # UTC ms range.
+        # interval : str
+        # Kline interval. "1" = 1 minute.
+        # category : str
+        # Market category.
+        # progress_callback : callable or None
+        # Called with (fetched_count, chunk_count) after each chunk.
+        #
+        # Returns
+        # List[BybitKline]
+        # All klines in range, sorted ascending by timestamp. No duplicates.
         interval_ms = _interval_to_ms(interval)
         all_klines: List[BybitKline] = []
         seen_ts: set = set()
@@ -415,13 +395,11 @@ class BybitRestClient:
         return all_klines
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Helpers
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def _interval_to_ms(interval: str) -> int:
-    """Convert Bybit interval string to milliseconds."""
+    # Convert Bybit interval string to milliseconds.
     mapping = {
         "1": 60_000,
         "3": 180_000,
@@ -445,16 +423,15 @@ def klines_to_bar_rows(
     symbol: str = "",
     bar_duration: int = 60,
 ) -> List[tuple]:
-    """Convert BybitKline list to market_bars INSERT tuples.
-
-    The timestamp is formatted as ISO UTC string to match the existing
-    ``market_bars`` schema where ``timestamp`` is TEXT.
-
-    Returns list of tuples matching the market_bars INSERT columns:
-    (timestamp, symbol, source, open, high, low, close, volume,
-     tick_count, n_ticks, first_source_ts, last_source_ts,
-     late_ticks_dropped, close_reason, bar_duration)
-    """
+    # Convert BybitKline list to market_bars INSERT tuples.
+    #
+    # The timestamp is formatted as ISO UTC string to match the existing
+    # ``market_bars`` schema where ``timestamp`` is TEXT.
+    #
+    # Returns list of tuples matching the market_bars INSERT columns:
+    # (timestamp, symbol, source, open, high, low, close, volume,
+    # tick_count, n_ticks, first_source_ts, last_source_ts,
+    # late_ticks_dropped, close_reason, bar_duration)
     rows = []
     for k in klines:
         ts_str = datetime.fromtimestamp(

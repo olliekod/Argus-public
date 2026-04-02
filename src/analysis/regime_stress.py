@@ -1,4 +1,6 @@
-"""Regime subset stress testing for replay experiments."""
+# Created by Oliver Meihls
+
+# Regime subset stress testing for replay experiments.
 
 from __future__ import annotations
 
@@ -52,7 +54,7 @@ def map_bars_to_regime_keys(
     regimes: List[Dict[str, Any]],
     include_session: bool = True,
 ) -> Dict[int, Set[str]]:
-    """Map each bar timestamp to active regime keys using latest-known regime state."""
+    # Map each bar timestamp to active regime keys using latest-known regime state.
     bars_sorted = sorted(bars, key=lambda b: b.timestamp_ms)
     regimes_sorted = sorted(regimes, key=lambda r: int(r.get("timestamp_ms", 0)))
 
@@ -107,7 +109,7 @@ def run_regime_subset_stress(
     execution_config: Optional[ExecutionConfig] = None,
     selected_regime_keys: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Run one replay per regime subset and return stress metrics."""
+    # Run one replay per regime subset and return stress metrics.
     if not bars:
         return {"subsets": [], "fraction_profitable": 0.0, "stress_score": 0.0}
 

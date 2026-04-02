@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
-"""
-Alpha Vantage Daily Backfill
-============================
+# Created by Oliver Meihls
 
-Fetches daily OHLCV bars for global ETF proxies and FX pairs from
-Alpha Vantage and persists them to the Argus database.
-
-Usage::
-
-    # Backfill all configured symbols (compact = last 100 days)
-    python scripts/alphavantage_daily_backfill.py
-
-    # Full history (20+ years)
-    python scripts/alphavantage_daily_backfill.py --full
-
-    # Specific symbols only
-    python scripts/alphavantage_daily_backfill.py --symbols EWJ FXI
-
-    # Dry-run (no DB writes)
-    python scripts/alphavantage_daily_backfill.py --dry-run
-
-Persists to ``market_bars`` with ``source="alphavantage"``,
-``bar_duration=86400``.  Uses INSERT OR IGNORE so live bars are
-never overwritten.
-
-Budget: 14 symbols × 1 call each = 14 calls.  Free tier allows
-25/day at 5/min.  The client enforces 12.5s between calls.
-"""
+# Alpha Vantage Daily Backfill
+#
+# Fetches daily OHLCV bars for global ETF proxies and FX pairs from
+# Alpha Vantage and persists them to the Argus database.
+#
+# Usage::
+#
+# # Backfill all configured symbols (compact = last 100 days)
+# python scripts/alphavantage_daily_backfill.py
+#
+# # Full history (20+ years)
+# python scripts/alphavantage_daily_backfill.py --full
+#
+# # Specific symbols only
+# python scripts/alphavantage_daily_backfill.py --symbols EWJ FXI
+#
+# # Dry-run (no DB writes)
+# python scripts/alphavantage_daily_backfill.py --dry-run
+#
+# Persists to ``market_bars`` with ``source="alphavantage"``,
+# ``bar_duration=86400``.  Uses INSERT OR IGNORE so live bars are
+# never overwritten.
+#
+# Budget: 14 symbols × 1 call each = 14 calls.  Free tier allows
+# 25/day at 5/min.  The client enforces 12.5s between calls.
 
 from __future__ import annotations
 
@@ -64,7 +63,7 @@ _ISO = "%Y-%m-%d"
 
 
 def _load_config() -> Dict[str, Any]:
-    """Load alphavantage config from config/config.yaml."""
+    # Load alphavantage config from config/config.yaml.
     cfg_path = _REPO / "config" / "config.yaml"
     with open(cfg_path) as f:
         cfg = yaml.safe_load(f) or {}
@@ -72,13 +71,12 @@ def _load_config() -> Dict[str, Any]:
 
 
 def _bar_to_row(bar: Dict[str, Any]) -> tuple:
-    """Convert a bar dict to a market_bars INSERT tuple.
-
-    Columns: (timestamp, symbol, source, open, high, low, close,
-              volume, tick_count, n_ticks, first_source_ts,
-              last_source_ts, late_ticks_dropped, close_reason,
-              bar_duration)
-    """
+    # Convert a bar dict to a market_bars INSERT tuple.
+    #
+    # Columns: (timestamp, symbol, source, open, high, low, close,
+    # volume, tick_count, n_ticks, first_source_ts,
+    # last_source_ts, late_ticks_dropped, close_reason,
+    # bar_duration)
     ts_iso = datetime.fromtimestamp(
         bar["timestamp_ms"] / 1000, tz=timezone.utc,
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -110,10 +108,9 @@ async def backfill(
     db_path: str = "data/argus.db",
     dry_run: bool = False,
 ) -> Dict[str, int]:
-    """Run the backfill for all symbols and FX pairs.
-
-    Returns dict mapping symbol → bars_inserted.
-    """
+    # Run the backfill for all symbols and FX pairs.
+    #
+    # Returns dict mapping symbol → bars_inserted.
     secrets = load_secrets()
     api_key = get_secret(secrets, "alphavantage", "api_key")
     if not api_key:

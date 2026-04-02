@@ -1,10 +1,9 @@
-"""
-Strategy Health Check
-=====================
+# Created by Oliver Meihls
 
-Runs quarterly health check with smart recommendations.
-Run: python scripts/strategy_health.py
-"""
+# Strategy Health Check
+#
+# Runs quarterly health check with smart recommendations.
+# Run: python scripts/strategy_health.py
 
 import sys
 from pathlib import Path
@@ -16,7 +15,7 @@ from src.analysis.strategy_monitor import StrategyMonitor
 
 
 def main():
-    """Run strategy health check."""
+    # Run strategy health check.
     print()
     monitor = StrategyMonitor(symbol="BITO")
     print(monitor.generate_health_report())

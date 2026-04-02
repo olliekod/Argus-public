@@ -1,4 +1,6 @@
-"""Tests for Strategy Manifest schemas and validation."""
+# Created by Oliver Meihls
+
+# Tests for Strategy Manifest schemas and validation.
 
 from __future__ import annotations
 
@@ -19,12 +21,10 @@ from src.core.manifests import (
 )
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 def _valid_manifest_dict() -> dict:
-    """Return a minimal valid manifest dict."""
+    # Return a minimal valid manifest dict.
     return {
         "name": "Vol-Adjusted Momentum",
         "objective": "Capture momentum premium in low-volatility regimes",
@@ -61,13 +61,11 @@ def _valid_manifest_dict() -> dict:
 
 
 def _valid_manifest() -> StrategyManifest:
-    """Return a valid StrategyManifest instance."""
+    # Return a valid StrategyManifest instance.
     return StrategyManifest.from_dict(_valid_manifest_dict())
 
 
-# ---------------------------------------------------------------------------
 # StrategyManifest tests
-# ---------------------------------------------------------------------------
 
 class TestStrategyManifest:
     def test_valid_manifest_parses(self):
@@ -229,9 +227,7 @@ class TestManifestValidation:
             StrategyManifest.from_dict(d)
 
 
-# ---------------------------------------------------------------------------
 # AresCritique tests
-# ---------------------------------------------------------------------------
 
 class TestAresCritique:
     def test_valid_critique_parses(self):
@@ -302,9 +298,7 @@ class TestAresCritique:
         assert c2.findings[0].evidence == "Ev1"
 
 
-# ---------------------------------------------------------------------------
 # AthenaVerdict tests
-# ---------------------------------------------------------------------------
 
 class TestAthenaVerdict:
     def test_valid_promote_verdict(self):
@@ -376,7 +370,7 @@ class TestAthenaVerdict:
         assert len(v2.conditions) == 1
 
     def test_overall_quality_fallback(self):
-        """When LLM outputs overall_quality (0-100) instead of confidence (0-1)."""
+        # When LLM outputs overall_quality (0-100) instead of confidence (0-1).
         v = AthenaVerdict.from_dict({
             "overall_quality": 80,
             "summary": "Strategy is solid.",
@@ -385,7 +379,7 @@ class TestAthenaVerdict:
         assert v.decision == "PROMOTE"  # 0.80 >= 0.6 → inferred PROMOTE
 
     def test_findings_ratings_to_rubric(self):
-        """When LLM outputs findings with category/rating instead of rubric_scores."""
+        # When LLM outputs findings with category/rating instead of rubric_scores.
         v = AthenaVerdict.from_dict({
             "overall_quality": 80,
             "findings": [
@@ -405,7 +399,7 @@ class TestAthenaVerdict:
         assert abs(v.rubric_scores["drawdown_risk"] - 0.60) < 0.01  # 3/5
 
     def test_exact_llm_verdict_format(self):
-        """Exact format observed from LLM in production runs."""
+        # Exact format observed from LLM in production runs.
         v = AthenaVerdict.from_dict({
             "overall_quality": 80,
             "findings": [
@@ -439,7 +433,7 @@ class TestAthenaVerdict:
         assert v.rationale.startswith("The revised strategy")
 
     def test_exact_llm_verdict_format_2(self):
-        """Exact format observed from LLM in production runs (verdict + reasoning array + summary)."""
+        # Exact format observed from LLM in production runs (verdict + reasoning array + summary).
         v = AthenaVerdict.from_dict({
             "verdict": "REJECTED",
             "reasoning": [
@@ -457,7 +451,7 @@ class TestAthenaVerdict:
         assert v.rationale == "The VRP put spread strategy has made progress but significant issues remain."
 
     def test_rationale_fallback_to_array_with_description(self):
-        """When reasoning array has 'description' but no 'comment' and no summary is provided."""
+        # When reasoning array has 'description' but no 'comment' and no summary is provided.
         v = AthenaVerdict.from_dict({
             "decision": "REJECT",
             "reasoning": [
@@ -468,9 +462,7 @@ class TestAthenaVerdict:
         assert v.rationale == "Bar. Qux."
 
 
-# ---------------------------------------------------------------------------
 # JSON extraction tests
-# ---------------------------------------------------------------------------
 
 class TestJsonExtraction:
     def test_extract_from_manifest_tags(self):

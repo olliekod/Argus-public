@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import sqlite3
 
 from scripts.tastytrade_health_audit import _ensure_snapshot_table, _prune_snapshots_sql

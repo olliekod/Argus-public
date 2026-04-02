@@ -1,32 +1,28 @@
-"""
-Conservative Execution Model
-=============================
+# Created by Oliver Meihls
 
-Honest fill simulation based on recorded liquidity and spreads.
-
-Philosophy
-----------
-Every backtest fill should be *worse* than what you'd get live so that
-any edge that survives is real.
-
-Fill rules
-----------
-- **Shorts (sell-to-open)**: Filled at ``bid − slippage``.
-- **Longs  (buy-to-open)**:  Filled at ``ask + slippage``.
-- **Close short (buy-to-close)**: Filled at ``ask + slippage``.
-- **Close long  (sell-to-close)**: Filled at ``bid − slippage``.
-
-Rejection reasons
------------------
-- ``ILLIQUID``    — ``bid_size`` or ``ask_size`` below minimum.
-- ``STALE_QUOTE`` — quote timestamp too far from simulation time.
-- ``ZERO_BID``    — bid is 0 (no market).
-- ``CROSSED``     — ask < bid (quote error).
-- ``SPREAD_WIDE`` — spread exceeds maximum fraction of mid.
-
-All fills are recorded with a ``source="simulated"`` tag so they are
-never confused with live executions.
-"""
+# Conservative Execution Model
+#
+# Honest fill simulation based on recorded liquidity and spreads.
+#
+# Philosophy
+# Every backtest fill should be *worse* than what you'd get live so that
+# any edge that survives is real.
+#
+# Fill rules
+# - **Shorts (sell-to-open)**: Filled at ``bid − slippage``.
+# - **Longs  (buy-to-open)**:  Filled at ``ask + slippage``.
+# - **Close short (buy-to-close)**: Filled at ``ask + slippage``.
+# - **Close long  (sell-to-close)**: Filled at ``bid − slippage``.
+#
+# Rejection reasons
+# - ``ILLIQUID``    — ``bid_size`` or ``ask_size`` below minimum.
+# - ``STALE_QUOTE`` — quote timestamp too far from simulation time.
+# - ``ZERO_BID``    — bid is 0 (no market).
+# - ``CROSSED``     — ask < bid (quote error).
+# - ``SPREAD_WIDE`` — spread exceeds maximum fraction of mid.
+#
+# All fills are recorded with a ``source="simulated"`` tag so they are
+# never confused with live executions.
 
 from __future__ import annotations
 
@@ -39,17 +35,14 @@ from typing import Any, Dict, List, Literal, Optional
 logger = logging.getLogger("argus.execution_model")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Configuration
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass(frozen=True)
 class ExecutionConfig:
-    """Tunable knobs for the conservative execution model.
-
-    All thresholds are intentionally pessimistic to bias toward
-    underestimating live performance.
-    """
+    # Tunable knobs for the conservative execution model.
+    #
+    # All thresholds are intentionally pessimistic to bias toward
+    # underestimating live performance.
 
     # Fixed slippage in dollars per contract (additive after bid/ask)
     slippage_per_contract: float = 0.02
@@ -76,9 +69,7 @@ class ExecutionConfig:
     cost_multiplier: float = 1.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Fill / Rejection types
-# ═══════════════════════════════════════════════════════════════════════════
 
 class RejectReason(Enum):
     ILLIQUID = auto()
@@ -91,16 +82,15 @@ class RejectReason(Enum):
 
 @dataclass(frozen=True)
 class Quote:
-    """Point-in-time quote snapshot used for fill simulation.
-
-    All prices are per-share / per-contract (not notional).
-
-    .. note::
-
-        ``recv_ts_ms`` is the local receipt timestamp and is the
-        **preferred** freshness reference.  Provider timestamps
-        (``quote_ts_ms``) are often zero from Tastytrade/DXLink.
-    """
+    # Point-in-time quote snapshot used for fill simulation.
+    #
+    # All prices are per-share / per-contract (not notional).
+    #
+    # .. note::
+    #
+    # ``recv_ts_ms`` is the local receipt timestamp and is the
+    # **preferred** freshness reference.  Provider timestamps
+    # (``quote_ts_ms``) are often zero from Tastytrade/DXLink.
     bid: float
     ask: float
     bid_size: int = 0          # 0 = unknown
@@ -113,11 +103,10 @@ class Quote:
 
 @dataclass(frozen=True)
 class FillResult:
-    """Result of an execution attempt.
-
-    ``filled`` is True when the order was accepted.
-    When rejected, ``reject_reason`` and ``reject_detail`` explain why.
-    """
+    # Result of an execution attempt.
+    #
+    # ``filled`` is True when the order was accepted.
+    # When rejected, ``reject_reason`` and ``reject_detail`` explain why.
     filled: bool
     fill_price: float = 0.0       # effective fill (after slippage)
     raw_price: float = 0.0        # bid or ask before slippage
@@ -134,7 +123,7 @@ class FillResult:
 
 @dataclass
 class ExecutionLedger:
-    """Accumulates fill / reject statistics for a simulation run."""
+    # Accumulates fill / reject statistics for a simulation run.
     fills: List[FillResult] = field(default_factory=list)
     rejects: List[FillResult] = field(default_factory=list)
 
@@ -177,26 +166,23 @@ class ExecutionLedger:
         return counts
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Engine
-# ═══════════════════════════════════════════════════════════════════════════
 
 class ExecutionModel:
-    """Conservative fill simulator for honest backtesting.
-
-    Usage::
-
-        model = ExecutionModel()
-        result = model.attempt_fill(
-            quote=Quote(bid=1.20, ask=1.35, bid_size=10, ask_size=12,
-                        quote_ts_ms=sim_ts),
-            side="SELL",
-            quantity=2,
-            sim_ts_ms=sim_ts,
-        )
-        if result.filled:
-            effective_credit = result.fill_price * result.quantity * 100
-    """
+    # Conservative fill simulator for honest backtesting.
+    #
+    # Usage::
+    #
+    # model = ExecutionModel()
+    # result = model.attempt_fill(
+    # quote=Quote(bid=1.20, ask=1.35, bid_size=10, ask_size=12,
+    # quote_ts_ms=sim_ts),
+    # side="SELL",
+    # quantity=2,
+    # sim_ts_ms=sim_ts,
+    # )
+    # if result.filled:
+    # effective_credit = result.fill_price * result.quantity * 100
 
     def __init__(self, config: Optional[ExecutionConfig] = None) -> None:
         self._cfg = config or ExecutionConfig()
@@ -207,12 +193,10 @@ class ExecutionModel:
         return self._cfg
 
     def reset(self) -> None:
-        """Reset the ledger for a new simulation run."""
+        # Reset the ledger for a new simulation run.
         self.ledger = ExecutionLedger()
 
-    # ------------------------------------------------------------------
-    # Core fill logic
-    # ------------------------------------------------------------------
+# Core fill logic
 
     def attempt_fill(
         self,
@@ -223,25 +207,22 @@ class ExecutionModel:
         *,
         multiplier: int = 100,
     ) -> FillResult:
-        """Attempt to fill an order against *quote*.
-
-        Parameters
-        ----------
-        quote : Quote
-            Current best bid/ask.
-        side : "BUY" | "SELL"
-            Direction of the fill.
-        quantity : int
-            Number of contracts.
-        sim_ts_ms : int
-            Current simulation time in epoch ms.
-        multiplier : int
-            Contract multiplier (default 100 for equity options).
-
-        Returns
-        -------
-        FillResult
-        """
+        # Attempt to fill an order against *quote*.
+        #
+        # Parameters
+        # quote : Quote
+        # Current best bid/ask.
+        # side : "BUY" | "SELL"
+        # Direction of the fill.
+        # quantity : int
+        # Number of contracts.
+        # sim_ts_ms : int
+        # Current simulation time in epoch ms.
+        # multiplier : int
+        # Contract multiplier (default 100 for equity options).
+        #
+        # Returns
+        # FillResult
         # ── Pre-flight checks ────────────────────────────────────────
         reject = self._validate_quote(quote, side, quantity, sim_ts_ms)
         if reject is not None:
@@ -283,9 +264,7 @@ class ExecutionModel:
         )
         return result
 
-    # ------------------------------------------------------------------
-    # Spread fill helpers
-    # ------------------------------------------------------------------
+# Spread fill helpers
 
     def fill_spread(
         self,
@@ -296,13 +275,12 @@ class ExecutionModel:
         *,
         multiplier: int = 100,
     ) -> Dict[str, Any]:
-        """Fill a vertical spread (sell short leg, buy long leg).
-
-        Returns a dict with ``"short_fill"``, ``"long_fill"``,
-        ``"net_credit"``, and ``"filled"`` keys.
-
-        If either leg is rejected the entire spread is rejected.
-        """
+        # Fill a vertical spread (sell short leg, buy long leg).
+        #
+        # Returns a dict with ``"short_fill"``, ``"long_fill"``,
+        # ``"net_credit"``, and ``"filled"`` keys.
+        #
+        # If either leg is rejected the entire spread is rejected.
         short_fill = self.attempt_fill(
             short_quote, "SELL", quantity, sim_ts_ms, multiplier=multiplier,
         )
@@ -348,11 +326,10 @@ class ExecutionModel:
         *,
         multiplier: int = 100,
     ) -> Dict[str, Any]:
-        """Close a vertical spread (buy-to-close short, sell-to-close long).
-
-        Returns a dict with ``"short_fill"``, ``"long_fill"``,
-        ``"net_debit"``, and ``"filled"`` keys.
-        """
+        # Close a vertical spread (buy-to-close short, sell-to-close long).
+        #
+        # Returns a dict with ``"short_fill"``, ``"long_fill"``,
+        # ``"net_debit"``, and ``"filled"`` keys.
         # Buy to close the short leg
         short_fill = self.attempt_fill(
             short_quote, "BUY", quantity, sim_ts_ms, multiplier=multiplier,
@@ -391,9 +368,7 @@ class ExecutionModel:
             "net_debit_after_commission": round(net_debit + total_commission, 2),
         }
 
-    # ------------------------------------------------------------------
-    # Validation
-    # ------------------------------------------------------------------
+# Validation
 
     def _validate_quote(
         self,
@@ -402,7 +377,7 @@ class ExecutionModel:
         quantity: int,
         sim_ts_ms: int,
     ) -> Optional[FillResult]:
-        """Return a rejected FillResult if the quote fails checks, else None."""
+        # Return a rejected FillResult if the quote fails checks, else None.
 
         def _reject(reason: RejectReason, detail: str) -> FillResult:
             logger.debug("REJECT %s %d %s: %s", side, quantity, quote.symbol, detail)

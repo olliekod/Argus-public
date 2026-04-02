@@ -1,4 +1,6 @@
-"""IBKR smoke test (event-loop safe for Python 3.14+)."""
+# Created by Oliver Meihls
+
+# IBKR smoke test (event-loop safe for Python 3.14+).
 
 import asyncio
 from ib_async import IB

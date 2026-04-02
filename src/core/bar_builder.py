@@ -1,49 +1,44 @@
-"""
-Argus Bar Builder
-=================
+# Created by Oliver Meihls
 
-Subscribes to ``market.quotes`` and aggregates tick data into
-1-minute OHLCV bars aligned to UTC minute boundaries.
-
-Rules
------
-* Use exchange ``timestamp`` only (no wall-clock fallback).
-* Reject quotes missing a valid ``source_ts``.
-* Bars are aligned to the **start** of each UTC minute
-  (e.g. 12:03:00.000 – 12:03:59.999 → bar timestamp 12:03:00).
-* When a new minute begins, the completed bar is published to
-  ``market.bars`` via the event bus.
-
-Volume handling
----------------
-``QuoteEvent.volume_24h`` is **cumulative** exchange volume.  Summing
-it directly would inflate bar volume by orders of magnitude.  Instead
-we track the last-seen cumulative value per symbol and only add the
-*delta* (current − previous).  A negative delta (exchange reset /
-rollover) is treated as zero to avoid corrupting the bar.
-
-Late-tick policy
-----------------
-A tick whose minute-floor falls **before** the active bar's open
-timestamp is silently discarded.  Once a bar is emitted it is
-immutable.
-
-Bar invariants (Stream 1.1)
----------------------------
-Before publishing, bars are validated against OHLCV invariants:
-* high >= max(open, close)
-* low  <= min(open, close)
-* volume >= 0
-On violation the bar is repaired, a warning is logged, and a
-``bar_invariant_violations`` counter is incremented.
-
-Close reasons
--------------
-Every bar carries a deterministic ``close_reason``:
-* ``NEW_TICK``       — a tick for a later minute closed the prior bar
-* ``MINUTE_TICK``    — ``system.minute_tick`` triggered close
-* ``SHUTDOWN_FLUSH`` — graceful shutdown flushed in-progress bars
-"""
+# Argus Bar Builder
+#
+# Subscribes to ``market.quotes`` and aggregates tick data into
+# 1-minute OHLCV bars aligned to UTC minute boundaries.
+#
+# Rules
+# -----
+# * Use exchange ``timestamp`` only (no wall-clock fallback).
+# * Reject quotes missing a valid ``source_ts``.
+# * Bars are aligned to the **start** of each UTC minute
+# (e.g. 12:03:00.000 – 12:03:59.999 → bar timestamp 12:03:00).
+# * When a new minute begins, the completed bar is published to
+# ``market.bars`` via the event bus.
+#
+# Volume handling
+# ``QuoteEvent.volume_24h`` is **cumulative** exchange volume.  Summing
+# it directly would inflate bar volume by orders of magnitude.  Instead
+# we track the last-seen cumulative value per symbol and only add the
+# *delta* (current − previous).  A negative delta (exchange reset /
+# rollover) is treated as zero to avoid corrupting the bar.
+#
+# Late-tick policy
+# A tick whose minute-floor falls **before** the active bar's open
+# timestamp is silently discarded.  Once a bar is emitted it is
+# immutable.
+#
+# Bar invariants (Stream 1.1)
+# Before publishing, bars are validated against OHLCV invariants:
+# * high >= max(open, close)
+# * low  <= min(open, close)
+# * volume >= 0
+# On violation the bar is repaired, a warning is logged, and a
+# ``bar_invariant_violations`` counter is incremented.
+#
+# Close reasons
+# Every bar carries a deterministic ``close_reason``:
+# * ``NEW_TICK``       — a tick for a later minute closed the prior bar
+# * ``MINUTE_TICK``    — ``system.minute_tick`` triggered close
+# * ``SHUTDOWN_FLUSH`` — graceful shutdown flushed in-progress bars
 
 from __future__ import annotations
 
@@ -78,12 +73,12 @@ _TS_MAX = 2_051_222_400.0
 
 
 def _ts_sane(ts: float) -> bool:
-    """Return True if *ts* looks like a plausible epoch-seconds value."""
+    # Return True if *ts* looks like a plausible epoch-seconds value.
     return _TS_MIN <= ts <= _TS_MAX
 
 
 class _BarAccumulator:
-    """Mutable accumulator for a single in-progress bar."""
+    # Mutable accumulator for a single in-progress bar.
 
     __slots__ = (
         "open", "high", "low", "close", "volume",
@@ -120,19 +115,17 @@ class _BarAccumulator:
 
 
 def _minute_floor(epoch: float) -> float:
-    """Round *epoch* down to the start of its UTC minute."""
+    # Round *epoch* down to the start of its UTC minute.
     return float(int(epoch) // 60 * 60)
 
 
 class BarBuilder:
-    """Aggregates :class:`QuoteEvent` ticks into 1-minute :class:`BarEvent`.
-
-    Parameters
-    ----------
-    bus : EventBus
-        The shared event bus.  BarBuilder will subscribe to
-        ``market.quotes`` and publish completed bars on ``market.bars``.
-    """
+    # Aggregates :class:`QuoteEvent` ticks into 1-minute :class:`BarEvent`.
+    #
+    # Parameters
+    # bus : EventBus
+    # The shared event bus.  BarBuilder will subscribe to
+    # ``market.quotes`` and publish completed bars on ``market.bars``.
 
     def __init__(self, bus: EventBus) -> None:
         self._bus = bus
@@ -166,12 +159,11 @@ class BarBuilder:
     # ── volume delta helper ─────────────────────────────────
 
     def _volume_delta(self, symbol: str, cum_vol: float) -> float:
-        """Compute the volume delta since last tick for *symbol*.
-
-        * First tick for a symbol → delta = 0 (no prior reference).
-        * Negative delta (exchange reset / rollover) → 0.
-        * Otherwise → ``cum_vol - last_cum_vol``.
-        """
+        # Compute the volume delta since last tick for *symbol*.
+        #
+        # * First tick for a symbol → delta = 0 (no prior reference).
+        # * Negative delta (exchange reset / rollover) → 0.
+        # * Otherwise → ``cum_vol - last_cum_vol``.
         prev = self._last_cum_vol.get(symbol)
         self._last_cum_vol[symbol] = cum_vol
 
@@ -187,7 +179,7 @@ class BarBuilder:
     # ── handler (called from the bus worker thread) ─────────
 
     def _on_quote(self, event: QuoteEvent) -> None:
-        """Ingest a quote and build / emit bars."""
+        # Ingest a quote and build / emit bars.
         if not event.timestamp or event.timestamp <= 0:
             self._reject_quote(event, "missing/invalid timestamp")
             return
@@ -280,7 +272,7 @@ class BarBuilder:
                 acc.update(price, vol_delta, source_ts)
 
     def _on_minute_tick(self, event: MinuteTickEvent) -> None:
-        """Flush any bars whose minute has closed at a boundary tick."""
+        # Flush any bars whose minute has closed at a boundary tick.
         tick_minute = _minute_floor(event.timestamp)
         with self._lock:
             to_remove = []
@@ -294,7 +286,7 @@ class BarBuilder:
     # ── bar invariant enforcement ─────────────────────────
 
     def _enforce_invariants(self, acc: _BarAccumulator) -> bool:
-        """Validate and repair OHLCV invariants. Returns True if bar was valid."""
+        # Validate and repair OHLCV invariants. Returns True if bar was valid.
         valid = True
 
         # high must be >= max(open, close)
@@ -376,10 +368,9 @@ class BarBuilder:
         return bar
 
     def flush(self) -> list[BarEvent]:
-        """Flush all in-progress bars (e.g. on shutdown).
-
-        Returns the list of emitted bars.
-        """
+        # Flush all in-progress bars (e.g. on shutdown).
+        #
+        # Returns the list of emitted bars.
         emitted: list[BarEvent] = []
         with self._lock:
             for symbol, acc in self._bars.items():
@@ -389,7 +380,7 @@ class BarBuilder:
         return emitted
 
     def emit_heartbeat(self) -> ComponentHeartbeatEvent:
-        """Create and publish a structured heartbeat for this component."""
+        # Create and publish a structured heartbeat for this component.
         now = time.time()
         with self._lock:
             total_quotes = sum(self._quotes_received_by_symbol.values())

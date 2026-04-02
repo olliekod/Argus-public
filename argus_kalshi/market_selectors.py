@@ -1,4 +1,6 @@
-"""Market selection helpers for BTC/ETH/SOL 15m, hourly and range contracts."""
+# Created by Oliver Meihls
+
+# Market selection helpers for BTC/ETH/SOL 15m, hourly and range contracts.
 
 from __future__ import annotations
 
@@ -32,14 +34,14 @@ _SERIES_MAP = {
 
 
 def classify_series(series_ticker: str) -> Optional[tuple[str, int, bool]]:
-    """Return (asset, window_minutes, is_range) for known series."""
+    # Return (asset, window_minutes, is_range) for known series.
     if not series_ticker:
         return None
     return _SERIES_MAP.get(series_ticker.upper())
 
 
 def settlement_timestamp(settlement_time_iso: str) -> Optional[float]:
-    """Parse a Kalshi settlement/close ISO timestamp to epoch seconds."""
+    # Parse a Kalshi settlement/close ISO timestamp to epoch seconds.
     if not settlement_time_iso:
         return None
     try:
@@ -53,7 +55,7 @@ def time_to_settlement_seconds(
     *,
     now_ts: Optional[float] = None,
 ) -> Optional[float]:
-    """Return seconds until settlement for a market, or None if unknown."""
+    # Return seconds until settlement for a market, or None if unknown.
     settle_ts = settlement_timestamp(settlement_time_iso)
     if settle_ts is None:
         return None
@@ -68,13 +70,12 @@ def hold_entry_horizon_seconds(
     max_entry_minutes_to_expiry: int,
     range_max_entry_minutes_to_expiry: int,
 ) -> int:
-    """Return the effective hold-to-expiry entry horizon for a market.
-
-    The farm should only open non-scalping positions close to expiry:
-    15m contracts in roughly the last 3 minutes, 60m contracts in roughly
-    the last 12 minutes, and longer range-style contracts in roughly the
-    last 12 minutes as well. Configured limits act as upper bounds.
-    """
+    # Return the effective hold-to-expiry entry horizon for a market.
+    #
+    # The farm should only open non-scalping positions close to expiry:
+    # 15m contracts in roughly the last 3 minutes, 60m contracts in roughly
+    # the last 12 minutes, and longer range-style contracts in roughly the
+    # last 12 minutes as well. Configured limits act as upper bounds.
     if is_range:
         default_minutes = 12
         configured_minutes = range_max_entry_minutes_to_expiry

@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import tempfile
 from pathlib import Path
 

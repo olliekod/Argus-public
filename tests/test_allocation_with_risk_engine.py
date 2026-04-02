@@ -1,13 +1,12 @@
-"""
-Test: AllocationEngine + RiskEngine Integration
-==================================================
+# Created by Oliver Meihls
 
-Integration test verifying that AllocationEngine + RiskEngine produces
-clamped allocations, clamp reasons, and attribution artifacts.
-
-Also includes a "no lookahead" test ensuring that loaders respect
-as_of_ts_ms and do not read future data.
-"""
+# Test: AllocationEngine + RiskEngine Integration
+#
+# Integration test verifying that AllocationEngine + RiskEngine produces
+# clamped allocations, clamp reasons, and attribution artifacts.
+#
+# Also includes a "no lookahead" test ensuring that loaders respect
+# as_of_ts_ms and do not read future data.
 
 import json
 import os
@@ -26,7 +25,7 @@ from src.analysis.tail_risk_scenario import TailRiskConfig
 
 
 def _make_forecasts():
-    """Create test forecasts."""
+    # Create test forecasts.
     return [
         Forecast(
             strategy_id="VRP_v1",
@@ -80,10 +79,10 @@ def _make_risk_config(**overrides):
 
 
 class TestAllocationWithRiskEngine:
-    """Integration: AllocationEngine + RiskEngine."""
+    # Integration: AllocationEngine + RiskEngine.
 
     def test_basic_integration(self):
-        """allocate_with_risk_engine returns valid tuple."""
+        # allocate_with_risk_engine returns valid tuple.
         engine = AllocationEngine(
             config=AllocationConfig(kelly_fraction=0.25, per_play_cap=0.07),
             equity=10_000.0,
@@ -104,14 +103,13 @@ class TestAllocationWithRiskEngine:
         assert isinstance(attribution, RiskAttribution)
 
     def test_produces_clamp_reasons_with_drawdown(self):
-        """Drawdown in portfolio → produces clamp reasons.
-
-        The drawdown throttle works as a tighter aggregate cap
-        (effective_cap = aggregate_cap * throttle).  For the throttle to
-        produce clamp reasons, total allocation exposure must exceed the
-        effective cap.  We use a tight aggregate cap so allocations exceed
-        effective_cap = 0.10 * 0.75 = 0.075.
-        """
+        # Drawdown in portfolio → produces clamp reasons.
+        #
+        # The drawdown throttle works as a tighter aggregate cap
+        # (effective_cap = aggregate_cap * throttle).  For the throttle to
+        # produce clamp reasons, total allocation exposure must exceed the
+        # effective cap.  We use a tight aggregate cap so allocations exceed
+        # effective_cap = 0.10 * 0.75 = 0.075.
         engine = AllocationEngine(
             config=AllocationConfig(kelly_fraction=0.25, per_play_cap=0.07),
             equity=10_000.0,
@@ -144,7 +142,7 @@ class TestAllocationWithRiskEngine:
         assert attribution.portfolio_summary.drawdown_throttle_factor < 1.0
 
     def test_produces_attribution_artifact(self):
-        """Risk attribution artifact has expected structure."""
+        # Risk attribution artifact has expected structure.
         engine = AllocationEngine(
             config=AllocationConfig(kelly_fraction=0.25, per_play_cap=0.07),
             equity=10_000.0,
@@ -166,7 +164,7 @@ class TestAllocationWithRiskEngine:
         assert "config_hash" in attr_dict
 
     def test_attribution_persistence(self):
-        """Risk attribution can be persisted to JSON."""
+        # Risk attribution can be persisted to JSON.
         engine = AllocationEngine(
             config=AllocationConfig(kelly_fraction=0.25),
             equity=10_000.0,
@@ -194,7 +192,7 @@ class TestAllocationWithRiskEngine:
             os.unlink(path)
 
     def test_aggregate_cap_with_risk_engine(self):
-        """Aggregate cap enforced by risk engine."""
+        # Aggregate cap enforced by risk engine.
         engine = AllocationEngine(
             config=AllocationConfig(kelly_fraction=0.50, per_play_cap=0.20),
             equity=10_000.0,
@@ -215,19 +213,19 @@ class TestAllocationWithRiskEngine:
         )
 
     def test_config_hash_deterministic(self):
-        """Same config → same hash."""
+        # Same config → same hash.
         config1 = _make_risk_config()
         config2 = _make_risk_config()
         assert config1.config_hash() == config2.config_hash()
 
     def test_config_hash_changes_with_params(self):
-        """Different config → different hash."""
+        # Different config → different hash.
         config1 = _make_risk_config(aggregate_exposure_cap=0.5)
         config2 = _make_risk_config(aggregate_exposure_cap=1.0)
         assert config1.config_hash() != config2.config_hash()
 
     def test_clamp_reason_structure(self):
-        """ClampReason objects have required fields."""
+        # ClampReason objects have required fields.
         engine = AllocationEngine(
             config=AllocationConfig(kelly_fraction=0.25),
             equity=10_000.0,
@@ -262,10 +260,10 @@ class TestAllocationWithRiskEngine:
 
 
 class TestNoLookahead:
-    """Ensure data loaders respect as_of_ts_ms and don't read future data."""
+    # Ensure data loaders respect as_of_ts_ms and don't read future data.
 
     def test_strategy_returns_no_future_data(self):
-        """get_strategy_returns_for_correlation respects as_of_ts_ms."""
+        # get_strategy_returns_for_correlation respects as_of_ts_ms.
         from datetime import datetime, timezone
         from src.analysis.correlation_exposure import get_strategy_returns_for_correlation
 
@@ -301,7 +299,7 @@ class TestNoLookahead:
         assert 0.05 not in result["A"]
 
     def test_portfolio_state_as_of_ts(self):
-        """PortfolioState records as_of_ts_ms correctly."""
+        # PortfolioState records as_of_ts_ms correctly.
         ts = 1700000000000
         state = build_portfolio_state_from_context(
             as_of_ts_ms=ts,
@@ -310,7 +308,7 @@ class TestNoLookahead:
         assert state.as_of_ts_ms == ts
 
     def test_risk_engine_uses_state_timestamp(self):
-        """RiskEngine clamp reasons use the state's timestamp."""
+        # RiskEngine clamp reasons use the state's timestamp.
         engine = RiskEngine()
         allocs = [
             Allocation(

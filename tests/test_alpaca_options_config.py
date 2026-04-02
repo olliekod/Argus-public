@@ -1,9 +1,8 @@
-"""
-Tests for Alpaca Options Connector Improvements
-=================================================
+# Created by Oliver Meihls
 
-Tests for configurable feed and improved logging in AlpacaOptionsConnector.
-"""
+# Tests for Alpaca Options Connector Improvements
+#
+# Tests for configurable feed and improved logging in AlpacaOptionsConnector.
 
 import pytest
 from src.connectors.alpaca_options import (
@@ -16,15 +15,15 @@ from src.connectors.alpaca_options import (
 
 
 class TestAlpacaOptionsConfig:
-    """Tests for AlpacaOptionsConfig."""
+    # Tests for AlpacaOptionsConfig.
 
     def test_default_feed(self):
-        """Default feed should be 'indicative'."""
+        # Default feed should be 'indicative'.
         config = AlpacaOptionsConfig()
         assert config.feed == "indicative"
 
     def test_custom_feed(self):
-        """Feed should be configurable."""
+        # Feed should be configurable.
         config = AlpacaOptionsConfig(feed="opra")
         assert config.feed == "opra"
 
@@ -37,7 +36,7 @@ class TestAlpacaOptionsConfig:
 
 
 class TestAlpacaOptionsConnector:
-    """Tests for AlpacaOptionsConnector initialization."""
+    # Tests for AlpacaOptionsConnector initialization.
 
     def test_provider_name(self):
         conn = AlpacaOptionsConnector()
@@ -52,7 +51,7 @@ class TestAlpacaOptionsConnector:
         assert health["health"] == "ok"
 
     def test_config_feed_propagation(self):
-        """Feed value should be stored on config."""
+        # Feed value should be stored on config.
         config = AlpacaOptionsConfig(feed="opra")
         conn = AlpacaOptionsConnector(config=config)
         assert conn._config.feed == "opra"
@@ -64,7 +63,7 @@ class TestAlpacaOptionsConnector:
 
 
 class TestOCCSymbolParsing:
-    """Tests for OCC symbol parsing."""
+    # Tests for OCC symbol parsing.
 
     def test_parse_put(self):
         conn = AlpacaOptionsConnector()

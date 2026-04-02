@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import json
 
 from argus_kalshi.runner import (
@@ -36,7 +38,7 @@ def test_running_bankroll_is_scoped_by_bot_id(tmp_path):
 
 
 def test_load_bot_stats_from_jsonl_includes_fills_and_primary_bot_id(tmp_path):
-    """Fills are restored from paper_fill records; primary_* values follow primary_bot_id."""
+    # Fills are restored from paper_fill records; primary_* values follow primary_bot_id.
     log_path = tmp_path / "paper_trades.jsonl"
     rows = [
         {"type": "paper_fill", "bot_id": "farm_001", "timestamp": 1000},

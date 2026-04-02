@@ -1,4 +1,6 @@
-"""Public options snapshot connector using Public.com greeks + external chain structure."""
+# Created by Oliver Meihls
+
+# Public options snapshot connector using Public.com greeks + external chain structure.
 
 from __future__ import annotations
 
@@ -43,11 +45,10 @@ def _normalize_osi_symbol(osi: str) -> str:
 
 
 def _response_osi_to_canonical(response_symbol: str) -> str:
-    """Normalize Public API response symbol to our canonical OSI (8-digit strike).
-
-    We send e.g. SPY250321P00550000. Public may return the same or e.g. SPY250321P550000
-    (strike without leading zeros). Convert to canonical so lookup matches.
-    """
+    # Normalize Public API response symbol to our canonical OSI (8-digit strike).
+    #
+    # We send e.g. SPY250321P00550000. Public may return the same or e.g. SPY250321P550000
+    # (strike without leading zeros). Convert to canonical so lookup matches.
     s = _normalize_osi_symbol(response_symbol)
     if not s:
         return ""
@@ -110,7 +111,7 @@ class PublicOptionsConnector:
         max_dte: int = 21,
         underlying_price: float = 0.0,
     ) -> List[OptionChainSnapshotEvent]:
-        """Build Public-based snapshots using Alpaca or Tastytrade structure."""
+        # Build Public-based snapshots using Alpaca or Tastytrade structure.
         snapshots: List[OptionChainSnapshotEvent] = []
 
         # Async Alpaca structure connector path

@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from datetime import datetime, timezone
 
 from scripts.alpaca_option_chain_snapshot import (

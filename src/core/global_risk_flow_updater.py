@@ -1,16 +1,15 @@
-"""
-GlobalRiskFlow Updater
-======================
+# Created by Oliver Meihls
 
-Periodically fetches Alpha Vantage daily bars, computes the
-``global_risk_flow`` metric, and publishes it to the event bus
-as an :class:`ExternalMetricEvent`.
-
-The regime detector subscribes to these events and merges the
-metric into ``metrics_json`` on subsequent market regime emissions.
-
-This module is a no-op when ``alphavantage.enabled`` is false in config.
-"""
+# GlobalRiskFlow Updater
+#
+# Periodically fetches Alpha Vantage daily bars, computes the
+# ``global_risk_flow`` metric, and publishes it to the event bus
+# as an :class:`ExternalMetricEvent`.
+#
+# The regime detector subscribes to these events and merges the
+# metric into ``metrics_json`` on subsequent market regime emissions.
+#
+# This module is a no-op when ``alphavantage.enabled`` is false in config.
 
 from __future__ import annotations
 
@@ -35,20 +34,18 @@ _ALL_FX_PAIRS = [FX_RISK_SYMBOL]  # stored as "FX:USDJPY" in AV bars
 
 
 class GlobalRiskFlowUpdater:
-    """Fetch AV daily bars from DB, compute risk flow, publish to bus.
-
-    DB-only (budget-safe): reads from market_bars seeded by the
-    Alpha Vantage backfill/collector; never calls the Alpha Vantage API.
-
-    Parameters
-    ----------
-    bus : EventBus
-        Event bus for publishing ``ExternalMetricEvent``.
-    db : Database
-        Database instance for ``get_bars_daily_for_risk_flow``.
-    config : dict
-        Full Argus config.  Reads ``exchanges.alphavantage``.
-    """
+    # Fetch AV daily bars from DB, compute risk flow, publish to bus.
+    #
+    # DB-only (budget-safe): reads from market_bars seeded by the
+    # Alpha Vantage backfill/collector; never calls the Alpha Vantage API.
+    #
+    # Parameters
+    # bus : EventBus
+    # Event bus for publishing ``ExternalMetricEvent``.
+    # db : Database
+    # Database instance for ``get_bars_daily_for_risk_flow``.
+    # config : dict
+    # Full Argus config.  Reads ``exchanges.alphavantage``.
 
     def __init__(
         self,
@@ -81,10 +78,9 @@ class GlobalRiskFlowUpdater:
             logger.info("GlobalRiskFlowUpdater disabled (alphavantage.enabled=false)")
 
     async def update(self) -> Optional[float]:
-        """Fetch bars from DB, compute risk flow, publish event.
-
-        Returns the computed risk-flow value, or None if skipped/unavailable.
-        """
+        # Fetch bars from DB, compute risk flow, publish event.
+        #
+        # Returns the computed risk-flow value, or None if skipped/unavailable.
         if not self._enabled:
             return None
 
@@ -120,7 +116,7 @@ class GlobalRiskFlowUpdater:
         return value
 
     async def _fetch_all_bars(self, now_ms: int) -> Dict[str, List[Dict[str, Any]]]:
-        """Fetch daily bars from DB for all configured symbols."""
+        # Fetch daily bars from DB for all configured symbols.
         # Use cache if fresh enough (protects DB during stress tests)
         if now_ms - self._last_load_ms < self._cache_duration_ms and self._bars_cache:
             return self._bars_cache

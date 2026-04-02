@@ -1,19 +1,19 @@
-"""
-Kalshi paper trading analytics — reads logs/paper_trades.jsonl.
+# Created by Oliver Meihls
 
-Each line in the JSONL is either a "paper_fill" (order placed) or a
-"settlement" (contract resolved win/loss with full P&L).
-
-Usage
------
-    python scripts/kalshi_stats.py                  # all-time
-    python scripts/kalshi_stats.py --days 1         # last 24 hours
-    python scripts/kalshi_stats.py --days 7         # last 7 days
-    python scripts/kalshi_stats.py --weeks 4        # last 4 weeks
-    python scripts/kalshi_stats.py --since 2026-03-01
-    python scripts/kalshi_stats.py --initial-bankroll 5000
-    python scripts/kalshi_stats.py --log path/to/other.jsonl
-"""
+# Kalshi paper trading analytics — reads logs/paper_trades.jsonl.
+#
+# Each line in the JSONL is either a "paper_fill" (order placed) or a
+# "settlement" (contract resolved win/loss with full P&L).
+#
+# Usage
+# -----
+# python scripts/kalshi_stats.py                  # all-time
+# python scripts/kalshi_stats.py --days 1         # last 24 hours
+# python scripts/kalshi_stats.py --days 7         # last 7 days
+# python scripts/kalshi_stats.py --weeks 4        # last 4 weeks
+# python scripts/kalshi_stats.py --since 2026-03-01
+# python scripts/kalshi_stats.py --initial-bankroll 5000
+# python scripts/kalshi_stats.py --log path/to/other.jsonl
 
 from __future__ import annotations
 

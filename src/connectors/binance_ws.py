@@ -1,9 +1,8 @@
-"""
-Binance WebSocket Connector
-===========================
+# Created by Oliver Meihls
 
-WebSocket client for Binance spot market data.
-"""
+# Binance WebSocket Connector
+#
+# WebSocket client for Binance spot market data.
 
 import asyncio
 import json
@@ -19,7 +18,7 @@ logger = get_connector_logger('binance')
 
 
 def _ws_is_open(ws) -> bool:
-    """Check if a websocket connection is open across websockets versions."""
+    # Check if a websocket connection is open across websockets versions.
     if ws is None:
         return False
     if hasattr(ws, 'closed'):
@@ -32,19 +31,18 @@ def _ws_is_open(ws) -> bool:
             return ws.state == State.OPEN
         except (ImportError, AttributeError):
             pass
+
     return False
 
 
 class BinanceWebSocket:
-    """
-    Binance WebSocket client for spot market data.
-    
-    Provides:
-    - Real-time spot prices
-    - 24h ticker statistics
-    
-    Uses public endpoints (no auth needed for market data).
-    """
+    # Binance WebSocket client for spot market data.
+    #
+    # Provides:
+    # - Real-time spot prices
+    # - 24h ticker statistics
+    #
+    # Uses public endpoints (no auth needed for market data).
     
     BASE_URL = "wss://stream.binance.com:9443/ws"
     
@@ -53,13 +51,11 @@ class BinanceWebSocket:
         symbols: List[str],
         on_ticker: Optional[Callable] = None,
     ):
-        """
-        Initialize Binance WebSocket client.
-        
-        Args:
-            symbols: List of symbols (e.g., ['BTC/USDT', 'ETH/USDT'])
-            on_ticker: Callback for ticker updates
-        """
+        # Initialize Binance WebSocket client.
+        #
+        # Args:
+        # symbols: List of symbols (e.g., ['BTC/USDT', 'ETH/USDT'])
+        # on_ticker: Callback for ticker updates
         self.symbols = [self._normalize_symbol(s) for s in symbols]
         
         # Callbacks
@@ -87,19 +83,19 @@ class BinanceWebSocket:
         logger.info(f"Binance WebSocket initialized for {len(self.symbols)} symbols")
     
     def _normalize_symbol(self, symbol: str) -> str:
-        """Convert unified symbol to Binance format."""
+        # Convert unified symbol to Binance format.
         # 'BTC/USDT:USDT' -> 'btcusdt' (lowercase for stream names)
         if ':' in symbol:
             symbol = symbol.split(':')[0]
         return symbol.replace('/', '').lower()
     
     def _get_stream_url(self) -> str:
-        """Build combined stream URL for all symbols."""
+        # Build combined stream URL for all symbols.
         streams = [f"{s}@ticker" for s in self.symbols]
         return f"{self.BASE_URL}/{'/'.join(streams)}"
     
     async def connect(self) -> None:
-        """Start WebSocket connection and message loop."""
+        # Start WebSocket connection and message loop.
         self._running = True
         retry_count = 0
         
@@ -146,14 +142,14 @@ class BinanceWebSocket:
         self._ws = None
     
     async def disconnect(self) -> None:
-        """Stop WebSocket connection."""
+        # Stop WebSocket connection.
         self._running = False
         if self._ws:
             await self._ws.close()
             logger.info("Binance WebSocket disconnected")
     
     async def _message_loop(self) -> None:
-        """Process incoming WebSocket messages."""
+        # Process incoming WebSocket messages.
         if not self._ws:
             return
         
@@ -177,14 +173,14 @@ class BinanceWebSocket:
                 logger.error(f"Error handling message: {e}")
     
     async def _handle_message(self, data: Dict[str, Any]) -> None:
-        """Handle a parsed WebSocket message."""
+        # Handle a parsed WebSocket message.
         
         # 24h ticker format
         if data.get('e') == '24hrTicker':
             await self._handle_ticker(data)
     
     async def _handle_ticker(self, data: Dict[str, Any]) -> None:
-        """Handle 24hr ticker message."""
+        # Handle 24hr ticker message.
         try:
             symbol = data.get('s', '').upper()
             
@@ -220,7 +216,7 @@ class BinanceWebSocket:
             logger.error(f"Error parsing ticker: {e}")
     
     def get_ticker(self, symbol: str) -> Optional[Dict]:
-        """Get cached ticker data for a symbol."""
+        # Get cached ticker data for a symbol.
         # Convert to Binance format (uppercase)
         if ':' in symbol:
             symbol = symbol.split(':')[0]
@@ -228,16 +224,16 @@ class BinanceWebSocket:
         return self.tickers.get(normalized)
     
     def get_price(self, symbol: str) -> Optional[float]:
-        """Get latest spot price for a symbol."""
+        # Get latest spot price for a symbol.
         ticker = self.get_ticker(symbol)
         return ticker['last_price'] if ticker else None
     
     def is_connected(self) -> bool:
-        """Check if WebSocket is connected."""
+        # Check if WebSocket is connected.
         return _ws_is_open(self._ws)
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Return health for dashboard."""
+        # Return health for dashboard.
         now = time.time()
         connected = self.is_connected()
         age = (now - self.last_message_ts) if self.last_message_ts else None

@@ -1,4 +1,6 @@
-"""Liquid ETF universe constants and helpers."""
+# Created by Oliver Meihls
+
+# Liquid ETF universe constants and helpers.
 
 from __future__ import annotations
 
@@ -21,5 +23,5 @@ LIQUID_ETF_UNIVERSE: tuple[str, ...] = tuple(
 
 
 def get_liquid_etf_universe() -> list[str]:
-    """Return the liquid ETF universe in deterministic alphabetical order."""
+    # Return the liquid ETF universe in deterministic alphabetical order.
     return list(LIQUID_ETF_UNIVERSE)

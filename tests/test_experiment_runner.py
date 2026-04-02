@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import pytest
 import json
 from pathlib import Path
@@ -71,7 +73,7 @@ def test_parameter_sweep(tmp_path):
 
 
 def test_parameter_sweep_merges_base_params(tmp_path):
-    """Verify sweep grid entries are merged with base strategy_params (P1 badge fix)."""
+    # Verify sweep grid entries are merged with base strategy_params (P1 badge fix).
     pack_path = tmp_path / "test_pack.json"
     pack = {"bars": [{"timestamp_ms": 1000, "open": 100, "high": 101, "low": 99, "close": 100, "symbol": "SPY"}], "outcomes": [], "regimes": []}
     with open(pack_path, "w") as f:

@@ -1,13 +1,12 @@
-"""
-Test IBIT Options System
-========================
+# Created by Oliver Meihls
 
-Tests the new Phase 6 components:
-- IBIT Options Client (yfinance)
-- Greeks Engine (Black-Scholes)
-- Trade Calculator (recommendations)
-- Economic Calendar (blackouts)
-"""
+# Test IBIT Options System
+#
+# Tests the new Phase 6 components:
+# - IBIT Options Client (yfinance)
+# - Greeks Engine (Black-Scholes)
+# - Trade Calculator (recommendations)
+# - Economic Calendar (blackouts)
 
 import pytest
 
@@ -22,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def test_options_client():
-    """Test IBIT options client."""
+    # Test IBIT options client.
     print("\n" + "="*60)
     print("OPTIONS CLIENT TEST")
     print("="*60)
@@ -65,7 +64,7 @@ def test_options_client():
 
 
 def test_greeks_engine():
-    """Test Greeks engine."""
+    # Test Greeks engine.
     print("\n" + "="*60)
     print("GREEKS ENGINE TEST")
     print("="*60)
@@ -109,7 +108,7 @@ def test_greeks_engine():
 
 
 def test_trade_calculator():
-    """Test trade calculator."""
+    # Test trade calculator.
     print("\n" + "="*60)
     print("TRADE CALCULATOR TEST")
     print("="*60)
@@ -151,7 +150,7 @@ def test_trade_calculator():
 
 
 def test_economic_calendar():
-    """Test economic calendar."""
+    # Test economic calendar.
     print("\n" + "="*60)
     print("ECONOMIC CALENDAR TEST")
     print("="*60)
@@ -194,7 +193,7 @@ def test_economic_calendar():
 
 
 def main():
-    """Run all tests."""
+    # Run all tests.
     print("\n" + "="*60)
     print("ARGUS IBIT OPTIONS SYSTEM - TEST SUITE")
     print("="*60)

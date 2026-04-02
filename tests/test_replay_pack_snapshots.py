@@ -1,14 +1,13 @@
-"""
-Tests for Replay Pack Snapshot Support
-=======================================
+# Created by Oliver Meihls
 
-Verifies:
-- Option chain snapshots are included in replay packs
-- Chronological ordering by recv_ts_ms is preserved
-- ReplayHarness loads snapshots from packs correctly
-- Snapshot gating uses recv_ts_ms (data availability barrier)
-- Symbols without options data produce empty snapshot lists
-"""
+# Tests for Replay Pack Snapshot Support
+#
+# Verifies:
+# - Option chain snapshots are included in replay packs
+# - Chronological ordering by recv_ts_ms is preserved
+# - ReplayHarness loads snapshots from packs correctly
+# - Snapshot gating uses recv_ts_ms (data availability barrier)
+# - Symbols without options data produce empty snapshot lists
 
 from __future__ import annotations
 
@@ -30,9 +29,7 @@ from src.analysis.replay_harness import (
 from src.core.outcome_engine import BarData
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _make_bars(
     n: int = 10,
@@ -63,7 +60,7 @@ def _make_snapshots(
     interval_ms: int = 120_000,
     symbol: str = "SPY",
 ) -> List[Dict[str, Any]]:
-    """Build synthetic snapshot dicts as they would appear in a replay pack."""
+    # Build synthetic snapshot dicts as they would appear in a replay pack.
     snaps = []
     for i in range(n):
         ts = start_ms + i * interval_ms
@@ -115,7 +112,7 @@ def _build_pack(
 
 
 class SnapshotCollector(ReplayStrategy):
-    """Records visible snapshots at each bar for verification."""
+    # Records visible snapshots at each bar for verification.
 
     def __init__(self):
         self.observations: List[Dict[str, Any]] = []
@@ -140,13 +137,11 @@ class SnapshotCollector(ReplayStrategy):
         return {"observations": self.observations}
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Snapshot inclusion in replay packs
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSnapshotInclusion:
     def test_snapshots_present_in_pack(self):
-        """Pack JSON contains the snapshots list with expected fields."""
+        # Pack JSON contains the snapshots list with expected fields.
         bars = _make_bars(n=5)
         snaps = _make_snapshots(n=3, start_ms=bars[0].timestamp_ms)
         pack = _build_pack(bars, snapshots=snaps)
@@ -161,13 +156,13 @@ class TestSnapshotInclusion:
             assert "quotes_json" in s
 
     def test_empty_snapshots_for_no_options(self):
-        """Symbols without options data have an empty snapshots list."""
+        # Symbols without options data have an empty snapshots list.
         bars = _make_bars(n=5)
         pack = _build_pack(bars, snapshots=[])
         assert pack["snapshots"] == []
 
     def test_snapshot_ordering_preserved(self):
-        """Snapshots must be in chronological order by recv_ts_ms."""
+        # Snapshots must be in chronological order by recv_ts_ms.
         bars = _make_bars(n=10)
         # Create out-of-order snapshots
         snaps = _make_snapshots(n=5, start_ms=bars[0].timestamp_ms)
@@ -181,7 +176,7 @@ class TestSnapshotInclusion:
             assert sorted_snaps[i]["recv_ts_ms"] >= sorted_snaps[i - 1]["recv_ts_ms"]
 
     def test_atm_iv_nullable(self):
-        """atm_iv can be None for snapshots where IV isn't available."""
+        # atm_iv can be None for snapshots where IV isn't available.
         bars = _make_bars(n=3)
         snaps = _make_snapshots(n=2, start_ms=bars[0].timestamp_ms)
         snaps[0]["atm_iv"] = None
@@ -190,13 +185,11 @@ class TestSnapshotInclusion:
         assert pack["snapshots"][1]["atm_iv"] is not None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: ReplayHarness snapshot loading from packs
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestHarnessSnapshotLoading:
     def _harness_from_pack(self, pack: Dict[str, Any]) -> ReplayHarness:
-        """Build a ReplayHarness from a pack dict (as experiment_runner does)."""
+        # Build a ReplayHarness from a pack dict (as experiment_runner does).
         bars = []
         for b in pack["bars"]:
             bar = BarData(
@@ -233,7 +226,7 @@ class TestHarnessSnapshotLoading:
         ), strategy
 
     def test_harness_receives_snapshots(self):
-        """Harness should receive and gate snapshots properly."""
+        # Harness should receive and gate snapshots properly.
         bars = _make_bars(n=10)
         snaps = _make_snapshots(n=3, start_ms=bars[0].timestamp_ms, interval_ms=120_000)
         pack = _build_pack(bars, snapshots=snaps)
@@ -246,7 +239,7 @@ class TestHarnessSnapshotLoading:
         assert last_obs["snapshot_count"] == 3
 
     def test_snapshot_gating_uses_recv_ts_ms(self):
-        """Snapshots must not be visible before their recv_ts_ms."""
+        # Snapshots must not be visible before their recv_ts_ms.
         bars = _make_bars(n=10, interval_ms=60_000)
         bar_duration_ms = 60_000
 
@@ -279,7 +272,7 @@ class TestHarnessSnapshotLoading:
             )
 
     def test_empty_snapshots_harness_ok(self):
-        """Harness runs fine with no snapshots."""
+        # Harness runs fine with no snapshots.
         bars = _make_bars(n=5)
         pack = _build_pack(bars, snapshots=[])
         harness, strategy = self._harness_from_pack(pack)
@@ -289,7 +282,7 @@ class TestHarnessSnapshotLoading:
             assert obs["snapshot_count"] == 0
 
     def test_snapshots_accumulate(self):
-        """Snapshot count should be non-decreasing over time."""
+        # Snapshot count should be non-decreasing over time.
         bars = _make_bars(n=20, interval_ms=60_000)
         snaps = _make_snapshots(
             n=5,
@@ -305,13 +298,11 @@ class TestHarnessSnapshotLoading:
             assert counts[i] >= counts[i - 1], "Snapshot count must not decrease"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests: Pack file I/O round-trip
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestPackRoundTrip:
     def test_json_round_trip(self):
-        """Write a pack to JSON and read it back — snapshots survive."""
+        # Write a pack to JSON and read it back — snapshots survive.
         bars = _make_bars(n=5)
         snaps = _make_snapshots(n=3, start_ms=bars[0].timestamp_ms)
         pack = _build_pack(bars, snapshots=snaps)

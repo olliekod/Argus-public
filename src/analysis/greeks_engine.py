@@ -1,35 +1,33 @@
-"""
-Greeks Engine
-=============
+# Created by Oliver Meihls
 
-**European** Black-Scholes model for calculating option Greeks.
-Provides Delta, Gamma, Theta, Vega, Rho, and Probability of Profit.
-
-.. note::
-
-    This engine uses the **European** Black-Scholes model as an
-    approximation for American-style equity options.  American options
-    can theoretically be worth more than their European counterpart
-    (early-exercise premium), so Greeks computed here may differ from
-    exchange-provided values — especially for deep-in-the-money puts
-    with high interest rates.
-
-Now with:
-- Optional GPU acceleration via ``gpu_engine``
-- Internal IV solver (Brent's method) with illiquid-quote guard
-- Dynamic risk-free rate helper (Treasury yield)
-- Derived-vs-provider tagging on every ``Greeks`` result
-
-Illiquid quote guard
---------------------
-Before attempting IV inversion the engine checks:
-1. ``bid > 0``  — a zero bid means no market
-2. ``spread_pct <= max_spread_pct`` — wide spreads produce unreliable IVs
-3. ``mid >= min_premium`` — near-zero premiums blow up the Newton step
-
-If any check fails the IV solve is skipped and ``Greeks.source`` is set
-to ``"failed_illiquid"``.
-"""
+# Greeks Engine
+#
+# **European** Black-Scholes model for calculating option Greeks.
+# Provides Delta, Gamma, Theta, Vega, Rho, and Probability of Profit.
+#
+# .. note::
+#
+# This engine uses the **European** Black-Scholes model as an
+# approximation for American-style equity options.  American options
+# can theoretically be worth more than their European counterpart
+# (early-exercise premium), so Greeks computed here may differ from
+# exchange-provided values — especially for deep-in-the-money puts
+# with high interest rates.
+#
+# Now with:
+# - Optional GPU acceleration via ``gpu_engine``
+# - Internal IV solver (Brent's method) with illiquid-quote guard
+# - Dynamic risk-free rate helper (Treasury yield)
+# - Derived-vs-provider tagging on every ``Greeks`` result
+#
+# Illiquid quote guard
+# Before attempting IV inversion the engine checks:
+# 1. ``bid > 0``  — a zero bid means no market
+# 2. ``spread_pct <= max_spread_pct`` — wide spreads produce unreliable IVs
+# 3. ``mid >= min_premium`` — near-zero premiums blow up the Newton step
+#
+# If any check fails the IV solve is skipped and ``Greeks.source`` is set
+# to ``"failed_illiquid"``.
 
 import math
 from dataclasses import dataclass, field
@@ -41,40 +39,34 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Illiquid-quote thresholds (conservative defaults)
-# ---------------------------------------------------------------------------
 _DEFAULT_MAX_SPREAD_PCT = 0.50   # 50 % of mid
 _DEFAULT_MIN_PREMIUM = 0.01     # $0.01 minimum mid-price
 
 
-# ---------------------------------------------------------------------------
 # Greeks result types
-# ---------------------------------------------------------------------------
 
 @dataclass
 class Greeks:
-    """Container for option Greeks.
-
-    Attributes
-    ----------
-    source : str
-        One of:
-        - ``"provider"``  — IV came directly from the exchange/API.
-        - ``"derived"``   — IV was solved internally via Brent inversion.
-        - ``"failed_illiquid"`` — IV solve skipped due to illiquid quote.
-        - ``"failed_solve"``    — IV solve did not converge.
-        - ``"unknown"``   — source not yet classified (legacy path).
-
-        Backtesters should treat ``"derived"`` conservatively (wider bands,
-        flag in reporting).
-    solver_converged : bool or None
-        True if IV solver converged, False if it failed, None if solver
-        was not used (provider IV or no solve attempted).
-    quote_quality_score : float
-        0.0-1.0 score reflecting input quote quality.  Based on spread
-        width, bid presence, and premium level.  0.0 = unusable.
-    """
+    # Container for option Greeks.
+    #
+    # Attributes
+    # source : str
+    # One of:
+    # - ``"provider"``  — IV came directly from the exchange/API.
+    # - ``"derived"``   — IV was solved internally via Brent inversion.
+    # - ``"failed_illiquid"`` — IV solve skipped due to illiquid quote.
+    # - ``"failed_solve"``    — IV solve did not converge.
+    # - ``"unknown"``   — source not yet classified (legacy path).
+    #
+    # Backtesters should treat ``"derived"`` conservatively (wider bands,
+    # flag in reporting).
+    # solver_converged : bool or None
+    # True if IV solver converged, False if it failed, None if solver
+    # was not used (provider IV or no solve attempted).
+    # quote_quality_score : float
+    # 0.0-1.0 score reflecting input quote quality.  Based on spread
+    # width, bid presence, and premium level.  0.0 = unusable.
     delta: float
     gamma: float
     theta: float  # Per day
@@ -88,7 +80,7 @@ class Greeks:
 
 @dataclass
 class SpreadGreeks:
-    """Container for spread Greeks (net of short and long legs)."""
+    # Container for spread Greeks (net of short and long legs).
     net_delta: float
     net_gamma: float
     net_theta: float  # Per day (positive = time decay helps us)
@@ -97,16 +89,13 @@ class SpreadGreeks:
     long_source: str = "unknown"
 
 
-# ---------------------------------------------------------------------------
 # Dynamic risk-free rate helper
-# ---------------------------------------------------------------------------
 
 def fetch_risk_free_rate(fallback: float = 0.045) -> float:
-    """Fetch the current 13-week US Treasury yield as a risk-free proxy.
-
-    Falls back to *fallback* on any network / parse error so the engine
-    is never blocked by an external service.
-    """
+    # Fetch the current 13-week US Treasury yield as a risk-free proxy.
+    #
+    # Falls back to *fallback* on any network / parse error so the engine
+    # is never blocked by an external service.
     try:
         import urllib.request
         import json
@@ -132,23 +121,21 @@ def fetch_risk_free_rate(fallback: float = 0.045) -> float:
 
 
 class GreeksEngine:
-    """
-    **European** Black-Scholes Greeks calculator.
-
-    .. warning::
-
-        This is a European approximation.  For American-style equity
-        options the true Greeks can differ — especially for deep ITM
-        puts.  The ``Greeks.source`` field tags every result so
-        downstream consumers can apply conservative handling.
-
-    Formulas use standard Black-Scholes model with:
-    - S: Spot price
-    - K: Strike price
-    - T: Time to expiration (years)
-    - r: Risk-free rate
-    - sigma: Implied volatility
-    """
+    # **European** Black-Scholes Greeks calculator.
+    #
+    # .. warning::
+    #
+    # This is a European approximation.  For American-style equity
+    # options the true Greeks can differ — especially for deep ITM
+    # puts.  The ``Greeks.source`` field tags every result so
+    # downstream consumers can apply conservative handling.
+    #
+    # Formulas use standard Black-Scholes model with:
+    # - S: Spot price
+    # - K: Strike price
+    # - T: Time to expiration (years)
+    # - r: Risk-free rate
+    # - sigma: Implied volatility
     
     # Default risk-free rate (current ~4.5% as of 2026)
     DEFAULT_RISK_FREE_RATE = 0.045
@@ -161,20 +148,18 @@ class GreeksEngine:
         max_spread_pct: float = _DEFAULT_MAX_SPREAD_PCT,
         min_premium: float = _DEFAULT_MIN_PREMIUM,
     ):
-        """
-        Initialize Greeks engine.
-        
-        Args:
-            risk_free_rate: Annual risk-free rate (default 4.5%).
-                If *auto_refresh_rate* is True this is ignored and the
-                rate is fetched from FRED on construction.
-            auto_refresh_rate: If True, fetch the 13-week T-bill rate
-                on startup.  Falls back to DEFAULT_RISK_FREE_RATE.
-            max_spread_pct: Maximum bid-ask spread as fraction of mid
-                before the quote is flagged illiquid (default 0.50).
-            min_premium: Minimum mid-price (in $) to attempt IV solve
-                (default 0.01).
-        """
+        # Initialize Greeks engine.
+        #
+        # Args:
+        # risk_free_rate: Annual risk-free rate (default 4.5%).
+        # If *auto_refresh_rate* is True this is ignored and the
+        # rate is fetched from FRED on construction.
+        # auto_refresh_rate: If True, fetch the 13-week T-bill rate
+        # on startup.  Falls back to DEFAULT_RISK_FREE_RATE.
+        # max_spread_pct: Maximum bid-ask spread as fraction of mid
+        # before the quote is flagged illiquid (default 0.50).
+        # min_premium: Minimum mid-price (in $) to attempt IV solve
+        # (default 0.01).
         if auto_refresh_rate:
             self.r = fetch_risk_free_rate(self.DEFAULT_RISK_FREE_RATE)
         else:
@@ -195,14 +180,13 @@ class GreeksEngine:
         bid: float, ask: float,
         *, max_spread_pct: float = 0.50, min_premium: float = 0.01,
     ) -> float:
-        """Compute a 0.0-1.0 quote quality score.
-
-        Scoring:
-        - 0.0 if bid <= 0 (no market)
-        - 0.0 if mid < min_premium (near-zero premium)
-        - Penalized by spread width (wider = lower score)
-        - 1.0 for a tight, liquid quote
-        """
+        # Compute a 0.0-1.0 quote quality score.
+        #
+        # Scoring:
+        # - 0.0 if bid <= 0 (no market)
+        # - 0.0 if mid < min_premium (near-zero premium)
+        # - Penalized by spread width (wider = lower score)
+        # - 1.0 for a tight, liquid quote
         if bid <= 0:
             return 0.0
         mid = (bid + ask) / 2.0
@@ -216,7 +200,7 @@ class GreeksEngine:
         return round(max(0.0, 1.0 - 0.5 * (spread_pct / max_spread_pct)), 4)
 
     def solver_metrics(self) -> Dict[str, Any]:
-        """Return solver performance metrics."""
+        # Return solver performance metrics.
         total = self._solve_attempts
         return {
             "solve_attempts": total,
@@ -229,20 +213,18 @@ class GreeksEngine:
         }
 
     def _d1(self, S: float, K: float, T: float, sigma: float) -> float:
-        """Calculate d1 parameter."""
+        # Calculate d1 parameter.
         if T <= 0 or sigma <= 0:
             return 0.0
         return (math.log(S / K) + (self.r + 0.5 * sigma**2) * T) / (sigma * math.sqrt(T))
     
     def _d2(self, S: float, K: float, T: float, sigma: float) -> float:
-        """Calculate d2 parameter."""
+        # Calculate d2 parameter.
         if T <= 0 or sigma <= 0:
             return 0.0
         return self._d1(S, K, T, sigma) - sigma * math.sqrt(T)
 
-    # ------------------------------------------------------------------
-    # European BS price (for IV inversion)
-    # ------------------------------------------------------------------
+# European BS price (for IV inversion)
 
     def _bs_price(
         self,
@@ -252,7 +234,7 @@ class GreeksEngine:
         sigma: float,
         option_type: Literal["call", "put"],
     ) -> float:
-        """European Black-Scholes theoretical price."""
+        # European Black-Scholes theoretical price.
         if T <= 0 or sigma <= 0 or S <= 0:
             return max(0.0, (S - K) if option_type == "call" else (K - S))
         d1 = self._d1(S, K, T, sigma)
@@ -261,9 +243,7 @@ class GreeksEngine:
             return S * norm.cdf(d1) - K * math.exp(-self.r * T) * norm.cdf(d2)
         return K * math.exp(-self.r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
-    # ------------------------------------------------------------------
-    # Illiquid-quote guard
-    # ------------------------------------------------------------------
+# Illiquid-quote guard
 
     def is_quote_liquid(
         self,
@@ -273,10 +253,9 @@ class GreeksEngine:
         max_spread_pct: float | None = None,
         min_premium: float | None = None,
     ) -> Tuple[bool, str]:
-        """Check whether a bid/ask quote is liquid enough for IV solving.
-
-        Returns ``(is_liquid, reason)`` where *reason* is empty on success.
-        """
+        # Check whether a bid/ask quote is liquid enough for IV solving.
+        #
+        # Returns ``(is_liquid, reason)`` where *reason* is empty on success.
         msp = max_spread_pct if max_spread_pct is not None else self._max_spread_pct
         mp = min_premium if min_premium is not None else self._min_premium
 
@@ -290,9 +269,7 @@ class GreeksEngine:
             return False, f"spread_too_wide({spread / mid:.2%}>{msp:.0%})"
         return True, ""
 
-    # ------------------------------------------------------------------
-    # IV solver (Brent's method)
-    # ------------------------------------------------------------------
+# IV solver (Brent's method)
 
     def implied_volatility(
         self,
@@ -309,17 +286,15 @@ class GreeksEngine:
         tol: float = 1e-8,
         max_iter: int = 100,
     ) -> Tuple[Optional[float], str]:
-        """Solve for implied volatility via Brent's method.
-
-        If *bid* and *ask* are provided the illiquid guard is applied
-        first.  If the quote fails the guard, ``(None, "failed_illiquid")``
-        is returned immediately.
-
-        Returns
-        -------
-        (iv, source) where source is one of ``"derived"``,
-        ``"failed_illiquid"``, or ``"failed_solve"``.
-        """
+        # Solve for implied volatility via Brent's method.
+        #
+        # If *bid* and *ask* are provided the illiquid guard is applied
+        # first.  If the quote fails the guard, ``(None, "failed_illiquid")``
+        # is returned immediately.
+        #
+        # Returns
+        # (iv, source) where source is one of ``"derived"``,
+        # ``"failed_illiquid"``, or ``"failed_solve"``.
         self._solve_attempts += 1
 
         # Guard: illiquid quotes
@@ -354,9 +329,7 @@ class GreeksEngine:
             self._solve_failures += 1
             return None, "failed_solve"
 
-    # ------------------------------------------------------------------
-    # All-in-one: Greeks from raw quote (provider or derived)
-    # ------------------------------------------------------------------
+# All-in-one: Greeks from raw quote (provider or derived)
 
     def greeks_from_quote(
         self,
@@ -369,16 +342,15 @@ class GreeksEngine:
         bid: float | None = None,
         ask: float | None = None,
     ) -> Greeks:
-        """Compute Greeks using provider IV first, falling back to internal IV.
-
-        Priority:
-        1. If *provider_iv* is supplied and > 0, use it (``source="provider"``).
-        2. Else if *bid*/*ask* are supplied, compute mid and attempt IV
-           solve (``source="derived"`` or ``"failed_*"``).
-        3. Else return zero Greeks with ``source="unknown"``.
-
-        This is the **recommended entry point** for the backtester.
-        """
+        # Compute Greeks using provider IV first, falling back to internal IV.
+        #
+        # Priority:
+        # 1. If *provider_iv* is supplied and > 0, use it (``source="provider"``).
+        # 2. Else if *bid*/*ask* are supplied, compute mid and attempt IV
+        # solve (``source="derived"`` or ``"failed_*"``).
+        # 3. Else return zero Greeks with ``source="unknown"``.
+        #
+        # This is the **recommended entry point** for the backtester.
         # Compute quote quality score if bid/ask available
         quality = 0.0
         if bid is not None and ask is not None:
@@ -430,24 +402,22 @@ class GreeksEngine:
         sigma: float,
         option_type: Literal['call', 'put'] = 'put'
     ) -> float:
-        """
-        Calculate option delta.
-        
-        Delta measures the rate of change of option price with respect
-        to changes in the underlying price.
-        
-        For puts: Delta is negative (price goes up, put value goes down).
-        
-        Args:
-            S: Spot price
-            K: Strike price
-            T: Time to expiration in years
-            sigma: Implied volatility (decimal)
-            option_type: 'call' or 'put'
-            
-        Returns:
-            Delta value (-1 to 0 for puts, 0 to 1 for calls)
-        """
+        # Calculate option delta.
+        #
+        # Delta measures the rate of change of option price with respect
+        # to changes in the underlying price.
+        #
+        # For puts: Delta is negative (price goes up, put value goes down).
+        #
+        # Args:
+        # S: Spot price
+        # K: Strike price
+        # T: Time to expiration in years
+        # sigma: Implied volatility (decimal)
+        # option_type: 'call' or 'put'
+        #
+        # Returns:
+        # Delta value (-1 to 0 for puts, 0 to 1 for calls)
         if T <= 0:
             # At expiration
             if option_type == 'call':
@@ -469,14 +439,12 @@ class GreeksEngine:
         T: float, 
         sigma: float
     ) -> float:
-        """
-        Calculate option gamma.
-        
-        Gamma measures the rate of change of delta. Same for calls and puts.
-        
-        Returns:
-            Gamma value (always positive)
-        """
+        # Calculate option gamma.
+        #
+        # Gamma measures the rate of change of delta. Same for calls and puts.
+        #
+        # Returns:
+        # Gamma value (always positive)
         if T <= 0 or sigma <= 0 or S <= 0:
             return 0.0
         
@@ -491,14 +459,12 @@ class GreeksEngine:
         sigma: float,
         option_type: Literal['call', 'put'] = 'put'
     ) -> float:
-        """
-        Calculate option theta (per day).
-        
-        Theta measures time decay. Negative means option loses value over time.
-        
-        Returns:
-            Theta per day (negative for long options)
-        """
+        # Calculate option theta (per day).
+        #
+        # Theta measures time decay. Negative means option loses value over time.
+        #
+        # Returns:
+        # Theta per day (negative for long options)
         if T <= 0 or sigma <= 0:
             return 0.0
         
@@ -523,15 +489,13 @@ class GreeksEngine:
         T: float, 
         sigma: float
     ) -> float:
-        """
-        Calculate option vega (per 1% IV change).
-        
-        Vega measures sensitivity to volatility changes.
-        Same for calls and puts.
-        
-        Returns:
-            Vega per 1% IV change
-        """
+        # Calculate option vega (per 1% IV change).
+        #
+        # Vega measures sensitivity to volatility changes.
+        # Same for calls and puts.
+        #
+        # Returns:
+        # Vega per 1% IV change
         if T <= 0 or sigma <= 0:
             return 0.0
         
@@ -549,12 +513,10 @@ class GreeksEngine:
         sigma: float,
         option_type: Literal['call', 'put'] = 'put'
     ) -> float:
-        """
-        Calculate option rho (sensitivity to interest rates).
-        
-        Returns:
-            Rho per 1% rate change
-        """
+        # Calculate option rho (sensitivity to interest rates).
+        #
+        # Returns:
+        # Rho per 1% rate change
         if T <= 0:
             return 0.0
         
@@ -573,19 +535,17 @@ class GreeksEngine:
         sigma: float,
         option_type: Literal['call', 'put'] = 'put'
     ) -> Greeks:
-        """
-        Calculate all Greeks for an option.
-        
-        Args:
-            S: Spot price
-            K: Strike price
-            T: Time to expiration in years
-            sigma: Implied volatility (decimal, e.g., 0.40 for 40%)
-            option_type: 'call' or 'put'
-            
-        Returns:
-            Greeks dataclass with all values
-        """
+        # Calculate all Greeks for an option.
+        #
+        # Args:
+        # S: Spot price
+        # K: Strike price
+        # T: Time to expiration in years
+        # sigma: Implied volatility (decimal, e.g., 0.40 for 40%)
+        # option_type: 'call' or 'put'
+        #
+        # Returns:
+        # Greeks dataclass with all values
         return Greeks(
             delta=self.calculate_delta(S, K, T, sigma, option_type),
             gamma=self.calculate_gamma(S, K, T, sigma),
@@ -605,26 +565,24 @@ class GreeksEngine:
         short_iv: float,
         long_iv: float = None,
     ) -> SpreadGreeks:
-        """
-        Calculate net Greeks for a put credit spread.
-        
-        For a put credit spread:
-        - We SELL the higher strike put (short)
-        - We BUY the lower strike put (long)
-        
-        Net Greeks = Short Greeks (inverted sign) + Long Greeks
-        
-        Args:
-            S: Spot price
-            short_strike: Strike we sell (higher)
-            long_strike: Strike we buy (lower)
-            T: Time to expiration in years
-            short_iv: IV of short put
-            long_iv: IV of long put (defaults to short_iv)
-            
-        Returns:
-            SpreadGreeks with net values
-        """
+        # Calculate net Greeks for a put credit spread.
+        #
+        # For a put credit spread:
+        # - We SELL the higher strike put (short)
+        # - We BUY the lower strike put (long)
+        #
+        # Net Greeks = Short Greeks (inverted sign) + Long Greeks
+        #
+        # Args:
+        # S: Spot price
+        # short_strike: Strike we sell (higher)
+        # long_strike: Strike we buy (lower)
+        # T: Time to expiration in years
+        # short_iv: IV of short put
+        # long_iv: IV of long put (defaults to short_iv)
+        #
+        # Returns:
+        # SpreadGreeks with net values
         if long_iv is None:
             long_iv = short_iv
         
@@ -655,22 +613,20 @@ class GreeksEngine:
         use_gpu: bool = True,
         use_heston: bool = True,
     ) -> Dict[str, float]:
-        """
-        Estimate probability of profit and touch.
-        
-        Args:
-            S: Current spot price
-            short_strike: Strike we sold
-            credit: Net credit received
-            T: Time to expiration in years
-            sigma: Implied volatility
-            long_strike: Strike we bought
-            use_gpu: If True, use GPU
-            use_heston: If True, use stochastic volatility
-            
-        Returns:
-            Dict with 'pop' (0-100) and 'touch_stop' (0-100)
-        """
+        # Estimate probability of profit and touch.
+        #
+        # Args:
+        # S: Current spot price
+        # short_strike: Strike we sold
+        # credit: Net credit received
+        # T: Time to expiration in years
+        # sigma: Implied volatility
+        # long_strike: Strike we bought
+        # use_gpu: If True, use GPU
+        # use_heston: If True, use stochastic volatility
+        #
+        # Returns:
+        # Dict with 'pop' (0-100) and 'touch_stop' (0-100)
         break_even = short_strike - credit
         
         if T <= 0:
@@ -707,20 +663,18 @@ class GreeksEngine:
         sigma: float,
         T: float,
     ) -> Tuple[float, float]:
-        """
-        Calculate expected move based on implied volatility.
-        
-        The "expected move" is the 1 standard deviation range.
-        ~68% of outcomes are expected within this range.
-        
-        Args:
-            S: Current spot price
-            sigma: Implied volatility (annualized)
-            T: Time to expiration in years
-            
-        Returns:
-            Tuple of (low_price, high_price)
-        """
+        # Calculate expected move based on implied volatility.
+        #
+        # The "expected move" is the 1 standard deviation range.
+        # ~68% of outcomes are expected within this range.
+        #
+        # Args:
+        # S: Current spot price
+        # sigma: Implied volatility (annualized)
+        # T: Time to expiration in years
+        #
+        # Returns:
+        # Tuple of (low_price, high_price)
         if T <= 0 or sigma <= 0:
             return (S, S)
         
@@ -731,13 +685,13 @@ class GreeksEngine:
     
     @staticmethod
     def dte_to_years(dte: int) -> float:
-        """Convert days to expiration to years."""
+        # Convert days to expiration to years.
         return dte / 365
 
 
 # Test function
 def test_greeks():
-    """Test the Greeks engine."""
+    # Test the Greeks engine.
     engine = GreeksEngine()
     
     print("=" * 60)

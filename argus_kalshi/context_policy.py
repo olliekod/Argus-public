@@ -1,11 +1,12 @@
-"""Soft context-policy engine for Kalshi bot farm allocation.
+# Created by Oliver Meihls
 
-Replaces hard family drops with weighted core/challenger/explore sleeves.
-Each context key tracks rolling settlement evidence and computes a weight
-multiplier (0.5 to 1.5) used by the farm dispatcher to scale position sizing.
-
-Thread-safe: all mutable state guarded by threading.Lock.
-"""
+# Soft context-policy engine for Kalshi bot farm allocation.
+#
+# Replaces hard family drops with weighted core/challenger/explore sleeves.
+# Each context key tracks rolling settlement evidence and computes a weight
+# multiplier (0.5 to 1.5) used by the farm dispatcher to scale position sizing.
+#
+# Thread-safe: all mutable state guarded by threading.Lock.
 
 from __future__ import annotations
 
@@ -18,18 +19,15 @@ from typing import Any, Deque, Dict, Optional
 
 from .config import KalshiConfig
 
-# ---------------------------------------------------------------------------
 # Context key builder
-# ---------------------------------------------------------------------------
 
 def momentum_bucket(drift: float, scale: float = 1e-4) -> str:
-    """Classify drift into directional regime: up / dn / flat.
-
-    scale = half of scalp_directional_drift_scale (0.0002 default).
-    At 1e-4/s price moves ~0.6%/min — a meaningful trend signal.
-    Direction-agnostic: the context policy learns which side wins in
-    which regime without any hard-coded directional preference.
-    """
+    # Classify drift into directional regime: up / dn / flat.
+    #
+    # scale = half of scalp_directional_drift_scale (0.0002 default).
+    # At 1e-4/s price moves ~0.6%/min — a meaningful trend signal.
+    # Direction-agnostic: the context policy learns which side wins in
+    # which regime without any hard-coded directional preference.
     if drift > scale:
         return "up"
     if drift < -scale:
@@ -50,19 +48,15 @@ def build_context_key(
     return f"{family}|{side}|{edge_bucket}|{price_bucket}|{strike_distance_bucket}|{nm}|{momentum}"
 
 
-# ---------------------------------------------------------------------------
 # Policy version for serialization compatibility
-# ---------------------------------------------------------------------------
 
 _POLICY_VERSION = 1
 
 
-# ---------------------------------------------------------------------------
 # ContextPolicyEngine
-# ---------------------------------------------------------------------------
 
 class ContextPolicyEngine:
-    """Rolling-window context weight engine with Core/Challenger/Explore sleeves."""
+    # Rolling-window context weight engine with Core/Challenger/Explore sleeves.
 
     def __init__(self, cfg: KalshiConfig) -> None:
         self._cfg = cfg
@@ -279,12 +273,10 @@ class ContextPolicyEngine:
         return mult
 
 
-# ---------------------------------------------------------------------------
 # DriftGuard
-# ---------------------------------------------------------------------------
 
 class DriftGuard:
-    """Detect promoted contexts whose expectancy drifts negative and auto-demote."""
+    # Detect promoted contexts whose expectancy drifts negative and auto-demote.
 
     def __init__(self, cfg: KalshiConfig) -> None:
         self._cfg = cfg
@@ -359,12 +351,10 @@ class DriftGuard:
             }
 
 
-# ---------------------------------------------------------------------------
 # AdaptiveCapEngine
-# ---------------------------------------------------------------------------
 
 class AdaptiveCapEngine:
-    """Tighten caps when concentration + negative expectancy persist on a key."""
+    # Tighten caps when concentration + negative expectancy persist on a key.
 
     def __init__(self, cfg: KalshiConfig) -> None:
         self._cfg = cfg

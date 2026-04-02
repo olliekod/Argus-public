@@ -1,22 +1,21 @@
-"""
-Argus Data Source Policy
-========================
+# Created by Oliver Meihls
 
-Canonical helper that reads the ``data_sources`` section from
-``config/config.yaml`` and returns provider selections used by
-replay packs, experiment runners, and strategies.
-
-The policy enforces a single source of truth so that no CLI flag
-or script needs to hard-code provider names.
-
-Usage::
-
-    from src.core.data_sources import get_data_source_policy
-
-    policy = get_data_source_policy()
-    policy.bars_primary           # "alpaca"
-    policy.options_snapshots_primary  # "tastytrade"
-"""
+# Argus Data Source Policy
+#
+# Canonical helper that reads the ``data_sources`` section from
+# ``config/config.yaml`` and returns provider selections used by
+# replay packs, experiment runners, and strategies.
+#
+# The policy enforces a single source of truth so that no CLI flag
+# or script needs to hard-code provider names.
+#
+# Usage::
+#
+# from src.core.data_sources import get_data_source_policy
+#
+# policy = get_data_source_policy()
+# policy.bars_primary           # "alpaca"
+# policy.options_snapshots_primary  # "tastytrade"
 
 from __future__ import annotations
 
@@ -44,7 +43,7 @@ _ALLOWED_OPTIONS_SNAPSHOT_PROVIDERS = {"tastytrade", "public"}
 
 @dataclass(frozen=True)
 class DataSourcePolicy:
-    """Immutable snapshot of the Argus data-source policy."""
+    # Immutable snapshot of the Argus data-source policy.
 
     bars_primary: str = _DEFAULT_BARS_PRIMARY
     outcomes_from: str = _DEFAULT_OUTCOMES_FROM
@@ -86,7 +85,7 @@ def _parse_list(value: Any) -> List[str]:
 
 
 def get_data_source_policy(config: Optional[Dict[str, Any]] = None) -> DataSourcePolicy:
-    """Load the data-source policy from config."""
+    # Load the data-source policy from config.
     if config is None:
         try:
             config = load_config()

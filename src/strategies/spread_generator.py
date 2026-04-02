@@ -1,15 +1,14 @@
-"""
-Put Spread Candidate Generator
-==============================
+# Created by Oliver Meihls
 
-Deterministic generator for put spread trading candidates.
-Takes option chain snapshots and emits SignalEvents for high-quality spreads.
-
-Guarantees:
-- No randomness: all ranking uses deterministic sort keys
-- No wall-clock: timestamps from events only
-- Reproducible: same inputs → same outputs
-"""
+# Put Spread Candidate Generator
+#
+# Deterministic generator for put spread trading candidates.
+# Takes option chain snapshots and emits SignalEvents for high-quality spreads.
+#
+# Guarantees:
+# - No randomness: all ranking uses deterministic sort keys
+# - No wall-clock: timestamps from events only
+# - Reproducible: same inputs → same outputs
 
 from __future__ import annotations
 
@@ -30,12 +29,12 @@ logger = logging.getLogger(__name__)
 
 
 def _now_ms() -> int:
-    """Current time as int milliseconds."""
+    # Current time as int milliseconds.
     return int(time.time() * 1000)
 
 
 def compute_config_hash(config: Dict[str, Any]) -> str:
-    """Compute deterministic hash of strategy config."""
+    # Compute deterministic hash of strategy config.
     config_str = json.dumps(config, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(config_str.encode()).hexdigest()[:12]
 
@@ -48,17 +47,16 @@ def compute_candidate_id(
     long_strike: float,
     timestamp_ms: int,
 ) -> str:
-    """Compute deterministic candidate ID."""
+    # Compute deterministic candidate ID.
     key = f"{strategy_id}:{symbol}:{expiration_ms}:{short_strike}:{long_strike}:{timestamp_ms}"
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
 @dataclass(frozen=True, slots=True)
 class PutSpreadCandidate:
-    """Deterministic put spread candidate.
-    
-    Represents a potential credit put spread trade.
-    """
+    # Deterministic put spread candidate.
+    #
+    # Represents a potential credit put spread trade.
     symbol: str
     expiration_ms: int
     short_strike: float
@@ -94,7 +92,7 @@ class PutSpreadCandidate:
 
 @dataclass
 class SpreadGeneratorConfig:
-    """Configuration for spread generator."""
+    # Configuration for spread generator.
     # DTE filters
     min_dte: int = 7
     max_dte: int = 21
@@ -121,10 +119,9 @@ class SpreadGeneratorConfig:
 
 
 class SpreadCandidateGenerator:
-    """Deterministic put spread candidate generator.
-    
-    Processes chain snapshots and emits candidate signals.
-    """
+    # Deterministic put spread candidate generator.
+    #
+    # Processes chain snapshots and emits candidate signals.
     
     def __init__(
         self,
@@ -132,13 +129,12 @@ class SpreadCandidateGenerator:
         config: Optional[SpreadGeneratorConfig] = None,
         on_signal: Optional[Callable[[SignalEvent], None]] = None,
     ) -> None:
-        """Initialize generator.
-        
-        Args:
-            strategy_id: Strategy identifier for signals
-            config: Generator configuration
-            on_signal: Callback for emitted signals
-        """
+        # Initialize generator.
+        #
+        # Args:
+        # strategy_id: Strategy identifier for signals
+        # config: Generator configuration
+        # on_signal: Callback for emitted signals
         self._strategy_id = strategy_id
         self._config = config or SpreadGeneratorConfig()
         self._config_hash = compute_config_hash(asdict(self._config))
@@ -153,7 +149,7 @@ class SpreadCandidateGenerator:
         self._signals_emitted = 0
     
     def set_regime(self, symbol: str, regime: str) -> None:
-        """Update regime for a symbol."""
+        # Update regime for a symbol.
         self._regime_cache[symbol] = regime
     
     def on_chain_snapshot(
@@ -161,15 +157,14 @@ class SpreadCandidateGenerator:
         snapshot: OptionChainSnapshotEvent,
         regime: Optional[str] = None,
     ) -> List[PutSpreadCandidate]:
-        """Process chain snapshot and generate candidates.
-        
-        Args:
-            snapshot: Option chain snapshot
-            regime: Optional regime override
-            
-        Returns:
-            List of generated candidates
-        """
+        # Process chain snapshot and generate candidates.
+        #
+        # Args:
+        # snapshot: Option chain snapshot
+        # regime: Optional regime override
+        #
+        # Returns:
+        # List of generated candidates
         self._snapshots_processed += 1
         
         # Determine regime
@@ -212,7 +207,7 @@ class SpreadCandidateGenerator:
         regime: str,
         dte: int,
     ) -> List[PutSpreadCandidate]:
-        """Generate all valid put spread candidates from chain."""
+        # Generate all valid put spread candidates from chain.
         candidates = []
         
         puts = list(snapshot.puts)
@@ -309,7 +304,7 @@ class SpreadCandidateGenerator:
         self,
         candidates: List[PutSpreadCandidate],
     ) -> List[PutSpreadCandidate]:
-        """Apply deterministic filters."""
+        # Apply deterministic filters.
         filtered = []
         
         for c in candidates:
@@ -334,13 +329,12 @@ class SpreadCandidateGenerator:
         self,
         candidates: List[PutSpreadCandidate],
     ) -> List[PutSpreadCandidate]:
-        """Deterministic ranking by score.
-        
-        Score favors:
-        - Higher risk/reward
-        - Delta closer to target
-        - Higher probability OTM
-        """
+        # Deterministic ranking by score.
+        #
+        # Score favors:
+        # - Higher risk/reward
+        # - Delta closer to target
+        # - Higher probability OTM
         def score(c: PutSpreadCandidate) -> Tuple[float, float, float, float, float]:
             # Risk/reward score (higher is better)
             rr_score = c.risk_reward
@@ -366,7 +360,7 @@ class SpreadCandidateGenerator:
         return candidates[:self._config.max_total_candidates]
     
     def _emit_signal(self, candidate: PutSpreadCandidate) -> None:
-        """Emit SignalEvent for a candidate."""
+        # Emit SignalEvent for a candidate.
         self._signals_emitted += 1
         
         signal = SignalEvent(
@@ -419,7 +413,7 @@ class SpreadCandidateGenerator:
         return signal
     
     def get_stats(self) -> Dict[str, Any]:
-        """Get generator statistics."""
+        # Get generator statistics.
         return {
             "strategy_id": self._strategy_id,
             "config_hash": self._config_hash,

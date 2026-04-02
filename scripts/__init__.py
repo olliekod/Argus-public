@@ -1,3 +1,3 @@
-"""
-Utility scripts for Argus.
-"""
+# Created by Oliver Meihls
+
+# Utility scripts for Argus.

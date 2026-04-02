@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Debug Tastytrade options snapshot pipeline.
+# Created by Oliver Meihls
 
-Fetches nested chain, normalizes, builds snapshots, and prints stats.
-Use this to verify the Tastytrade snapshot connector is working correctly.
-
-Usage:
-  python scripts/debug_tastytrade_options.py --symbol SPY
-  python scripts/debug_tastytrade_options.py --symbol IBIT --min-dte 7 --max-dte 21
-  python scripts/debug_tastytrade_options.py --symbol QQQ --verbose
-"""
+# Debug Tastytrade options snapshot pipeline.
+#
+# Fetches nested chain, normalizes, builds snapshots, and prints stats.
+# Use this to verify the Tastytrade snapshot connector is working correctly.
+#
+# Usage:
+# python scripts/debug_tastytrade_options.py --symbol SPY
+# python scripts/debug_tastytrade_options.py --symbol IBIT --min-dte 7 --max-dte 21
+# python scripts/debug_tastytrade_options.py --symbol QQQ --verbose
 
 import argparse
 import json

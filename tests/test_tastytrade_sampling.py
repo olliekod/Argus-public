@@ -1,9 +1,9 @@
-"""
-Unit tests for deterministic option-symbol sampling, spot fallback, and Bearer prefix.
+# Created by Oliver Meihls
 
-Verify that given a fixed spot and normalized chain fixture, the sampled
-symbols list remains stable across invocations.
-"""
+# Unit tests for deterministic option-symbol sampling, spot fallback, and Bearer prefix.
+#
+# Verify that given a fixed spot and normalized chain fixture, the sampled
+# symbols list remains stable across invocations.
 
 from __future__ import annotations
 
@@ -22,16 +22,14 @@ from scripts.tastytrade_health_audit import _select_sampled_contracts, select_sp
 from src.connectors.tastytrade_rest import ensure_bearer_prefix
 
 
-# ---------------------------------------------------------------------------
 # Fixture data: synthetic normalized chain
-# ---------------------------------------------------------------------------
 
 def _make_chain(
     underlying: str = "SPY",
     expiries: list[str] | None = None,
     strikes: list[float] | None = None,
 ) -> list[dict]:
-    """Build a synthetic normalized chain for testing."""
+    # Build a synthetic normalized chain for testing.
     today = date.today()
     if expiries is None:
         expiries = [
@@ -73,13 +71,11 @@ def _make_chain(
     return chain
 
 
-# ---------------------------------------------------------------------------
 # Tests: deterministic sampling via _select_sampled_contracts
-# ---------------------------------------------------------------------------
 
 class TestSelectSampledContracts:
     def test_determinism(self):
-        """Same input must always produce the same output."""
+        # Same input must always produce the same output.
         chain = _make_chain()
         now = datetime(2025, 12, 1, tzinfo=timezone.utc)
         r1 = _select_sampled_contracts(chain, 500.0, now)
@@ -88,7 +84,7 @@ class TestSelectSampledContracts:
         assert len(r1) > 0
 
     def test_reversed_input_same_output(self):
-        """Order of input contracts must not matter."""
+        # Order of input contracts must not matter.
         chain = _make_chain()
         now = datetime(2025, 12, 1, tzinfo=timezone.utc)
         r1 = _select_sampled_contracts(chain, 500.0, now)
@@ -147,9 +143,7 @@ class TestSelectSampledContracts:
             assert [c["option_symbol"] for c in _select_sampled_contracts(chain, 505.0, now)] == first
 
 
-# ---------------------------------------------------------------------------
 # Tests: select_spot fallback hierarchy
-# ---------------------------------------------------------------------------
 
 class TestSelectSpot:
     def test_dxlink_preferred(self):
@@ -173,9 +167,7 @@ class TestSelectSpot:
         assert "WARNING" in spot["warning"]
 
 
-# ---------------------------------------------------------------------------
 # Tests: ensure_bearer_prefix
-# ---------------------------------------------------------------------------
 
 class TestEnsureBearerPrefix:
     def test_adds_prefix(self):

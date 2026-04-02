@@ -1,6 +1,6 @@
-"""
-Trading module __init__
-"""
+# Created by Oliver Meihls
+
+# Trading module __init__
 
 from .paper_trader import PaperTrader, TraderConfig, StrategyType, PaperTrade
 from .trader_config_generator import generate_all_configs, get_config_summary

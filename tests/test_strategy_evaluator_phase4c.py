@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import json
 
 from src.analysis.strategy_evaluator import (

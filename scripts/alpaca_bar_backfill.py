@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
-"""
-Alpaca ETF Bar Backfill
-=======================
+# Created by Oliver Meihls
 
-Fetches historical 1-minute OHLCV bars from Alpaca for equity/ETF symbols
-and persists them to the Argus database.
-
-Alpaca Data API v2: GET /v2/stocks/{symbol}/bars
-  - timeframe: 1Min
-  - limit: up to 10,000 bars per request
-  - requires APCA-API-KEY-ID and APCA-API-SECRET-KEY headers
-
-Usage::
-
-    # Dry-run: show how many bars exist for IBIT since 2021
-    python scripts/alpaca_bar_backfill.py --symbols IBIT --start 2021-01-01 --dry-run
-
-    # Backfill IBIT, BITO, SPY from 2021-01-01 to now
-    python scripts/alpaca_bar_backfill.py --start 2021-01-01
-
-    # Specify a custom date range
-    python scripts/alpaca_bar_backfill.py --start 2021-01-01 --end 2021-12-31
-
-    # Only specific symbols
-    python scripts/alpaca_bar_backfill.py --symbols IBIT BITO SPY --start 2021-01-01
-"""
+# Alpaca ETF Bar Backfill
+#
+# Fetches historical 1-minute OHLCV bars from Alpaca for equity/ETF symbols
+# and persists them to the Argus database.
+#
+# Alpaca Data API v2: GET /v2/stocks/{symbol}/bars
+# - timeframe: 1Min
+# - limit: up to 10,000 bars per request
+# - requires APCA-API-KEY-ID and APCA-API-SECRET-KEY headers
+#
+# Usage::
+#
+# # Dry-run: show how many bars exist for IBIT since 2021
+# python scripts/alpaca_bar_backfill.py --symbols IBIT --start 2021-01-01 --dry-run
+#
+# # Backfill IBIT, BITO, SPY from 2021-01-01 to now
+# python scripts/alpaca_bar_backfill.py --start 2021-01-01
+#
+# # Specify a custom date range
+# python scripts/alpaca_bar_backfill.py --start 2021-01-01 --end 2021-12-31
+#
+# # Only specific symbols
+# python scripts/alpaca_bar_backfill.py --symbols IBIT BITO SPY --start 2021-01-01
 
 import argparse
 import asyncio
@@ -63,7 +62,7 @@ DEFAULT_SYMBOLS = [
 
 
 def _load_credentials() -> tuple[str, str]:
-    """Load Alpaca API credentials from secrets.yaml or environment."""
+    # Load Alpaca API credentials from secrets.yaml or environment.
     # Try environment first
     key = os.environ.get("ALPACA_API_KEY", "")
     secret = os.environ.get("ALPACA_API_SECRET", "")
@@ -107,7 +106,7 @@ async def fetch_bars_chunk(
     end_dt: datetime,
     limit: int = BARS_PER_REQUEST,
 ) -> List[Dict[str, Any]]:
-    """Fetch a single paginated chunk of bars from Alpaca."""
+    # Fetch a single paginated chunk of bars from Alpaca.
     url = f"{ALPACA_DATA_URL}/stocks/{symbol}/bars"
     all_bars: List[Dict[str, Any]] = []
     next_page_token = None
@@ -145,7 +144,7 @@ async def fetch_bars_chunk(
 
 
 def bars_to_rows(bars: List[Dict[str, Any]], symbol: str) -> List[tuple]:
-    """Convert Alpaca bar list to market_bars INSERT tuples."""
+    # Convert Alpaca bar list to market_bars INSERT tuples.
     rows = []
     for bar in bars:
         ts_str = bar["t"]
@@ -183,7 +182,7 @@ async def backfill_symbol(
     end_dt: datetime,
     dry_run: bool = False,
 ) -> int:
-    """Backfill a single symbol by chunking into CHUNK_DAYS windows."""
+    # Backfill a single symbol by chunking into CHUNK_DAYS windows.
     total_inserted = 0
     chunk_start = start_dt
 

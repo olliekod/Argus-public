@@ -1,15 +1,15 @@
-"""
-Tests for SoakGuardian threshold guard logic.
+# Created by Oliver Meihls
 
-Run with:  python -m pytest tests/test_soak_guards.py -v
-"""
+# Tests for SoakGuardian threshold guard logic.
+#
+# Run with:  python -m pytest tests/test_soak_guards.py -v
 
 import time
 from src.soak.guards import SoakGuardian, ALERT, WARN
 
 
 def _make_bus_stats(**overrides):
-    """Build minimal bus stats dict."""
+    # Build minimal bus stats dict.
     base = {
         "market.quotes": {
             "events_published": 1000,

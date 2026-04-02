@@ -1,9 +1,8 @@
-"""
-OKX REST API Client
-===================
+# Created by Oliver Meihls
 
-REST client for OKX market data and funding rates.
-"""
+# OKX REST API Client
+#
+# REST client for OKX market data and funding rates.
 
 import asyncio
 import hmac
@@ -20,14 +19,12 @@ logger = get_connector_logger('okx')
 
 
 class OKXClient:
-    """
-    OKX REST API client for market data.
-    
-    Provides:
-    - Funding rate data
-    - Ticker/price data
-    - Open interest
-    """
+    # OKX REST API client for market data.
+    #
+    # Provides:
+    # - Funding rate data
+    # - Ticker/price data
+    # - Open interest
     
     BASE_URL = "https://www.okx.com"
     
@@ -37,14 +34,12 @@ class OKXClient:
         api_secret: str = "",
         passphrase: str = "",
     ):
-        """
-        Initialize OKX client.
-        
-        Args:
-            api_key: OKX API key
-            api_secret: OKX API secret
-            passphrase: OKX API passphrase
-        """
+        # Initialize OKX client.
+        #
+        # Args:
+        # api_key: OKX API key
+        # api_secret: OKX API secret
+        # passphrase: OKX API passphrase
         self.api_key = api_key
         self.api_secret = api_secret
         self.passphrase = passphrase
@@ -67,18 +62,18 @@ class OKXClient:
         logger.info("OKX client initialized")
     
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session."""
+        # Get or create HTTP session.
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession()
         return self._session
     
     async def close(self) -> None:
-        """Close HTTP session."""
+        # Close HTTP session.
         if self._session and not self._session.closed:
             await self._session.close()
     
     def _sign_request(self, timestamp: str, method: str, path: str, body: str = "") -> str:
-        """Generate request signature."""
+        # Generate request signature.
         message = timestamp + method + path + body
         mac = hmac.new(
             self.api_secret.encode('utf-8'),
@@ -94,7 +89,7 @@ class OKXClient:
         params: Optional[Dict] = None,
         signed: bool = False
     ) -> Dict:
-        """Make an API request."""
+        # Make an API request.
         # Rate limiting
         now = time.time()
         elapsed = now - self._last_request_time
@@ -155,15 +150,13 @@ class OKXClient:
             return {'code': '-1', 'msg': str(e), 'data': []}
     
     async def get_funding_rate(self, symbol: str) -> Optional[Dict]:
-        """
-        Get current funding rate for a symbol.
-        
-        Args:
-            symbol: Trading pair (e.g., 'BTC-USDT-SWAP')
-            
-        Returns:
-            Funding rate data dict or None
-        """
+        # Get current funding rate for a symbol.
+        #
+        # Args:
+        # symbol: Trading pair (e.g., 'BTC-USDT-SWAP')
+        #
+        # Returns:
+        # Funding rate data dict or None
         # Convert symbol format
         inst_id = self._to_okx_symbol(symbol)
         
@@ -190,16 +183,14 @@ class OKXClient:
         symbol: str,
         limit: int = 100
     ) -> List[Dict]:
-        """
-        Get historical funding rates.
-        
-        Args:
-            symbol: Trading pair
-            limit: Number of records
-            
-        Returns:
-            List of funding rate records
-        """
+        # Get historical funding rates.
+        #
+        # Args:
+        # symbol: Trading pair
+        # limit: Number of records
+        #
+        # Returns:
+        # List of funding rate records
         inst_id = self._to_okx_symbol(symbol)
         
         data = await self._request(
@@ -221,15 +212,13 @@ class OKXClient:
         return result
     
     async def get_ticker(self, symbol: str) -> Optional[Dict]:
-        """
-        Get ticker data for a symbol.
-        
-        Args:
-            symbol: Trading pair
-            
-        Returns:
-            Ticker data dict or None
-        """
+        # Get ticker data for a symbol.
+        #
+        # Args:
+        # symbol: Trading pair
+        #
+        # Returns:
+        # Ticker data dict or None
         inst_id = self._to_okx_symbol(symbol)
         
         data = await self._request(
@@ -255,15 +244,13 @@ class OKXClient:
         return None
     
     async def get_open_interest(self, symbol: str) -> Optional[Dict]:
-        """
-        Get open interest for a symbol.
-        
-        Args:
-            symbol: Trading pair
-            
-        Returns:
-            Open interest data or None
-        """
+        # Get open interest for a symbol.
+        #
+        # Args:
+        # symbol: Trading pair
+        #
+        # Returns:
+        # Open interest data or None
         inst_id = self._to_okx_symbol(symbol)
         
         data = await self._request(
@@ -284,12 +271,10 @@ class OKXClient:
         return None
     
     def _to_okx_symbol(self, symbol: str) -> str:
-        """
-        Convert unified symbol to OKX format.
-        
-        'BTC/USDT:USDT' -> 'BTC-USDT-SWAP'
-        'BTC/USDT' -> 'BTC-USDT'
-        """
+        # Convert unified symbol to OKX format.
+        #
+        # 'BTC/USDT:USDT' -> 'BTC-USDT-SWAP'
+        # 'BTC/USDT' -> 'BTC-USDT'
         is_perp = ':' in symbol
         
         if is_perp:
@@ -307,14 +292,12 @@ class OKXClient:
         interval_seconds: int = 300,
         callback=None
     ) -> None:
-        """
-        Continuously poll funding rates.
-        
-        Args:
-            symbols: List of symbols to poll
-            interval_seconds: Polling interval
-            callback: Function to call with data
-        """
+        # Continuously poll funding rates.
+        #
+        # Args:
+        # symbols: List of symbols to poll
+        # interval_seconds: Polling interval
+        # callback: Function to call with data
         logger.info(f"Starting funding rate polling for {len(symbols)} symbols")
         
         while True:
@@ -332,7 +315,7 @@ class OKXClient:
             await asyncio.sleep(interval_seconds)
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Return health for dashboard."""
+        # Return health for dashboard.
         now = time.time()
         age = (now - self.last_message_ts) if self.last_message_ts else None
         if self.consecutive_failures > 0:

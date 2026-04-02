@@ -1,19 +1,18 @@
-"""
-Shared market state for Kalshi farm mode.
+# Created by Oliver Meihls
 
-All 7,488 farm bots read from ONE copy of these dicts instead of each
-maintaining their own asyncio subscriber queues.  This eliminates the
-O(N_bots) bus fan-out that blocked the event loop.
-
-Architecture
-------------
-* FarmDispatcher (in farm_runner.py) subscribes ONCE per high-frequency
-  topic and writes into SharedFarmState.
-* StrategyEngine and MispricingScalper in farm mode point their internal
-  state dicts at the shared objects — dict identity, not copy.
-* Low-frequency topics (fills, ws.status, account_balance) are still
-  fanned out per-bot because they fire rarely and carry bot-specific data.
-"""
+# Shared market state for Kalshi farm mode.
+#
+# All 7,488 farm bots read from ONE copy of these dicts instead of each
+# maintaining their own asyncio subscriber queues.  This eliminates the
+# O(N_bots) bus fan-out that blocked the event loop.
+#
+# Architecture
+# * FarmDispatcher (in farm_runner.py) subscribes ONCE per high-frequency
+# topic and writes into SharedFarmState.
+# * StrategyEngine and MispricingScalper in farm mode point their internal
+# state dicts at the shared objects — dict identity, not copy.
+# * Low-frequency topics (fills, ws.status, account_balance) are still
+# fanned out per-bot because they fire rarely and carry bot-specific data.
 from __future__ import annotations
 
 from collections import deque
@@ -23,7 +22,7 @@ from .models import FairProbability, OrderbookState
 
 
 class SharedFarmState:
-    """Single source of truth for all market data in farm mode."""
+    # Single source of truth for all market data in farm mode.
 
     __slots__ = (
         "fair_probs",

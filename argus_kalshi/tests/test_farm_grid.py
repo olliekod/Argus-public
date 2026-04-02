@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 from argus_kalshi.farm_grid import generate_farm_configs

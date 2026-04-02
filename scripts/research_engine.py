@@ -1,50 +1,47 @@
 #!/usr/bin/env python3
-"""
-Autonomous Research Engine
-==========================
+# Created by Oliver Meihls
 
-A proactive service that watches a research backlog and drives each
-objective through the full Pantheon 5-stage debate protocol:
-
-    Prometheus (Proposal) -> Ares (Critique) -> Prometheus (Revision)
-    -> Ares (Final Attack) -> Athena (Adjudication)
-
-Upon completion:
-- The :class:`~src.agent.pantheon.factory.FactoryPipe` persists the
-  case and evidence to the strategy library.
-- If Athena grades the strategy "Gold" or "Silver",
-  :class:`~src.agent.pantheon.hermes.HermesRouter` automatically
-  routes it to the Hades backtest queue.
-
-Queue Source
-------------
-The engine reads research objectives from either:
-1. ``config/research_backlog.yaml`` — a YAML file with a list of objectives.
-2. The ``research_queue`` table in ``data/argus.db`` (if it exists).
-
-Usage
------
-::
-
-    # Process the entire backlog, one objective at a time
-    python scripts/research_engine.py
-
-    # Process a single objective from the CLI
-    python scripts/research_engine.py --objective "BTC/USDT Breakout seasonality"
-
-    # Dry-run: show what would be processed without running debates
-    python scripts/research_engine.py --dry-run
-
-    # Process one objective and exit
-    python scripts/research_engine.py --once
-
-Clean Shutdown
---------------
-The engine installs a SIGINT / SIGTERM handler.  When interrupted:
-1. The current debate stage is allowed to finish (if one is in progress).
-2. The partial case file is persisted with whatever stages completed.
-3. The remaining backlog is left untouched for the next run.
-"""
+# Autonomous Research Engine
+#
+# A proactive service that watches a research backlog and drives each
+# objective through the full Pantheon 5-stage debate protocol:
+#
+# Prometheus (Proposal) -> Ares (Critique) -> Prometheus (Revision)
+# -> Ares (Final Attack) -> Athena (Adjudication)
+#
+# Upon completion:
+# - The :class:`~src.agent.pantheon.factory.FactoryPipe` persists the
+# case and evidence to the strategy library.
+# - If Athena grades the strategy "Gold" or "Silver",
+# :class:`~src.agent.pantheon.hermes.HermesRouter` automatically
+# routes it to the Hades backtest queue.
+#
+# Queue Source
+# The engine reads research objectives from either:
+# 1. ``config/research_backlog.yaml`` — a YAML file with a list of objectives.
+# 2. The ``research_queue`` table in ``data/argus.db`` (if it exists).
+#
+# Usage
+# -----
+# ::
+#
+# # Process the entire backlog, one objective at a time
+# python scripts/research_engine.py
+#
+# # Process a single objective from the CLI
+# python scripts/research_engine.py --objective "BTC/USDT Breakout seasonality"
+#
+# # Dry-run: show what would be processed without running debates
+# python scripts/research_engine.py --dry-run
+#
+# # Process one objective and exit
+# python scripts/research_engine.py --once
+#
+# Clean Shutdown
+# The engine installs a SIGINT / SIGTERM handler.  When interrupted:
+# 1. The current debate stage is allowed to finish (if one is in progress).
+# 2. The partial case file is persisted with whatever stages completed.
+# 3. The remaining backlog is left untouched for the next run.
 
 from __future__ import annotations
 
@@ -100,9 +97,7 @@ from src.core.manifests import (
 
 logger = logging.getLogger("argus.research_engine")
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Console Dialogue & Stats Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 _ROLE_COLORS = {
     "Prometheus": "\033[94m",  # Blue
@@ -118,11 +113,10 @@ _BOX   = "-"
 
 
 def _print_dialogue_block(role_name: str, stage_name: str, response: str) -> None:
-    """Pretty-print a single LLM dialogue block to stdout.
-
-    Uses ANSI colours so the terminal output is easy to scan.
-    Colour codes degrade gracefully if the terminal doesn't support them.
-    """
+    # Pretty-print a single LLM dialogue block to stdout.
+    #
+    # Uses ANSI colours so the terminal output is easy to scan.
+    # Colour codes degrade gracefully if the terminal doesn't support them.
     color = _ROLE_COLORS.get(role_name, "")
     width = 80
     header = f" {role_name} [{stage_name}] "
@@ -141,7 +135,7 @@ def _print_dialogue_block(role_name: str, stage_name: str, response: str) -> Non
 
 
 def _print_hades_summary(results: list) -> None:
-    """Print a formatted table of Hades backtest experiment results to stdout."""
+    # Print a formatted table of Hades backtest experiment results to stdout.
     if not results:
         print(f"\n{_DIM}[Hades] No experiment results returned.{_RESET}\n")
         return
@@ -181,14 +175,13 @@ def _print_hades_summary(results: list) -> None:
     print(f"{_CYAN}{_DIM}{border}{_RESET}\n")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 
 _BACKLOG_PATH = Path("config/research_backlog.yaml")
 _DB_PATH = Path("data/argus.db")
 
 
 def _load_yaml_backlog() -> List[Dict[str, Any]]:
-    """Load research objectives from YAML backlog."""
+    # Load research objectives from YAML backlog.
     if not _BACKLOG_PATH.exists():
         logger.info("No research backlog found at %s", _BACKLOG_PATH)
         return []
@@ -213,7 +206,7 @@ def _load_yaml_backlog() -> List[Dict[str, Any]]:
 
 
 def _load_db_queue() -> List[Dict[str, Any]]:
-    """Load pending research objectives from SQLite queue table."""
+    # Load pending research objectives from SQLite queue table.
     if not _DB_PATH.exists():
         return []
 
@@ -249,7 +242,7 @@ def _load_db_queue() -> List[Dict[str, Any]]:
 
 
 def _mark_db_objective_done(obj_id: int, case_id: str, grading: str) -> None:
-    """Mark a DB queue objective as completed."""
+    # Mark a DB queue objective as completed.
     if not _DB_PATH.exists():
         return
     try:
@@ -265,7 +258,7 @@ def _mark_db_objective_done(obj_id: int, case_id: str, grading: str) -> None:
 
 
 def _mark_yaml_objective_done(objective: str) -> None:
-    """Mark a YAML backlog objective as completed by updating its status."""
+    # Mark a YAML backlog objective as completed by updating its status.
     if not _BACKLOG_PATH.exists():
         return
     try:
@@ -287,7 +280,7 @@ def _mark_yaml_objective_done(objective: str) -> None:
 
 
 def load_research_queue() -> List[Dict[str, Any]]:
-    """Load pending research objectives from all sources."""
+    # Load pending research objectives from all sources.
     items: List[Dict[str, Any]] = []
     items.extend(_load_yaml_backlog())
     items.extend(_load_db_queue())
@@ -298,18 +291,14 @@ def load_research_queue() -> List[Dict[str, Any]]:
     return items
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Research Engine
-# ═══════════════════════════════════════════════════════════════════════════
 
 class ResearchEngine:
-    """Autonomous research service that drives the Pantheon debate protocol.
-
-    Parameters
-    ----------
-    orchestrator : ArgusOrchestrator
-        The fully-wired orchestrator with Zeus, Delphi, and LLM access.
-    """
+    # Autonomous research service that drives the Pantheon debate protocol.
+    #
+    # Parameters
+    # orchestrator : ArgusOrchestrator
+    # The fully-wired orchestrator with Zeus, Delphi, and LLM access.
 
     def __init__(
         self,
@@ -334,19 +323,17 @@ class ResearchEngine:
 
 
     def request_shutdown(self) -> None:
-        """Signal the engine to stop after the current debate stage."""
+        # Signal the engine to stop after the current debate stage.
         self._shutdown_requested = True
         logger.info("Shutdown requested — will finish current stage and exit.")
 
     async def process_objective(self, objective: str) -> Dict[str, Any]:
-        """Run a single research objective through the full Pantheon debate.
-
-        Returns
-        -------
-        dict
-            Summary of the research outcome including case_id, grading,
-            decision, and confidence.
-        """
+        # Run a single research objective through the full Pantheon debate.
+        #
+        # Returns
+        # dict
+        # Summary of the research outcome including case_id, grading,
+        # decision, and confidence.
         case_id = f"research_{int(time.time())}_{hash(objective) % 10000:04d}"
         logger.info("Starting research case %s: %s", case_id, objective[:80])
 
@@ -361,17 +348,15 @@ class ResearchEngine:
         return summary
 
     async def process_objective_standalone(self, objective: str) -> Dict[str, Any]:
-        """Run the debate protocol independently without the orchestrator chat loop.
-
-        This directly drives the 5-stage debate using the Pantheon roles,
-        which gives us finer control over shutdown coordination and error
-        handling.
-
-        Returns
-        -------
-        dict
-            Summary of the research outcome.
-        """
+        # Run the debate protocol independently without the orchestrator chat loop.
+        #
+        # This directly drives the 5-stage debate using the Pantheon roles,
+        # which gives us finer control over shutdown coordination and error
+        # handling.
+        #
+        # Returns
+        # dict
+        # Summary of the research outcome.
         case_id = f"research_{int(time.time())}_{abs(hash(objective)) % 10000:04d}"
         case = CaseFile(case_id=case_id, objective=objective)
         self._current_case = case
@@ -613,10 +598,9 @@ class ResearchEngine:
         }
 
     def _run_hades_cycle(self, case_id: str, universe: Optional[List[str]] = None) -> Optional[List[Dict[str, Any]]]:
-        """Trigger the Hades research loop for a specific case.
-
-        Returns a list of experiment result summaries, or None on failure.
-        """
+        # Trigger the Hades research loop for a specific case.
+        #
+        # Returns a list of experiment result summaries, or None on failure.
         logger.info("  [Singularity] Triggering Hades backtest for case_id=%s...", case_id)
         try:
             # Inline import to avoid circular dependency
@@ -642,7 +626,7 @@ class ResearchEngine:
     def _parse_outcome(
         self, result_text: str, case_id: str, objective: str
     ) -> Dict[str, Any]:
-        """Parse the orchestrator's debate output into a summary dict."""
+        # Parse the orchestrator's debate output into a summary dict.
         # Extract key metrics from the debate log
         decision = "UNKNOWN"
         confidence = 0.0
@@ -674,20 +658,17 @@ class ResearchEngine:
         once: bool = False,
         dry_run: bool = False,
     ) -> List[Dict[str, Any]]:
-        """Process the research backlog.
-
-        Parameters
-        ----------
-        once : bool
-            If True, process only the first pending objective and exit.
-        dry_run : bool
-            If True, print objectives but don't run debates.
-
-        Returns
-        -------
-        list
-            List of outcome summaries.
-        """
+        # Process the research backlog.
+        #
+        # Parameters
+        # once : bool
+        # If True, process only the first pending objective and exit.
+        # dry_run : bool
+        # If True, print objectives but don't run debates.
+        #
+        # Returns
+        # list
+        # List of outcome summaries.
         queue = load_research_queue()
 
         if not queue:
@@ -729,12 +710,10 @@ class ResearchEngine:
         return results
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Startup & Signal Handling
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _build_orchestrator(config: Dict[str, Any]) -> ArgusOrchestrator:
-    """Wire up an ArgusOrchestrator with all dependencies."""
+    # Wire up an ArgusOrchestrator with all dependencies.
     # 1. Initialize ZeusConfig from dict
     z_cfg_dict = config.get("zeus", {})
     zeus_cfg = ZeusConfig(
@@ -786,7 +765,7 @@ def _build_orchestrator(config: Dict[str, Any]) -> ArgusOrchestrator:
 
 
 async def _main(args: argparse.Namespace) -> None:
-    """Async entry point."""
+    # Async entry point.
     config = load_config()
 
     orchestrator = _build_orchestrator(config)
@@ -825,7 +804,7 @@ async def _main(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    """CLI entry point."""
+    # CLI entry point.
     parser = argparse.ArgumentParser(
         description="Argus Autonomous Research Engine",
         formatter_class=argparse.RawDescriptionHelpFormatter,

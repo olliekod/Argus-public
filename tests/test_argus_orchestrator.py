@@ -1,4 +1,6 @@
-"""Tests for the Argus Orchestrator — conversational loop, tool integration, case-file workflow."""
+# Created by Oliver Meihls
+
+# Tests for the Argus Orchestrator — conversational loop, tool integration, case-file workflow.
 
 from __future__ import annotations
 
@@ -27,16 +29,14 @@ from src.core.config import ZeusConfig
 from src.core.manifests import ManifestValidationError
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 class _FakeResourceManager:
     gpu_enabled: bool = True
 
 
 def _make_stack(tmp_path, **zeus_kwargs):
-    """Create a full Zeus → Delphi → Runtime → Argus stack for testing."""
+    # Create a full Zeus → Delphi → Runtime → Argus stack for testing.
     db_path = str(tmp_path / "argus.db")
     zeus_cfg = ZeusConfig(governance_db_path=db_path, **zeus_kwargs)
     zeus = ZeusPolicyEngine(zeus_cfg)
@@ -47,7 +47,7 @@ def _make_stack(tmp_path, **zeus_kwargs):
 
 
 async def _echo_llm(messages: List[Dict[str, str]], model: str) -> str:
-    """Deterministic LLM stub that echoes the last user message."""
+    # Deterministic LLM stub that echoes the last user message.
     for msg in reversed(messages):
         if msg["role"] == "user":
             return f"Echo: {msg['content']}"
@@ -55,7 +55,7 @@ async def _echo_llm(messages: List[Dict[str, str]], model: str) -> str:
 
 
 async def _tool_calling_llm(messages: List[Dict[str, str]], model: str) -> str:
-    """LLM stub that always responds with a tool call for 'get_status'."""
+    # LLM stub that always responds with a tool call for 'get_status'.
     # Check if we're in an observation follow-up
     for msg in reversed(messages):
         if msg["role"] == "user" and msg["content"].startswith("Observation:"):
@@ -64,12 +64,12 @@ async def _tool_calling_llm(messages: List[Dict[str, str]], model: str) -> str:
 
 
 async def _noop_llm(messages: List[Dict[str, str]], model: str) -> str:
-    """LLM stub that returns a plain text response (no tool call)."""
+    # LLM stub that returns a plain text response (no tool call).
     return "I understand your request. Here is my analysis."
 
 
 async def _case_file_llm(messages: List[Dict[str, str]], model: str) -> str:
-    """LLM stub that returns stage-appropriate responses for case-file debates."""
+    # LLM stub that returns stage-appropriate responses for case-file debates.
     for msg in reversed(messages):
         if msg["role"] == "system":
             if "Prometheus" in msg["content"]:
@@ -81,9 +81,7 @@ async def _case_file_llm(messages: List[Dict[str, str]], model: str) -> str:
     return "Generic case file response."
 
 
-# ---------------------------------------------------------------------------
 # ConversationBuffer tests
-# ---------------------------------------------------------------------------
 
 class TestConversationBuffer:
     def test_append_and_retrieve(self):
@@ -123,9 +121,7 @@ class TestConversationBuffer:
         assert len(buf.messages) == 1  # Original unaffected
 
 
-# ---------------------------------------------------------------------------
 # CaseFile tests
-# ---------------------------------------------------------------------------
 
 class TestCaseFile:
     def test_advance_through_stages(self):
@@ -155,9 +151,7 @@ class TestCaseFile:
         assert case.artifacts[0]["stage"] == CaseStage.PROPOSAL_V1.value
 
 
-# ---------------------------------------------------------------------------
 # Intent classification tests
-# ---------------------------------------------------------------------------
 
 class TestIntentClassification:
     def _make_orchestrator(self, tmp_path):
@@ -196,9 +190,7 @@ class TestIntentClassification:
         assert orch._classify_intent("How does the regime detector work?") == Intent.QUESTION
 
 
-# ---------------------------------------------------------------------------
 # Mode switching tests
-# ---------------------------------------------------------------------------
 
 class TestModeSwitching:
     @pytest.mark.asyncio
@@ -244,9 +236,7 @@ class TestModeSwitching:
         assert "ACTIVE" in response
 
 
-# ---------------------------------------------------------------------------
 # Tool-calling (ReAct loop) tests
-# ---------------------------------------------------------------------------
 
 class TestToolCalling:
     @pytest.mark.asyncio
@@ -265,7 +255,7 @@ class TestToolCalling:
 
     @pytest.mark.asyncio
     async def test_tool_result_parsed_into_response(self, tmp_path):
-        """Verify tool-calling results are correctly parsed and integrated."""
+        # Verify tool-calling results are correctly parsed and integrated.
         zeus, delphi, runtime = _make_stack(tmp_path)
 
         @delphi.register(name="get_status", description="Get system status", risk_level=RiskLevel.READ_ONLY)
@@ -364,9 +354,7 @@ class TestToolCalling:
         assert "kaboom" in response.lower() or "failed" in response.lower()
 
 
-# ---------------------------------------------------------------------------
 # Case-file debate protocol tests
-# ---------------------------------------------------------------------------
 
 class TestCaseFileWorkflow:
     @pytest.mark.asyncio
@@ -417,9 +405,7 @@ class TestCaseFileWorkflow:
         assert "restricted" in response.lower() or "switch" in response.lower()
 
 
-# ---------------------------------------------------------------------------
 # Runtime awareness tests
-# ---------------------------------------------------------------------------
 
 class TestRuntimeAwareness:
     @pytest.mark.asyncio
@@ -447,9 +433,7 @@ class TestRuntimeAwareness:
         assert "Echo:" in response
 
 
-# ---------------------------------------------------------------------------
 # Zeus budget / escalation tests
-# ---------------------------------------------------------------------------
 
 class TestEscalation:
     @pytest.mark.asyncio
@@ -525,9 +509,7 @@ class TestResourceManager:
         assert peak == 2
 
 
-# ---------------------------------------------------------------------------
 # Conversation memory integration tests
-# ---------------------------------------------------------------------------
 
 class TestConversationIntegration:
     @pytest.mark.asyncio
@@ -566,9 +548,7 @@ class TestConversationIntegration:
         assert "DATA_ONLY" in system_msgs[0]["content"]
 
 
-# ---------------------------------------------------------------------------
 # Error handling tests
-# ---------------------------------------------------------------------------
 
 class TestErrorHandling:
     @pytest.mark.asyncio
@@ -592,9 +572,7 @@ class TestErrorHandling:
         assert "nothing pending" in response.lower()
 
 
-# ---------------------------------------------------------------------------
 # Tool catalog tests
-# ---------------------------------------------------------------------------
 
 class TestToolCatalog:
     def test_catalog_with_no_tools(self, tmp_path):
@@ -629,9 +607,7 @@ class TestToolCatalog:
         assert "READ_ONLY" in catalog
 
 
-# ---------------------------------------------------------------------------
 # Parse tool-call tests
-# ---------------------------------------------------------------------------
 
 class TestParseToolCall:
     def _make_orchestrator(self, tmp_path):
@@ -667,9 +643,7 @@ class TestParseToolCall:
         assert result is None
 
 
-# ---------------------------------------------------------------------------
 # Tiered Escalation tests
-# ---------------------------------------------------------------------------
 
 class TestTieredEscalation:
     @pytest.mark.asyncio
@@ -745,7 +719,7 @@ class TestTieredEscalation:
         assert len(escalation_calls) >= 1
 
     def test_ares_validation_enforcement(self):
-        """Ares must produce at least 3 findings; fewer raises ManifestValidationError."""
+        # Ares must produce at least 3 findings; fewer raises ManifestValidationError.
         critique_response = """
 <critique>
 {

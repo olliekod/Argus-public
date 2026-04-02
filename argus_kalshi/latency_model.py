@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 import random
@@ -8,7 +10,7 @@ from .simulation import ScenarioProfile
 
 
 class EmpiricalLatencyModel:
-    """Rolling empirical latency sampler keyed by (family, order_style, scenario)."""
+    # Rolling empirical latency sampler keyed by (family, order_style, scenario).
 
     def __init__(self, max_samples: int = 4000, seed: int = 0) -> None:
         self._samples: Dict[Tuple[str, str, str], Deque[float]] = defaultdict(

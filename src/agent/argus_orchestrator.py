@@ -1,8 +1,9 @@
-"""Argus Orchestrator — conversational agent, tool executor, and multi-agent coordinator.
+# Created by Oliver Meihls
 
-Integrates Zeus (policy), Delphi (tools), and RuntimeController into a
-cohesive chat loop backed by local LLMs via Ollama.
-"""
+# Argus Orchestrator — conversational agent, tool executor, and multi-agent coordinator.
+#
+# Integrates Zeus (policy), Delphi (tools), and RuntimeController into a
+# cohesive chat loop backed by local LLMs via Ollama.
 
 from __future__ import annotations
 
@@ -48,9 +49,7 @@ from src.core.manifests import (
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Configuration
-# ---------------------------------------------------------------------------
 
 DEFAULT_OLLAMA_BASE = "http://127.0.0.1:11434"
 DEFAULT_MODEL = "qwen2.5:14b-instruct"
@@ -61,12 +60,10 @@ DEFAULT_MAX_HISTORY = 40  # message pairs kept in memory
 DEFAULT_MAX_TOOL_ITERATIONS = 6  # ReAct loop guard
 
 
-# ---------------------------------------------------------------------------
 # Intent classification
-# ---------------------------------------------------------------------------
 
 class Intent(str, Enum):
-    """Coarse-grained intent categories for user input."""
+    # Coarse-grained intent categories for user input.
 
     COMMAND = "command"
     QUESTION = "question"
@@ -76,9 +73,7 @@ class Intent(str, Enum):
     UNKNOWN = "unknown"
 
 
-# ---------------------------------------------------------------------------
 # Case-file stages (§10.8 debate protocol)
-# ---------------------------------------------------------------------------
 
 class CaseStage(int, Enum):
     INITIATED = 0
@@ -91,7 +86,7 @@ class CaseStage(int, Enum):
 
 @dataclass
 class CaseFile:
-    """Tracks a multi-agent debate through the six-stage protocol."""
+    # Tracks a multi-agent debate through the six-stage protocol.
 
     case_id: str
     objective: str
@@ -102,7 +97,7 @@ class CaseFile:
     created_utc: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def advance(self) -> CaseStage:
-        """Move to the next stage.  Returns the new stage."""
+        # Move to the next stage.  Returns the new stage.
         if self.stage.value < CaseStage.ADJUDICATION.value:
             self.stage = CaseStage(self.stage.value + 1)
         return self.stage
@@ -116,13 +111,11 @@ class CaseFile:
         })
 
 
-# ---------------------------------------------------------------------------
 # Conversation memory
-# ---------------------------------------------------------------------------
 
 @dataclass
 class ConversationBuffer:
-    """Sliding-window conversation history for the LLM context."""
+    # Sliding-window conversation history for the LLM context.
 
     max_messages: int = DEFAULT_MAX_HISTORY
     _messages: List[Dict[str, str]] = field(default_factory=list)
@@ -151,13 +144,11 @@ class ConversationBuffer:
         self._messages = system_msgs + non_system[-keep:]
 
     def to_prompt_messages(self) -> List[Dict[str, str]]:
-        """Return the messages list suitable for the Ollama /api/chat endpoint."""
+        # Return the messages list suitable for the Ollama /api/chat endpoint.
         return list(self._messages)
 
 
-# ---------------------------------------------------------------------------
 # Escalation provider (for API fallback)
-# ---------------------------------------------------------------------------
 
 class EscalationProvider(str, Enum):
     CLAUDE = "claude"
@@ -173,9 +164,7 @@ class EscalationConfig:
     estimated_cost_per_call: float = 0.05
 
 
-# ---------------------------------------------------------------------------
 # Argus Orchestrator
-# ---------------------------------------------------------------------------
 
 _SYSTEM_PROMPT = """\
 You are Argus, a loyal friend and a highly capable AI partner in trading and research.
@@ -256,7 +245,7 @@ _MODE_NAME_MAP = {
 
 
 class ArgusOrchestrator:
-    """Central conversational orchestrator integrating Zeus, Delphi, and RuntimeController."""
+    # Central conversational orchestrator integrating Zeus, Delphi, and RuntimeController.
 
     def __init__(
         self,
@@ -322,7 +311,7 @@ class ArgusOrchestrator:
         self._refresh_system_prompt()
 
     def _register_internal_tools(self) -> None:
-        """Register built-in tools for Argus."""
+        # Register built-in tools for Argus.
 
         @self.delphi.register(
             name="set_mode",
@@ -456,7 +445,7 @@ class ArgusOrchestrator:
         get_farm_status: Optional[Callable] = None,
         get_kalshi_summary: Optional[Callable] = None,
     ) -> None:
-        """Dynamically wire data sources to the agent."""
+        # Dynamically wire data sources to the agent.
         if get_status: self._get_status = get_status
         if get_pnl: self._get_pnl = get_pnl
         if get_positions: self._get_positions = get_positions
@@ -464,20 +453,17 @@ class ArgusOrchestrator:
         if get_kalshi_summary: self._get_kalshi_summary = get_kalshi_summary
 
     async def stop(self) -> None:
-        """Gracefully stop the agent stack and release resources."""
+        # Gracefully stop the agent stack and release resources.
         logger.info("AgentOrchestrator: Shutting down AI stack...")
         await self.runtime.transition_to(RuntimeMode.OFFLINE)
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+# Public API
 
     async def chat(self, message: str) -> str:
-        """Process a user message and return Argus's response.
-
-        This is the primary entry point. It classifies intent, routes to
-        the appropriate handler, and manages the ReAct tool-calling loop.
-        """
+        # Process a user message and return Argus's response.
+        #
+        # This is the primary entry point. It classifies intent, routes to
+        # the appropriate handler, and manages the ReAct tool-calling loop.
         self.memory.append("user", message)
         await self._audit("user_message", {"content": message})
 
@@ -504,7 +490,7 @@ class ArgusOrchestrator:
         return response
 
     async def chat_stream(self, message: str) -> AsyncIterator[str]:
-        """Streaming variant of chat() that yields token chunks."""
+        # Streaming variant of chat() that yields token chunks.
         self.memory.append("user", message)
         await self._audit("user_message_stream", {"content": message})
 
@@ -546,9 +532,7 @@ class ArgusOrchestrator:
     def pending_approval(self) -> Optional[Dict[str, Any]]:
         return self._pending_approval
 
-    # ------------------------------------------------------------------
-    # Intent classification
-    # ------------------------------------------------------------------
+# Intent classification
 
     def _classify_intent(self, message: str) -> Intent:
         text = message.strip()
@@ -585,9 +569,7 @@ class ArgusOrchestrator:
 
         return Intent.UNKNOWN
 
-    # ------------------------------------------------------------------
-    # Handler: mode switch
-    # ------------------------------------------------------------------
+# Handler: mode switch
 
     async def _handle_mode_switch(self, message: str) -> str:
         match = _MODE_SWITCH_PATTERNS.search(message)
@@ -630,9 +612,7 @@ class ArgusOrchestrator:
             return "GPU disabled, heavy compute paused. CPU-only chat available."
         return "All systems active. GPU enabled, Ollama running."
 
-    # ------------------------------------------------------------------
-    # Handler: approval (Zeus gating)
-    # ------------------------------------------------------------------
+# Handler: approval (Zeus gating)
 
     async def _handle_approval(self) -> str:
         if self._pending_approval is None:
@@ -671,9 +651,7 @@ class ArgusOrchestrator:
         })
         return self._format_tool_result(result)
 
-    # ------------------------------------------------------------------
-    # Handler: command (Delphi tool-calling ReAct loop)
-    # ------------------------------------------------------------------
+# Handler: command (Delphi tool-calling ReAct loop)
 
     async def _handle_command(self, message: str) -> str:
         # Check runtime mode for compute-heavy tasks
@@ -747,9 +725,7 @@ class ArgusOrchestrator:
         summary = "\n".join(thoughts) if thoughts else "No tool calls were made."
         return f"I reached my reasoning limit. Here's what I found:\n{summary}"
 
-    # ------------------------------------------------------------------
-    # Handler: research (Case File debate protocol)
-    # ------------------------------------------------------------------
+# Handler: research (Case File debate protocol)
 
     async def _handle_research(self, message: str) -> str:
         restriction = self._check_runtime_restriction(message)
@@ -949,20 +925,16 @@ class ArgusOrchestrator:
         self._active_case = None
         return "\n".join(debate_log)
 
-    # ------------------------------------------------------------------
-    # Handler: question (straight LLM completion)
-    # ------------------------------------------------------------------
+# Handler: question (straight LLM completion)
 
     async def _handle_question(self, message: str) -> str:
         messages = self.memory.to_prompt_messages()
         return await self._llm_complete(messages, self.model)
 
-    # ------------------------------------------------------------------
-    # Runtime restriction check
-    # ------------------------------------------------------------------
+# Runtime restriction check
 
     def _check_runtime_restriction(self, message: str) -> Optional[str]:
-        """Return a polite restriction message when in DATA_ONLY mode, or None."""
+        # Return a polite restriction message when in DATA_ONLY mode, or None.
         mode = self.zeus.current_mode
         if mode == RuntimeMode.DATA_ONLY:
             compute_keywords = ["backtest", "replay", "hades", "research", "run", "execute", "deploy"]
@@ -975,12 +947,10 @@ class ArgusOrchestrator:
                 )
         return None
 
-    # ------------------------------------------------------------------
-    # Hybrid escalation
-    # ------------------------------------------------------------------
+# Hybrid escalation
 
     async def _escalate_to_api(self, messages: List[Dict[str, str]], justification: str) -> Optional[str]:
-        """Attempt API escalation if budget allows. Returns content string or None."""
+        # Attempt API escalation if budget allows. Returns content string or None.
         if not self.escalation_config or not self.escalation_config.api_key:
             return None
 
@@ -1026,12 +996,10 @@ class ArgusOrchestrator:
             })
             return None
 
-    # ------------------------------------------------------------------
-    # LLM interaction (Ollama)
-    # ------------------------------------------------------------------
+# LLM interaction (Ollama)
 
     async def _llm_complete(self, messages: List[Dict[str, str]], model: str, escalation_justification: Optional[str] = None) -> str:
-        """Completion via Ollama with tiered escalation (14B -> 32B -> API)."""
+        # Completion via Ollama with tiered escalation (14B -> 32B -> API).
         async with self.resource_manager.llm_slot():
             # 1. If escalation is justified (e.g. Athena), try API FIRST if budget allows
             if escalation_justification and self.escalation_config:
@@ -1059,7 +1027,7 @@ class ArgusOrchestrator:
             return "I'm unable to reach any LLM service right now. Please check that Ollama is running."
 
     async def _call_ollama(self, messages: List[Dict[str, str]], model: str) -> Optional[str]:
-        """Low-level Ollama call."""
+        # Low-level Ollama call.
         url = f"{self.ollama_base}/api/chat"
         payload = {"model": model, "messages": messages, "stream": False}
         try:
@@ -1074,7 +1042,7 @@ class ArgusOrchestrator:
         return None
 
     async def _llm_stream(self, messages: List[Dict[str, str]], model: str) -> AsyncIterator[str]:
-        """Streaming completion via Ollama /api/chat."""
+        # Streaming completion via Ollama /api/chat.
         if self._llm_call is not None:
             result = await self._llm_call(messages, model)
             yield result
@@ -1104,16 +1072,14 @@ class ArgusOrchestrator:
             yield "I'm unable to reach the LLM service right now."
 
     async def _llm_complete_for_role(self, prompt: str, role: str, escalation_justification: Optional[str] = None) -> str:
-        """Run a completion with a role-specific prompt for Pantheon agents."""
+        # Run a completion with a role-specific prompt for Pantheon agents.
         messages = [
             {"role": "system", "content": f"You are {role}, part of the Argus Pantheon."},
             {"role": "user", "content": prompt},
         ]
         return await self._llm_complete(messages, self.model, escalation_justification=escalation_justification)
 
-    # ------------------------------------------------------------------
-    # Tool-call helpers
-    # ------------------------------------------------------------------
+# Tool-call helpers
 
     def _build_tool_prompt(self, user_message: str) -> str:
         tool_catalog = self._get_tool_catalog()
@@ -1138,7 +1104,7 @@ class ArgusOrchestrator:
         return "\n".join(lines)
 
     def _parse_tool_call(self, text: str) -> Optional[Dict[str, Any]]:
-        """Extract a JSON tool call from LLM output, if present."""
+        # Extract a JSON tool call from LLM output, if present.
         # 1. Try the full text as JSON directly
         try:
             parsed = json.loads(text.strip())
@@ -1170,7 +1136,7 @@ class ArgusOrchestrator:
 
     @staticmethod
     def _extract_json_objects(text: str) -> List[str]:
-        """Yield substrings that look like balanced JSON objects."""
+        # Yield substrings that look like balanced JSON objects.
         results: List[str] = []
         i = 0
         while i < len(text):
@@ -1209,12 +1175,10 @@ class ArgusOrchestrator:
         error = result.error or {}
         return f"Tool `{result.tool_name}` failed [{error.get('code', '?')}]: {error.get('message', 'unknown')}"
 
-    # ------------------------------------------------------------------
-    # Case-file prompt helpers
-    # ------------------------------------------------------------------
+# Case-file prompt helpers
 
     def _build_case_prompt(self, case: CaseFile, template: str) -> str:
-        """Fill in the template with available artifacts."""
+        # Fill in the template with available artifacts.
         artifacts = case.artifacts
         latest = artifacts[-1]["content"] if artifacts else ""
         original = artifacts[0]["content"] if artifacts else ""
@@ -1228,9 +1192,7 @@ class ArgusOrchestrator:
             full_debate=full_debate,
         )
 
-    # ------------------------------------------------------------------
-    # System prompt management
-    # ------------------------------------------------------------------
+# System prompt management
 
     def _refresh_system_prompt(self) -> None:
         tool_list = self._get_tool_catalog()
@@ -1245,9 +1207,7 @@ class ArgusOrchestrator:
         else:
             msgs.insert(0, {"role": "system", "content": prompt})
 
-    # ------------------------------------------------------------------
-    # Audit logging
-    # ------------------------------------------------------------------
+# Audit logging
 
     async def _audit(self, event: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         await self.zeus.log_action({

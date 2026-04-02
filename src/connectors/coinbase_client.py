@@ -1,10 +1,9 @@
-"""
-Coinbase REST API Client
-========================
+# Created by Oliver Meihls
 
-REST client for Coinbase spot prices (US-friendly).
-Replaces Binance WebSocket which blocks US IPs.
-"""
+# Coinbase REST API Client
+#
+# REST client for Coinbase spot prices (US-friendly).
+# Replaces Binance WebSocket which blocks US IPs.
 
 import asyncio
 import time
@@ -18,12 +17,10 @@ logger = get_connector_logger('coinbase')
 
 
 class CoinbaseClient:
-    """
-    Coinbase public API client for spot prices.
-    
-    Uses public endpoints - no API key required for price data.
-    US-friendly - no IP blocking.
-    """
+    # Coinbase public API client for spot prices.
+    #
+    # Uses public endpoints - no API key required for price data.
+    # US-friendly - no IP blocking.
     
     BASE_URL = "https://api.coinbase.com/v2"
     EXCHANGE_URL = "https://api.exchange.coinbase.com"
@@ -33,13 +30,11 @@ class CoinbaseClient:
         symbols: List[str],
         on_ticker: Optional[Callable] = None,
     ):
-        """
-        Initialize Coinbase client.
-        
-        Args:
-            symbols: List of symbols (e.g., ['BTC/USDT', 'ETH/USDT'])
-            on_ticker: Callback for ticker updates
-        """
+        # Initialize Coinbase client.
+        #
+        # Args:
+        # symbols: List of symbols (e.g., ['BTC/USDT', 'ETH/USDT'])
+        # on_ticker: Callback for ticker updates
         self.symbols = [self._normalize_symbol(s) for s in symbols]
         self.on_ticker = on_ticker
         
@@ -63,7 +58,7 @@ class CoinbaseClient:
         logger.info(f"Coinbase client initialized for {len(self.symbols)} symbols")
     
     def _normalize_symbol(self, symbol: str) -> str:
-        """Convert unified symbol to Coinbase format."""
+        # Convert unified symbol to Coinbase format.
         # 'BTC/USDT:USDT' -> 'BTC-USD'
         if ':' in symbol:
             symbol = symbol.split(':')[0]
@@ -74,27 +69,25 @@ class CoinbaseClient:
         return f"{base}-USD"
     
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session."""
+        # Get or create HTTP session.
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=10))
         return self._session
     
     async def close(self) -> None:
-        """Close HTTP session."""
+        # Close HTTP session.
         self._running = False
         if self._session and not self._session.closed:
             await self._session.close()
     
     async def get_ticker(self, symbol: str) -> Optional[Dict]:
-        """
-        Get spot price for a symbol.
-        
-        Args:
-            symbol: Coinbase symbol (e.g., 'BTC-USD')
-            
-        Returns:
-            Ticker data or None
-        """
+        # Get spot price for a symbol.
+        #
+        # Args:
+        # symbol: Coinbase symbol (e.g., 'BTC-USD')
+        #
+        # Returns:
+        # Ticker data or None
         session = await self._get_session()
         url = f"{self.EXCHANGE_URL}/products/{symbol}/ticker"
         
@@ -142,7 +135,7 @@ class CoinbaseClient:
             return None
     
     async def get_all_tickers(self) -> Dict[str, Dict]:
-        """Get tickers for all configured symbols."""
+        # Get tickers for all configured symbols.
         results = {}
         
         for symbol in self.symbols:
@@ -154,12 +147,10 @@ class CoinbaseClient:
         return results
     
     async def poll(self, interval_seconds: int = 5) -> None:
-        """
-        Continuously poll for price updates.
-        
-        Args:
-            interval_seconds: Polling interval
-        """
+        # Continuously poll for price updates.
+        #
+        # Args:
+        # interval_seconds: Polling interval
         self._running = True
         logger.info(f"Starting Coinbase price polling ({interval_seconds}s interval)")
         
@@ -188,18 +179,18 @@ class CoinbaseClient:
             await asyncio.sleep(interval_seconds)
     
     def get_price(self, symbol: str) -> Optional[float]:
-        """Get latest spot price for a symbol."""
+        # Get latest spot price for a symbol.
         normalized = self._normalize_symbol(symbol)
         ticker = self.tickers.get(normalized)
         return ticker['last_price'] if ticker else None
     
     @property
     def is_connected(self) -> bool:
-        """Check if client is running."""
+        # Check if client is running.
         return self._running
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Return health for dashboard."""
+        # Return health for dashboard.
         now = time.time()
         age = (now - self.last_message_ts) if self.last_message_ts else None
         if self.consecutive_failures > 0:

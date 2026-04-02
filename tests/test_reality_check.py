@@ -1,14 +1,13 @@
-"""
-Tests for Reality Check / SPA Test
-====================================
+# Created by Oliver Meihls
 
-Verifies:
-- Correct p-value computation
-- Strong strategy gets low p-value
-- Random strategies get high p-value
-- Edge cases: empty input, single strategy, mismatched lengths
-- Bootstrap reproducibility with seed
-"""
+# Tests for Reality Check / SPA Test
+#
+# Verifies:
+# - Correct p-value computation
+# - Strong strategy gets low p-value
+# - Random strategies get high p-value
+# - Edge cases: empty input, single strategy, mismatched lengths
+# - Bootstrap reproducibility with seed
 
 from __future__ import annotations
 
@@ -39,7 +38,7 @@ class TestStationaryBootstrap:
         assert _stationary_bootstrap_indices(0, 10.0, rng) == []
 
     def test_block_size_1_random(self):
-        """Block size 1 should produce nearly i.i.d. draws."""
+        # Block size 1 should produce nearly i.i.d. draws.
         rng = random.Random(42)
         indices = _stationary_bootstrap_indices(1000, 1.0, rng)
         assert len(indices) == 1000
@@ -79,7 +78,7 @@ class TestRealityCheck:
         assert result["n_strategies"] == 0
 
     def test_single_strong_strategy(self):
-        """A strategy with consistently positive excess returns."""
+        # A strategy with consistently positive excess returns.
         returns = {"alpha": [0.01] * 200}
         result = reality_check(returns, seed=42)
         assert result["p_value"] < 0.10
@@ -87,14 +86,14 @@ class TestRealityCheck:
         assert result["n_strategies"] == 1
 
     def test_single_weak_strategy(self):
-        """A strategy with near-zero returns should not reject H0."""
+        # A strategy with near-zero returns should not reject H0.
         rng = random.Random(123)
         returns = {"weak": [rng.gauss(0.0, 0.01) for _ in range(200)]}
         result = reality_check(returns, seed=42, n_bootstrap=500)
         assert result["p_value"] > 0.10
 
     def test_multiple_strategies_one_strong(self):
-        """Multiple strategies where one is clearly dominant."""
+        # Multiple strategies where one is clearly dominant.
         rng = random.Random(42)
         strategies = {
             "noise_1": [rng.gauss(0.0, 0.01) for _ in range(200)],
@@ -107,7 +106,7 @@ class TestRealityCheck:
         assert result["p_value"] < 0.10
 
     def test_with_benchmark(self):
-        """Test with non-zero benchmark."""
+        # Test with non-zero benchmark.
         strategies = {"alpha": [0.02] * 100}
         benchmark = [0.01] * 100  # alpha beats benchmark by 1% per period
         result = reality_check(strategies, benchmark_returns=benchmark, seed=42)
@@ -115,7 +114,7 @@ class TestRealityCheck:
         assert result["best_mean_excess"] > 0
 
     def test_reproducibility(self):
-        """Same seed should produce same result."""
+        # Same seed should produce same result.
         rng = random.Random(99)
         strategies = {
             "s1": [rng.gauss(0.005, 0.01) for _ in range(100)],

@@ -1,23 +1,22 @@
-"""
-Async WebSocket client for the Kalshi streaming API.
+# Created by Oliver Meihls
 
-Responsibilities
-----------------
-1. **Authenticated handshake** — auth headers are included during the
-   initial HTTP upgrade, using the same RSA-PSS signing scheme as REST.
-2. **Heartbeat** — respond to server ``Ping`` frames (payload ``heartbeat``)
-   with ``Pong``.  aiohttp handles this at the transport level, but we
-   also detect application-layer heartbeat messages.
-3. **Subscribe / update_subscription** — manage channel subscriptions for
-   ``ticker``, ``orderbook_delta``, ``market_lifecycle_v2`` (public) and
-   ``fill``, ``user_orders``, ``market_positions`` (private).
-4. **Message dispatch** — decode JSON frames, wrap them in typed dataclass
-   messages, and publish on the internal bus.
-5. **Reconnect** — on disconnect, reconnect with jittered exponential
-   back-off.  Resubscriptions are replayed automatically.
-6. **Cancellation** — the main loop honours ``asyncio.CancelledError`` so
-   that the caller's ``task.cancel()`` results in a clean shutdown.
-"""
+# Async WebSocket client for the Kalshi streaming API.
+#
+# Responsibilities
+# 1. **Authenticated handshake** — auth headers are included during the
+# initial HTTP upgrade, using the same RSA-PSS signing scheme as REST.
+# 2. **Heartbeat** — respond to server ``Ping`` frames (payload ``heartbeat``)
+# with ``Pong``.  aiohttp handles this at the transport level, but we
+# also detect application-layer heartbeat messages.
+# 3. **Subscribe / update_subscription** — manage channel subscriptions for
+# ``ticker``, ``orderbook_delta``, ``market_lifecycle_v2`` (public) and
+# ``fill``, ``user_orders``, ``market_positions`` (private).
+# 4. **Message dispatch** — decode JSON frames, wrap them in typed dataclass
+# messages, and publish on the internal bus.
+# 5. **Reconnect** — on disconnect, reconnect with jittered exponential
+# back-off.  Resubscriptions are replayed automatically.
+# 6. **Cancellation** — the main loop honours ``asyncio.CancelledError`` so
+# that the caller's ``task.cancel()`` results in a clean shutdown.
 
 from __future__ import annotations
 
@@ -66,18 +65,16 @@ _MAX_AUTH_FAILURES = 3
 
 
 class KalshiWebSocket:
-    """Manages a single authenticated WebSocket connection to Kalshi.
-
-    WebSocket authentication
-    ------------------------
-    Auth headers are computed at handshake time using the same RSA-PSS
-    signing scheme as REST.  The signed path is configurable via
-    ``ws_signing_path`` in config — set this to match whatever Kalshi's
-    validator expects for the WS upgrade (may differ from the URL path).
-
-    If ``ws_signing_path`` is empty, we derive it from the URL path of
-    ``base_url_ws``.
-    """
+    # Manages a single authenticated WebSocket connection to Kalshi.
+    #
+    # WebSocket authentication
+    # Auth headers are computed at handshake time using the same RSA-PSS
+    # signing scheme as REST.  The signed path is configurable via
+    # ``ws_signing_path`` in config — set this to match whatever Kalshi's
+    # validator expects for the WS upgrade (may differ from the URL path).
+    #
+    # If ``ws_signing_path`` is empty, we derive it from the URL path of
+    # ``base_url_ws``.
 
     def __init__(
         self,
@@ -153,7 +150,7 @@ class KalshiWebSocket:
         self._last_remove_resubscribe_mono: float = 0.0
 
     def get_health(self) -> Dict[str, Any]:
-        """Return structured WS health metrics for monitoring."""
+        # Return structured WS health metrics for monitoring.
         now = time.monotonic()
         msg_age = (now - self._last_message_mono) if self._last_message_mono > 0 else None
         return {
@@ -172,13 +169,13 @@ class KalshiWebSocket:
     # -- lifecycle -----------------------------------------------------------
 
     async def start(self, offset_ms: int = 0) -> None:
-        """Start the WebSocket event loop as a background task."""
+        # Start the WebSocket event loop as a background task.
         self._offset_ms = offset_ms
         self._running = True
         self._task = asyncio.create_task(self._run_loop())
 
     async def stop(self) -> None:
-        """Gracefully shut down."""
+        # Gracefully shut down.
         self._running = False
         if self._task:
             self._task.cancel()
@@ -186,6 +183,7 @@ class KalshiWebSocket:
                 await self._task
             except asyncio.CancelledError:
                 pass
+
         await self._close()
 
     async def _close(self) -> None:
@@ -202,7 +200,7 @@ class KalshiWebSocket:
         channels: List[str],
         market_tickers: List[str],
     ) -> None:
-        """Register desired subscriptions and send if connected."""
+        # Register desired subscriptions and send if connected.
         self._desired_channels = channels
         self._desired_tickers = set(market_tickers)
         if self._ws and not self._ws.closed:
@@ -214,7 +212,7 @@ class KalshiWebSocket:
         add_tickers: Optional[List[str]] = None,
         remove_tickers: Optional[List[str]] = None,
     ) -> None:
-        """Incrementally add/remove tickers from existing subscriptions."""
+        # Incrementally add/remove tickers from existing subscriptions.
         add_set = set(add_tickers or [])
         remove_set = set(remove_tickers or [])
 
@@ -287,7 +285,7 @@ class KalshiWebSocket:
     # -- internal: connection loop -------------------------------------------
 
     async def _run_loop(self) -> None:
-        """Outer loop: connect, read messages, reconnect on failure."""
+        # Outer loop: connect, read messages, reconnect on failure.
         backoff = _BASE_BACKOFF_S
 
         while self._running:
@@ -397,13 +395,12 @@ class KalshiWebSocket:
         await self._close()
 
     async def _connect(self) -> None:
-        """Open an authenticated WebSocket connection.
-
-        The signed path for the handshake is taken from
-        ``config.ws_signing_path`` (or derived from the WS URL if empty).
-        Method is always GET.  The same three KALSHI-ACCESS-* headers
-        used for REST are attached to the upgrade request.
-        """
+        # Open an authenticated WebSocket connection.
+        #
+        # The signed path for the handshake is taken from
+        # ``config.ws_signing_path`` (or derived from the WS URL if empty).
+        # Method is always GET.  The same three KALSHI-ACCESS-* headers
+        # used for REST are attached to the upgrade request.
         await self._close()
 
         self._session = aiohttp.ClientSession()
@@ -454,7 +451,7 @@ class KalshiWebSocket:
         )
 
     async def _read_loop(self) -> None:
-        """Read frames until disconnect or cancellation."""
+        # Read frames until disconnect or cancellation.
         assert self._ws is not None
         last_heartbeat = time.monotonic()
 
@@ -539,7 +536,7 @@ class KalshiWebSocket:
     # -- internal: message dispatch ------------------------------------------
 
     async def _dispatch(self, data: Dict[str, Any]) -> None:
-        """Route an incoming JSON message to the appropriate bus topic."""
+        # Route an incoming JSON message to the appropriate bus topic.
         msg_type = data.get("type", "")
         sid = data.get("sid")
 
@@ -601,7 +598,7 @@ class KalshiWebSocket:
     async def _handle_orderbook(
         self, payload: Dict[str, Any], msg_type: str, seq: int
     ) -> None:
-        """Process orderbook snapshot or delta. *seq* is from root or payload."""
+        # Process orderbook snapshot or delta. *seq* is from root or payload.
         ticker = payload.get("market_ticker", "")
 
         if ticker not in self._orderbooks:
@@ -756,7 +753,7 @@ class KalshiWebSocket:
         await self._bus.publish("kalshi.orderbook", _ob_state)
 
     async def _handle_trade(self, data: Dict[str, Any]) -> None:
-        """Publish executed trade events for trade-flow tracking."""
+        # Publish executed trade events for trade-flow tracking.
         ticker = data.get("market_ticker", "")
         taker_side = data.get("taker_side", "")  # "yes" or "no"
         count = int(data.get("count", 0))

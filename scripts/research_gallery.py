@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-"""
-Research Gallery & Strategy Bank CLI
-====================================
+# Created by Oliver Meihls
 
-Allows listing, viewing, and batch-backtesting strategies stored in 
-the factory database (Athena's promoted bank).
-
-Usage::
-
-    # List all Gold/Silver strategies
-    python scripts/research_gallery.py list
-
-    # View details for a specific case
-    python scripts/research_gallery.py view [case_id]
-
-    # Batch test all promoted but un-backtested strategies
-    python scripts/research_gallery.py run-untested
-"""
+# Research Gallery & Strategy Bank CLI
+#
+# Allows listing, viewing, and batch-backtesting strategies stored in
+# the factory database (Athena's promoted bank).
+#
+# Usage::
+#
+# # List all Gold/Silver strategies
+# python scripts/research_gallery.py list
+#
+# # View details for a specific case
+# python scripts/research_gallery.py view [case_id]
+#
+# # Batch test all promoted but un-backtested strategies
+# python scripts/research_gallery.py run-untested
 
 import argparse
 import json
@@ -42,7 +41,7 @@ logging.basicConfig(
 logger = logging.getLogger("argus.gallery")
 
 def list_strategies(pipe: FactoryPipe):
-    """List all promoted strategies."""
+    # List all promoted strategies.
     promoted = pipe.get_promoted_strategies()
     if not promoted:
         print("No promoted strategies found in factory.db")
@@ -57,7 +56,7 @@ def list_strategies(pipe: FactoryPipe):
     print(f"Total: {len(promoted)} promoted strategies.")
 
 def view_case(pipe: FactoryPipe, case_id: str):
-    """View details for a specific case."""
+    # View details for a specific case.
     case = pipe.get_case(case_id)
     if not case:
         print(f"Case {case_id} not found.")
@@ -76,7 +75,7 @@ def view_case(pipe: FactoryPipe, case_id: str):
         print("No manifest found.")
 
 def run_untested(pipe: FactoryPipe):
-    """Run backtests for all promoted strategies that haven't been run yet."""
+    # Run backtests for all promoted strategies that haven't been run yet.
     promoted = pipe.get_promoted_strategies()
     if not promoted:
         print("No promoted strategies to run.")

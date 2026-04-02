@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -30,17 +32,15 @@ def test_paper_trader_enter_trade_raises_in_collector_mode(monkeypatch):
         )
 
 
-# ═══════════════════════════════════════════════════════════
 #  FIX 2: PaperTraderFarm must NOT initialize in collector mode
-# ═══════════════════════════════════════════════════════════
 
 
 class TestCollectorModeSkipsFarmInit:
-    """Verify orchestrator does not create PaperTraderFarm in collector mode."""
+    # Verify orchestrator does not create PaperTraderFarm in collector mode.
 
     @pytest.mark.asyncio
     async def test_collector_mode_does_not_create_farm(self, monkeypatch):
-        """In collector mode, paper_trader_farm should remain None."""
+        # In collector mode, paper_trader_farm should remain None.
         monkeypatch.setenv("ARGUS_MODE", "collector")
 
         # Minimal mock of the orchestrator's _setup_off_hours_monitoring logic
@@ -59,7 +59,7 @@ class TestCollectorModeSkipsFarmInit:
 
     @pytest.mark.asyncio
     async def test_live_mode_creates_farm(self, monkeypatch):
-        """In live mode, paper_trader_farm should be instantiated."""
+        # In live mode, paper_trader_farm should be instantiated.
         monkeypatch.setenv("ARGUS_MODE", "live")
 
         mode = "live"
@@ -75,7 +75,7 @@ class TestCollectorModeSkipsFarmInit:
         )
 
     def test_collector_mode_guard_in_orchestrator_setup(self, monkeypatch):
-        """Verify the orchestrator's mode guard logic works correctly."""
+        # Verify the orchestrator's mode guard logic works correctly.
         monkeypatch.setenv("ARGUS_MODE", "collector")
 
         # Simulate the orchestrator's decision logic
@@ -87,7 +87,7 @@ class TestCollectorModeSkipsFarmInit:
         )
 
     def test_live_mode_allows_farm_in_orchestrator_setup(self, monkeypatch):
-        """Verify the orchestrator allows farm init in live mode."""
+        # Verify the orchestrator allows farm init in live mode.
         monkeypatch.setenv("ARGUS_MODE", "live")
 
         mode = "live"

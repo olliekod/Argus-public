@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 import argparse

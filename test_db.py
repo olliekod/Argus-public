@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import asyncio
 
 from src.core.database import Database

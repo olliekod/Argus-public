@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Run the full Polymarket wallet pipeline for the fixed watchlist.
+# Created by Oliver Meihls
 
-Pipeline:
-1) Ingest all watched wallets
-2) Analyze each wallet
-3) Compare wallets
-4) Generate Kalshi hypotheses for each wallet analysis
-"""
+# Run the full Polymarket wallet pipeline for the fixed watchlist.
+#
+# Pipeline:
+# 1) Ingest all watched wallets
+# 2) Analyze each wallet
+# 3) Compare wallets
+# 4) Generate Kalshi hypotheses for each wallet analysis
 
 from __future__ import annotations
 

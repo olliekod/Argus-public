@@ -1,12 +1,11 @@
-"""
-Paper Trader Farm
-=================
+# Created by Oliver Meihls
 
-Manages 97K+ paper traders running in parallel.
-Tests all unique parameter combinations with market regime awareness.
-Generates monthly reports with strategy averages and top threshold combos.
-Checks economic calendar for blackout periods before entries.
-"""
+# Paper Trader Farm
+#
+# Manages 97K+ paper traders running in parallel.
+# Tests all unique parameter combinations with market regime awareness.
+# Generates monthly reports with strategy averages and top threshold combos.
+# Checks economic calendar for blackout periods before entries.
 
 import asyncio
 import logging
@@ -24,11 +23,9 @@ from ..core.economic_calendar import EconomicCalendar
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
 # Hard tradeable-universe allowlist.
 # Only these underlyings may be traded as options positions.
 # Crypto symbols (BTCUSDT, ETHUSDT, …) are data/signal sources ONLY.
-# ---------------------------------------------------------------------------
 TRADEABLE_UNDERLYINGS: frozenset = frozenset({"IBIT", "BITO"})
 
 # Regex that matches a valid YYYY-MM-DD expiry string
@@ -36,13 +33,11 @@ _EXPIRY_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class PaperTraderFarm:
-    """
-    Manages a farm of paper traders.
-    
-    Each trader runs with different parameters but shares
-    the same market data. Trades are logged to database
-    for later analysis.
-    """
+    # Manages a farm of paper traders.
+    #
+    # Each trader runs with different parameters but shares
+    # the same market data. Trades are logged to database
+    # for later analysis.
     
     def __init__(
         self,
@@ -55,18 +50,16 @@ class PaperTraderFarm:
         max_open_positions_total: int = 500_000,
         max_trades_per_minute: int = 10_000,
     ):
-        """
-        Initialize the paper trader farm.
-
-        Args:
-            db: Database instance for logging trades
-            total_traders: Number of traders (ignored if full_coverage=True)
-            full_coverage: If True, generate ALL unique parameter combinations
-            config_file: Optional path to saved configs
-            max_traders: Hard cap on total configs (guardrail)
-            max_open_positions_total: Safety cap on open positions
-            max_trades_per_minute: Rate limit on new trades
-        """
+        # Initialize the paper trader farm.
+        #
+        # Args:
+        # db: Database instance for logging trades
+        # total_traders: Number of traders (ignored if full_coverage=True)
+        # full_coverage: If True, generate ALL unique parameter combinations
+        # config_file: Optional path to saved configs
+        # max_traders: Hard cap on total configs (guardrail)
+        # max_open_positions_total: Safety cap on open positions
+        # max_trades_per_minute: Rate limit on new trades
         self.db = db
         self.total_traders = total_traders
         self.full_coverage = full_coverage
@@ -121,7 +114,7 @@ class PaperTraderFarm:
         logger.info(f"PaperTraderFarm initialized (full_coverage={full_coverage})")
     
     async def initialize(self) -> None:
-        """Initialize all traders and database tables."""
+        # Initialize all traders and database tables.
         import time as _time
 
         # Create database table
@@ -160,7 +153,7 @@ class PaperTraderFarm:
             logger.info(f"  {strat}: {count:,} traders")
     
     async def _create_tables(self) -> None:
-        """Create database tables for paper trading."""
+        # Create database tables for paper trading.
         # Create paper_trades table
         await self.db.execute("""
             CREATE TABLE IF NOT EXISTS paper_trades (
@@ -233,7 +226,7 @@ class PaperTraderFarm:
         logger.info("Paper trading tables created")
 
     async def _prepare_trader_tensors(self) -> None:
-        """Convert all trader configs into a single tensor for GPU evaluation."""
+        # Convert all trader configs into a single tensor for GPU evaluation.
         import torch
         from .paper_trader import StrategyType
         
@@ -269,7 +262,7 @@ class PaperTraderFarm:
         get_options_chain: Callable = None,
         get_gap_risk: Callable = None,
     ) -> None:
-        """Set callbacks for market data access."""
+        # Set callbacks for market data access.
         if get_conditions:
             self._get_conditions = get_conditions
         if get_options_chain:
@@ -278,15 +271,14 @@ class PaperTraderFarm:
             self._get_gap_risk = get_gap_risk
     
     def set_telegram_alert_callback(self, callback: Callable) -> None:
-        """Set callback for sending Telegram alerts (runaway safety, etc.)."""
+        # Set callback for sending Telegram alerts (runaway safety, etc.).
         self._telegram_callback = callback
 
     def record_exit_error(self) -> None:
-        """Record an exit-monitor error for runaway detection.
-
-        Called by the orchestrator whenever the exit monitor loop catches
-        an exception so the farm can track error frequency.
-        """
+        # Record an exit-monitor error for runaway detection.
+        #
+        # Called by the orchestrator whenever the exit monitor loop catches
+        # an exception so the farm can track error frequency.
         import time as _time
         now = _time.time()
         self._exit_errors.append(now)
@@ -312,10 +304,9 @@ class PaperTraderFarm:
 
     @staticmethod
     def _validate_signal_data(signal_data: Dict[str, Any]) -> Optional[str]:
-        """Validate critical signal fields before any trade insertion.
-
-        Returns an error message string if invalid, or None if OK.
-        """
+        # Validate critical signal fields before any trade insertion.
+        #
+        # Returns an error message string if invalid, or None if OK.
         # Credit must be a positive number
         credit = signal_data.get('credit')
         if credit is None or not isinstance(credit, (int, float)) or credit <= 0:
@@ -341,28 +332,26 @@ class PaperTraderFarm:
         symbol: str,
         signal_data: Dict[str, Any],
     ) -> List[PaperTrade]:
-        """
-        Evaluate a trading signal across all traders.
-
-        Each trader decides independently whether to enter.
-        Respects economic calendar blackout periods and correlation limits.
-
-        Args:
-            symbol: Ticker symbol
-            signal_data: Dict with signal details:
-                - iv: Current implied volatility
-                - warmth: Conditions warmth score
-                - dte: Days to expiration
-                - pop: Probability of profit
-                - gap_risk: Current gap risk %
-                - direction: Market direction
-                - strikes: Strike prices
-                - expiry: Expiration date
-                - credit: Entry credit
-
-        Returns:
-            List of trades that were entered
-        """
+        # Evaluate a trading signal across all traders.
+        #
+        # Each trader decides independently whether to enter.
+        # Respects economic calendar blackout periods and correlation limits.
+        #
+        # Args:
+        # symbol: Ticker symbol
+        # signal_data: Dict with signal details:
+        # - iv: Current implied volatility
+        # - warmth: Conditions warmth score
+        # - dte: Days to expiration
+        # - pop: Probability of profit
+        # - gap_risk: Current gap risk %
+        # - direction: Market direction
+        # - strikes: Strike prices
+        # - expiry: Expiration date
+        # - credit: Entry credit
+        #
+        # Returns:
+        # List of trades that were entered
         import time as _time
 
         guard_collector_mode()
@@ -644,7 +633,7 @@ class PaperTraderFarm:
         return entered_trades
 
     def _update_drawdown_check(self) -> None:
-        """P3: Check portfolio drawdown and halt if exceeded."""
+        # P3: Check portfolio drawdown and halt if exceeded.
         total_pnl = sum(
             t.stats['total_pnl'] for t in self.active_traders.values()
         )
@@ -667,7 +656,7 @@ class PaperTraderFarm:
                 logger.info(f"Drawdown circuit breaker reset (drawdown={drawdown_pct:.1f}%)")
 
     def get_status_summary(self) -> Dict[str, Any]:
-        """Return last evaluation status for the farm."""
+        # Return last evaluation status for the farm.
         return {
             "last_evaluation_time": self.last_evaluation_time.isoformat() if self.last_evaluation_time else None,
             "last_evaluation_symbol": self.last_evaluation_symbol,
@@ -683,7 +672,7 @@ class PaperTraderFarm:
         }
 
     def set_promoted_traders(self, trader_ids: List[str]) -> None:
-        """Restrict evaluations to promoted trader IDs."""
+        # Restrict evaluations to promoted trader IDs.
         promoted = set(trader_ids)
         indices = {
             idx for idx, config in enumerate(self.trader_configs)
@@ -693,7 +682,7 @@ class PaperTraderFarm:
         self._promoted_indices = indices
     
     async def _save_trade(self, trade: PaperTrade) -> None:
-        """Save a single trade to the database."""
+        # Save a single trade to the database.
         await self.db.execute("""
             INSERT OR REPLACE INTO paper_trades
             (id, trader_id, strategy_type, symbol, timestamp, strikes, expiry,
@@ -720,7 +709,7 @@ class PaperTraderFarm:
         ))
 
     async def _save_trades_batch(self, trades: List[PaperTrade]) -> None:
-        """Save multiple trades in a single batch transaction (P2)."""
+        # Save multiple trades in a single batch transaction (P2).
         if not trades:
             return
         rows = [
@@ -742,15 +731,13 @@ class PaperTraderFarm:
         """, rows)
     
     async def check_exits(self, current_prices: Dict[str, Dict[str, float]]) -> List[PaperTrade]:
-        """
-        Check all traders for exit conditions.
-
-        Args:
-            current_prices: Dict mapping symbol to {trade_id: current_price}
-
-        Returns:
-            List of closed trades
-        """
+        # Check all traders for exit conditions.
+        #
+        # Args:
+        # current_prices: Dict mapping symbol to {trade_id: current_price}
+        #
+        # Returns:
+        # List of closed trades
         all_closed = []
         db_batch = []
         eligible = 0
@@ -799,7 +786,7 @@ class PaperTraderFarm:
         return all_closed
 
     async def expire_positions(self, expiry_date: str) -> List[PaperTrade]:
-        """Handle expiration for a given date."""
+        # Handle expiration for a given date.
         all_expired = []
         db_batch = []
 
@@ -828,19 +815,17 @@ class PaperTraderFarm:
 
         return all_expired
     
-    # =========================================================================
-    # Reporting
-    # =========================================================================
+# Reporting
     
     def get_aggregate_positions(self) -> List[Dict]:
-        """Get all open positions across all traders (active only)."""
+        # Get all open positions across all traders (active only).
         positions = []
         for trader in self.active_traders.values():
             positions.extend(trader.get_positions_summary())
         return positions
     
     def get_aggregate_pnl(self) -> Dict:
-        """Get aggregate P&L across all traders."""
+        # Get aggregate P&L across all traders.
         total_realized = 0
         total_trades = 0
         total_wins = 0
@@ -863,7 +848,7 @@ class PaperTraderFarm:
         }
     
     def get_leaderboard(self, top_n: int = 20) -> List[Dict]:
-        """Get top performing traders (active only for now)."""
+        # Get top performing traders (active only for now).
         rankings = []
         
         for trader in self.active_traders.values():
@@ -876,7 +861,7 @@ class PaperTraderFarm:
         return rankings[:top_n]
     
     def get_strategy_breakdown(self) -> Dict[str, Dict]:
-        """Get performance breakdown by strategy."""
+        # Get performance breakdown by strategy.
         strategies = {}
         
         # For a full breakdown, we need to load stats from DB or track all-time
@@ -906,7 +891,7 @@ class PaperTraderFarm:
         return strategies
     
     def format_leaderboard(self, month: str = None) -> str:
-        """Format monthly report for Telegram/display."""
+        # Format monthly report for Telegram/display.
         if month is None:
             month = datetime.now().strftime('%B %Y')
         
@@ -966,7 +951,7 @@ class PaperTraderFarm:
         return "\n".join(lines)
     
     def _get_top_threshold_combos(self, top_n: int = 5) -> List[Dict]:
-        """Get top performing threshold combinations."""
+        # Get top performing threshold combinations.
         # Group ACTIVE traders by key threshold combos
         combos = {}
         
@@ -1000,17 +985,13 @@ class PaperTraderFarm:
         
         return sorted_combos[:top_n]
     
-    # =========================================================================
-    # For /positions and /pnl commands
-    # =========================================================================
+# For /positions and /pnl commands
     
     async def get_positions_for_telegram(self) -> List[Dict]:
-        """
-        Get positions formatted for /positions command.
-        
-        Returns aggregated view, NOT individual positions.
-        Groups by symbol and strategy for manageable output.
-        """
+        # Get positions formatted for /positions command.
+        #
+        # Returns aggregated view, NOT individual positions.
+        # Groups by symbol and strategy for manageable output.
         # Group by symbol AND strategy
         by_symbol_strategy = {}
         for pos in self.get_aggregate_positions():
@@ -1036,18 +1017,18 @@ class PaperTraderFarm:
         return result[:10]
 
     async def get_positions_for_review(self) -> List[Dict]:
-        """Get detailed open positions for daily review."""
+        # Get detailed open positions for daily review.
         return self.get_aggregate_positions()
     
     def _et_day_bounds(self, target_date: date) -> tuple[datetime, datetime]:
-        """Return UTC start/end for a given ET date."""
+        # Return UTC start/end for a given ET date.
         eastern = ZoneInfo("America/New_York")
         start_et = datetime.combine(target_date, time.min, tzinfo=eastern)
         end_et = start_et + timedelta(days=1)
         return start_et.astimezone(timezone.utc), end_et.astimezone(timezone.utc)
 
     async def _get_epoch_start(self) -> Optional[str]:
-        """Fetch current epoch start timestamp (cached)."""
+        # Fetch current epoch start timestamp (cached).
         if not self.db:
             return None
         if not self._current_epoch_start:
@@ -1055,7 +1036,7 @@ class PaperTraderFarm:
         return self._current_epoch_start
 
     async def _fetch_realized_stats(self, start: datetime, end: datetime) -> Dict[str, Any]:
-        """Fetch realized trade stats between start/end timestamps."""
+        # Fetch realized trade stats between start/end timestamps.
         if not self.db:
             return {'closed_trades': 0, 'winners': 0, 'realized_pnl': 0.0}
         epoch_start = await self._get_epoch_start()
@@ -1087,7 +1068,7 @@ class PaperTraderFarm:
         }
 
     async def _fetch_opened_count(self, start: datetime, end: datetime) -> int:
-        """Fetch count of trades opened between start/end timestamps."""
+        # Fetch count of trades opened between start/end timestamps.
         if not self.db:
             return 0
         epoch_start = await self._get_epoch_start()
@@ -1109,7 +1090,7 @@ class PaperTraderFarm:
         return row['opened_trades'] if row else 0
 
     async def _fetch_open_positions_count(self) -> int:
-        """Fetch count of open positions."""
+        # Fetch count of open positions.
         if not self.db:
             return len(self.get_aggregate_positions())
         epoch_start = await self._get_epoch_start()
@@ -1130,7 +1111,7 @@ class PaperTraderFarm:
         return row['open_trades'] if row else 0
 
     async def get_trade_activity_summary(self) -> Dict[str, Any]:
-        """Return realized P&L and activity stats for daily review and Telegram."""
+        # Return realized P&L and activity stats for daily review and Telegram.
         today_et = datetime.now(ZoneInfo("America/New_York")).date()
         month_start = today_et.replace(day=1)
         year_start = date(today_et.year, 1, 1)
@@ -1170,12 +1151,11 @@ class PaperTraderFarm:
         }
 
     async def get_top_unrealized(self, n: int = 3) -> List[Dict]:
-        """Get top N positions by unrealized P&L for display.
-
-        Scans in-memory active traders and estimates current P&L
-        based on entry credit (since we don't have live option prices
-        for every position, we report the entry credit as the reference).
-        """
+        # Get top N positions by unrealized P&L for display.
+        #
+        # Scans in-memory active traders and estimates current P&L
+        # based on entry credit (since we don't have live option prices
+        # for every position, we report the entry credit as the reference).
         candidates = []
         for trader in self.active_traders.values():
             for trade in trader.open_positions:
@@ -1199,16 +1179,14 @@ class PaperTraderFarm:
         return candidates[:n]
 
     async def get_pnl_for_telegram(self) -> Dict:
-        """
-        Get statistically sane P&L for /pnl command.
-
-        Returns per-trader aggregated statistics:
-        - Returns are computed PER TRADER then aggregated (mean/median/std)
-        - Each trader has the same starting notional (self.starting_balance)
-        - Return = total_realized_pnl / starting_balance * 100
-        - No double-counting realized + unrealized: only realized is reported
-        - Open positions are counted separately
-        """
+        # Get statistically sane P&L for /pnl command.
+        #
+        # Returns per-trader aggregated statistics:
+        # - Returns are computed PER TRADER then aggregated (mean/median/std)
+        # - Each trader has the same starting notional (self.starting_balance)
+        # - Return = total_realized_pnl / starting_balance * 100
+        # - No double-counting realized + unrealized: only realized is reported
+        # - Open positions are counted separately
         import statistics
 
         activity = await self.get_trade_activity_summary()
@@ -1253,16 +1231,15 @@ class PaperTraderFarm:
     async def _compute_per_trader_stats(
         self, days: int = 30, min_trades: int = 1
     ) -> Optional[Dict[str, Any]]:
-        """Compute per-trader return distribution.
-
-        Returns are computed PER TRADER: return_pct = total_pnl / starting_balance * 100.
-        Then we aggregate across traders: mean, median, std, deciles.
-
-        Exclusions are tracked with reason counts:
-        - 'no_trades': trader has zero closed trades in window
-        - 'insufficient_data': fewer than min_trades closed trades
-        - 'zombie_contamination': trader has zombie-flagged trades
-        """
+        # Compute per-trader return distribution.
+        #
+        # Returns are computed PER TRADER: return_pct = total_pnl / starting_balance * 100.
+        # Then we aggregate across traders: mean, median, std, deciles.
+        #
+        # Exclusions are tracked with reason counts:
+        # - 'no_trades': trader has zero closed trades in window
+        # - 'insufficient_data': fewer than min_trades closed trades
+        # - 'zombie_contamination': trader has zombie-flagged trades
         import statistics as stats_mod
 
         if not self.db:
@@ -1355,22 +1332,19 @@ class PaperTraderFarm:
         }
 
 
-    # =========================================================================
-    # Zombie Detection & Cleanup (7-14 DTE aligned)
-    # =========================================================================
+# Zombie Detection & Cleanup (7-14 DTE aligned)
 
     async def detect_zombies(self, stale_days: int = 14, grace_days: int = 2) -> List[Dict]:
-        """Detect zombie positions without closing them.
-
-        Zombie = orphaned/stuck, NOT just aged.
-
-        Rules:
-        1. Status='open' AND expiry < today - grace_days (expired + grace period)
-        2. Status='open' AND no expiry AND timestamp < now - stale_days
-           (truly stale with no expiry info)
-
-        Does NOT close positions just due to age.
-        """
+        # Detect zombie positions without closing them.
+        #
+        # Zombie = orphaned/stuck, NOT just aged.
+        #
+        # Rules:
+        # 1. Status='open' AND expiry < today - grace_days (expired + grace period)
+        # 2. Status='open' AND no expiry AND timestamp < now - stale_days
+        # (truly stale with no expiry info)
+        #
+        # Does NOT close positions just due to age.
         if not self.db:
             return []
 
@@ -1415,10 +1389,9 @@ class PaperTraderFarm:
         return zombies
 
     async def close_zombies(self, stale_days: int = 14, grace_days: int = 2) -> int:
-        """Detect and close zombie positions.
-
-        Sets status='expired', close_reason=zombie_reason.
-        """
+        # Detect and close zombie positions.
+        #
+        # Sets status='expired', close_reason=zombie_reason.
         zombies = await self.detect_zombies(stale_days, grace_days)
         if not zombies:
             return 0
@@ -1438,7 +1411,7 @@ class PaperTraderFarm:
         return len(zombies)
 
     async def format_zombies_report(self, stale_days: int = 14, grace_days: int = 2) -> str:
-        """Format zombie detection report for Telegram / dashboard."""
+        # Format zombie detection report for Telegram / dashboard.
         zombies = await self.detect_zombies(stale_days, grace_days)
         if not zombies:
             return "No zombie positions detected."
@@ -1460,17 +1433,14 @@ class PaperTraderFarm:
         lines.append("Use /zombie_clean to close them.")
         return "\n".join(lines)
 
-    # =========================================================================
-    # Paper Equity Reset
-    # =========================================================================
+# Paper Equity Reset
 
     async def reset_paper_equity(self, scope: str = 'all', mode: str = 'epoch') -> str:
-        """Reset paper equity by starting a new epoch.
-
-        Args:
-            scope: 'all' or a specific trader_id
-            mode: 'epoch' (start fresh epoch, old data excluded from current metrics)
-        """
+        # Reset paper equity by starting a new epoch.
+        #
+        # Args:
+        # scope: 'all' or a specific trader_id
+        # mode: 'epoch' (start fresh epoch, old data excluded from current metrics)
         if not self.db:
             return "No database connected."
 
@@ -1496,7 +1466,7 @@ class PaperTraderFarm:
 
 # Test function
 async def test_paper_trader_farm():
-    """Test the paper trader farm."""
+    # Test the paper trader farm.
     print("Paper Trader Farm Test")
     print("=" * 50)
     

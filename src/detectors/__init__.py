@@ -1,4 +1,6 @@
-"""Detectors module - opportunity detection algorithms."""
+# Created by Oliver Meihls
+
+# Detectors module - opportunity detection algorithms.
 from .base_detector import BaseDetector
 from .options_iv_detector import OptionsIVDetector
 from .volatility_detector import VolatilityDetector

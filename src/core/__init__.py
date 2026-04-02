@@ -1,4 +1,6 @@
-"""Core module - database, config, logging, utilities."""
+# Created by Oliver Meihls
+
+# Core module - database, config, logging, utilities.
 from .database import Database
 from .config import load_all_config, load_config, load_secrets, load_thresholds
 from .logger import setup_logger, get_logger

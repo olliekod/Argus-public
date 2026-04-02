@@ -1,9 +1,9 @@
-"""
-Tests for liquidity regime classification.
+# Created by Oliver Meihls
 
-Validates the LiquidityRegime enum, SymbolRegimeEvent serialization,
-and the regime detector's liquidity classification.
-"""
+# Tests for liquidity regime classification.
+#
+# Validates the LiquidityRegime enum, SymbolRegimeEvent serialization,
+# and the regime detector's liquidity classification.
 
 from __future__ import annotations
 
@@ -20,9 +20,7 @@ from src.core.regimes import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # LiquidityRegime Enum
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestLiquidityRegimeEnum:
     def test_enum_values(self):
@@ -37,9 +35,7 @@ class TestLiquidityRegimeEnum:
         assert LIQUIDITY_REGIME_NAMES[LiquidityRegime.LIQ_DRIED] == "LIQ_DRIED"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # SymbolRegimeEvent with liquidity
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSymbolRegimeEventLiquidity:
     def _make_event(self, liq_regime="LIQ_NORMAL", spread_pct=0.10, volume_pctile=50.0):
@@ -84,7 +80,7 @@ class TestSymbolRegimeEventLiquidity:
         assert e2.spread_pct == pytest.approx(0.02, abs=1e-6)
 
     def test_backward_compat_deserialization(self):
-        """Dicts from before liquidity regime was added should still work."""
+        # Dicts from before liquidity regime was added should still work.
         old_dict = {
             "symbol": "SPY",
             "timeframe": 60,
@@ -110,9 +106,7 @@ class TestSymbolRegimeEventLiquidity:
         assert e.volume_pctile == 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Default Thresholds
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestDefaultThresholds:
     def test_liquidity_thresholds_present(self):
@@ -128,15 +122,13 @@ class TestDefaultThresholds:
         assert t["liq_spread_low_pct"] < t["liq_spread_dried_pct"]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Regime Detector Liquidity Classification
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRegimeDetectorLiquidity:
-    """Test the _classify_liquidity_regime method directly."""
+    # Test the _classify_liquidity_regime method directly.
 
     def _make_detector(self):
-        """Create a minimal RegimeDetector for testing classification."""
+        # Create a minimal RegimeDetector for testing classification.
         from unittest.mock import MagicMock
         from src.core.regime_detector import RegimeDetector
 
@@ -171,7 +163,7 @@ class TestRegimeDetectorLiquidity:
         assert regime == "LIQ_DRIED"
 
     def test_deterministic_classification(self):
-        """Same inputs always produce same regime."""
+        # Same inputs always produce same regime.
         d = self._make_detector()
         for _ in range(10):
             regime, _, _ = d._classify_liquidity_regime(0.15, 50.0)

@@ -1,20 +1,19 @@
-"""
-Phase 2 E2E Verification Tests
-================================
+# Created by Oliver Meihls
 
-Tests for Overnight Session Strategy — Phase 2 (Data Enhancement).
-
-Covers:
-- Task A: Replay pack contains global_risk_flow in regime metrics_json
-- Task B: Strategy respects gate_on_risk_flow gating
-- Task C: Full replay harness integration with risk flow + overnight strategy
-- Deterministic injection behavior across multiple pack builds
-- Edge cases: missing AV data, partial components, boundary values
-
-These tests use mocked DB layers to avoid requiring a live database, but
-exercise the full code path through replay_pack injection, strategy gating,
-and replay harness integration.
-"""
+# Phase 2 E2E Verification Tests
+#
+# Tests for Overnight Session Strategy — Phase 2 (Data Enhancement).
+#
+# Covers:
+# - Task A: Replay pack contains global_risk_flow in regime metrics_json
+# - Task B: Strategy respects gate_on_risk_flow gating
+# - Task C: Full replay harness integration with risk flow + overnight strategy
+# - Deterministic injection behavior across multiple pack builds
+# - Edge cases: missing AV data, partial components, boundary values
+#
+# These tests use mocked DB layers to avoid requiring a live database, but
+# exercise the full code path through replay_pack injection, strategy gating,
+# and replay harness integration.
 
 from __future__ import annotations
 
@@ -50,15 +49,13 @@ from src.analysis.replay_harness import (
 from src.analysis.execution_model import ExecutionModel, ExecutionConfig
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Shared test data builders
-# ═══════════════════════════════════════════════════════════════════════════
 
 _DAY_MS = 86_400_000
 
 
 def _make_av_bars(symbol: str, closes: List[float], start_day: int = 1):
-    """Create daily bars for Alpha Vantage symbols."""
+    # Create daily bars for Alpha Vantage symbols.
     return [
         {"timestamp_ms": (start_day + i) * _DAY_MS, "close": c, "symbol": symbol}
         for i, c in enumerate(closes)
@@ -70,10 +67,9 @@ def _build_full_av_bars(
     europe_ret: float = 0.02,
     fx_ret: float = 0.005,
 ) -> Dict[str, List[Dict[str, Any]]]:
-    """Build a complete set of AV bars for all risk-flow symbols.
-
-    Uses synthetic close prices to produce the specified returns.
-    """
+    # Build a complete set of AV bars for all risk-flow symbols.
+    #
+    # Uses synthetic close prices to produce the specified returns.
     bars: Dict[str, List[Dict[str, Any]]] = {}
 
     base = 100.0
@@ -105,7 +101,7 @@ def _make_outcome_dict(
     fwd_return: float = 0.01,
     symbol: str = "SPY",
 ) -> Dict[str, Any]:
-    """Create outcome dict as stored in replay packs."""
+    # Create outcome dict as stored in replay packs.
     return {
         "timestamp_ms": ts_ms,
         "symbol": symbol,
@@ -187,17 +183,15 @@ def _make_regimes(
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Task A — Replay Pack Contains Risk Flow
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestReplayPackRiskFlowInjection:
-    """E2E: Replay pack building injects global_risk_flow into regimes."""
+    # E2E: Replay pack building injects global_risk_flow into regimes.
 
     @pytest.mark.asyncio
     async def test_pack_injects_risk_flow_into_regimes(self, tmp_path):
-        """Pack building should inject global_risk_flow into regime metrics_json."""
+        # Pack building should inject global_risk_flow into regime metrics_json.
         from src.tools.replay_pack import create_replay_pack
 
         output_file = tmp_path / "pack.json"
@@ -266,7 +260,7 @@ class TestReplayPackRiskFlowInjection:
 
     @pytest.mark.asyncio
     async def test_pack_preserves_existing_metrics(self, tmp_path):
-        """Injection should preserve existing metrics in metrics_json."""
+        # Injection should preserve existing metrics in metrics_json.
         from src.tools.replay_pack import create_replay_pack
 
         output_file = tmp_path / "pack_preserve.json"
@@ -308,7 +302,7 @@ class TestReplayPackRiskFlowInjection:
 
     @pytest.mark.asyncio
     async def test_pack_injection_deterministic(self, tmp_path):
-        """Two pack builds with identical data produce identical risk_flow values."""
+        # Two pack builds with identical data produce identical risk_flow values.
         from src.tools.replay_pack import create_replay_pack
 
         av_bars = _build_full_av_bars(asia_ret=0.015, europe_ret=-0.005, fx_ret=0.003)
@@ -350,7 +344,7 @@ class TestReplayPackRiskFlowInjection:
 
     @pytest.mark.asyncio
     async def test_pack_no_av_data_no_injection(self, tmp_path):
-        """When no Alpha Vantage bars exist, regimes should not have risk flow."""
+        # When no Alpha Vantage bars exist, regimes should not have risk flow.
         from src.tools.replay_pack import create_replay_pack
 
         output_file = tmp_path / "pack_no_av.json"
@@ -388,7 +382,7 @@ class TestReplayPackRiskFlowInjection:
 
     @pytest.mark.asyncio
     async def test_pack_sort_keys_for_determinism(self, tmp_path):
-        """Verify metrics_json uses sort_keys for deterministic serialization."""
+        # Verify metrics_json uses sort_keys for deterministic serialization.
         from src.tools.replay_pack import create_replay_pack
 
         output_file = tmp_path / "pack_sort.json"
@@ -427,7 +421,7 @@ class TestReplayPackRiskFlowInjection:
 
     @pytest.mark.asyncio
     async def test_pack_partial_av_data_still_injects(self, tmp_path):
-        """With only Asia data (no Europe, no FX), risk flow is still computed."""
+        # With only Asia data (no Europe, no FX), risk flow is still computed.
         from src.tools.replay_pack import create_replay_pack
 
         output_file = tmp_path / "pack_partial.json"
@@ -467,16 +461,14 @@ class TestReplayPackRiskFlowInjection:
         assert abs(metrics["global_risk_flow"] - 0.02) < 0.001
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Task B — Strategy Respects Gate
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategyGateOnRiskFlow:
-    """E2E: OvernightSessionStrategy gates entries based on risk flow."""
+    # E2E: OvernightSessionStrategy gates entries based on risk flow.
 
     def test_gate_suppresses_all_entries_when_risk_flow_below_threshold(self):
-        """With gate_on_risk_flow=True and min above regime values, no entries."""
+        # With gate_on_risk_flow=True and min above regime values, no entries.
         strategy = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -516,7 +508,7 @@ class TestStrategyGateOnRiskFlow:
         assert state["entries_emitted"] == 0
 
     def test_gate_allows_entries_when_risk_flow_above_threshold(self):
-        """With gate_on_risk_flow=True and risk flow above threshold, entries occur."""
+        # With gate_on_risk_flow=True and risk flow above threshold, entries occur.
         strategy = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -544,7 +536,7 @@ class TestStrategyGateOnRiskFlow:
         assert len(open_intents) == 1
 
     def test_gate_exact_boundary_value(self):
-        """Risk flow exactly at threshold should NOT be gated (>= semantics)."""
+        # Risk flow exactly at threshold should NOT be gated (>= semantics).
         strategy = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -572,7 +564,7 @@ class TestStrategyGateOnRiskFlow:
         assert len(open_intents) == 1
 
     def test_gate_still_emits_close_intents(self):
-        """Even when gated, existing positions should still be closed."""
+        # Even when gated, existing positions should still be closed.
         horizon_s = 3600
         strategy = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
@@ -613,7 +605,7 @@ class TestStrategyGateOnRiskFlow:
         assert len(close_only) == 1, "Close intent should still fire even when gated"
 
     def test_gate_with_multiple_risk_flow_transitions(self):
-        """Strategy should respect risk flow changes across bars."""
+        # Strategy should respect risk flow changes across bars.
         strategy = OvernightSessionStrategy(params={
             "fwd_return_threshold": 0.001,
             "horizon_seconds": 14400,
@@ -652,16 +644,14 @@ class TestStrategyGateOnRiskFlow:
         assert entry_count == 1
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Task C — Full Replay Harness Integration
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestReplayHarnessIntegration:
-    """E2E: Run OvernightSessionStrategy through ReplayHarness with regimes."""
+    # E2E: Run OvernightSessionStrategy through ReplayHarness with regimes.
 
     def test_harness_passes_regimes_to_strategy(self):
-        """ReplayHarness feeds visible_regimes (with risk flow) to strategy."""
+        # ReplayHarness feeds visible_regimes (with risk flow) to strategy.
         # Build minimal replay data: CLOSED → PRE transition with outcomes
         # 2024-01-15 03:00 UTC = CLOSED, 04:30 UTC = PRE
         t_closed = 1705287600000  # 03:00 UTC
@@ -729,7 +719,7 @@ class TestReplayHarnessIntegration:
         assert result.regimes_loaded == 1
 
     def test_harness_gated_strategy_no_entries(self):
-        """ReplayHarness with risk flow below threshold → no entries."""
+        # ReplayHarness with risk flow below threshold → no entries.
         t0 = 100_000
         bars = [
             _make_bar(t0, close=100.0, symbol="SPY"),
@@ -782,7 +772,7 @@ class TestReplayHarnessIntegration:
         )
 
     def test_harness_deterministic_replay_with_regimes(self):
-        """Two runs of same data produce identical results (with regimes)."""
+        # Two runs of same data produce identical results (with regimes).
         t0 = 100_000
         bars = [
             _make_bar(t0, close=100.0, symbol="SPY"),
@@ -833,16 +823,14 @@ class TestReplayHarnessIntegration:
         assert results[0].portfolio_summary["total_trades"] == results[1].portfolio_summary["total_trades"]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Global Risk Flow Computation Verification
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestGlobalRiskFlowIntegrity:
-    """Verify risk flow computation matches expected formula end-to-end."""
+    # Verify risk flow computation matches expected formula end-to-end.
 
     def test_full_computation_matches_formula(self):
-        """GlobalRiskFlow = 0.4*Asia + 0.4*Europe + 0.2*FX."""
+        # GlobalRiskFlow = 0.4*Asia + 0.4*Europe + 0.2*FX.
         asia_ret = 0.01
         europe_ret = 0.02
         fx_ret = 0.005
@@ -855,7 +843,7 @@ class TestGlobalRiskFlowIntegrity:
         assert abs(flow - expected) < 1e-10
 
     def test_risk_flow_sign_semantics(self):
-        """Positive = risk-on, negative = risk-off."""
+        # Positive = risk-on, negative = risk-off.
         # All positive: risk-on
         bars_on = _build_full_av_bars(0.02, 0.03, 0.01)
         flow_on = compute_global_risk_flow(bars_on, 10 * _DAY_MS)
@@ -867,7 +855,7 @@ class TestGlobalRiskFlowIntegrity:
         assert flow_off is not None and flow_off < 0
 
     def test_risk_flow_with_only_fx(self):
-        """FX-only data should compute with full weight on FX."""
+        # FX-only data should compute with full weight on FX.
         bars = {}
         bars[FX_RISK_SYMBOL] = _make_av_bars(FX_RISK_SYMBOL, [100.0, 103.0])
 
@@ -877,7 +865,7 @@ class TestGlobalRiskFlowIntegrity:
         assert abs(flow - 0.03) < 1e-10
 
     def test_risk_flow_lookahead_prevention(self):
-        """Bars at exactly sim_time are excluded (strict less-than)."""
+        # Bars at exactly sim_time are excluded (strict less-than).
         bars = _build_full_av_bars(0.01, 0.02, 0.005)
         # sim_time exactly at the second bar's timestamp (day 2 = 2 * _DAY_MS)
         flow = compute_global_risk_flow(bars, 2 * _DAY_MS)
@@ -885,16 +873,14 @@ class TestGlobalRiskFlowIntegrity:
         assert flow is None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Research Loop Config Validation
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestResearchLoopConfig:
-    """Verify research loop config includes overnight strategy with gating."""
+    # Verify research loop config includes overnight strategy with gating.
 
     def test_overnight_strategy_in_research_loop_config(self):
-        """OvernightSessionStrategy is registered in research_loop.yaml."""
+        # OvernightSessionStrategy is registered in research_loop.yaml.
         import yaml
         config_path = "config/research_loop.yaml"
 
@@ -911,7 +897,7 @@ class TestResearchLoopConfig:
         )
 
     def test_overnight_sweep_includes_risk_flow_gate(self):
-        """overnight_sweep.yaml includes gate_on_risk_flow parameter."""
+        # overnight_sweep.yaml includes gate_on_risk_flow parameter.
         import yaml
         sweep_path = "config/overnight_sweep.yaml"
 
@@ -930,7 +916,7 @@ class TestResearchLoopConfig:
         )
 
     def test_strategy_loadable_by_research_loop(self):
-        """OvernightSessionStrategy can be loaded by the research loop loader."""
+        # OvernightSessionStrategy can be loaded by the research loop loader.
         import importlib
         modules = [
             "src.strategies.vrp_credit_spread",
@@ -949,16 +935,14 @@ class TestResearchLoopConfig:
         assert found, "OvernightSessionStrategy not loadable from strategy modules"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Strategy _extract_global_risk_flow Edge Cases
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestExtractGlobalRiskFlow:
-    """Verify the strategy's extraction of risk flow from visible_regimes."""
+    # Verify the strategy's extraction of risk flow from visible_regimes.
 
     def test_extract_from_valid_regimes(self):
-        """Normal extraction path."""
+        # Normal extraction path.
         regimes = _make_regimes(risk_flow=0.0123)
         val = OvernightSessionStrategy._extract_global_risk_flow(regimes)
         assert val == 0.0123
@@ -992,7 +976,7 @@ class TestExtractGlobalRiskFlow:
         assert val is None
 
     def test_extract_zero_risk_flow(self):
-        """Zero is a valid risk flow value."""
+        # Zero is a valid risk flow value.
         regimes = _make_regimes(risk_flow=0.0)
         val = OvernightSessionStrategy._extract_global_risk_flow(regimes)
         assert val == 0.0

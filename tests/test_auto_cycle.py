@@ -1,6 +1,6 @@
-"""
-Tests for scripts/kalshi_auto_cycle.py — automated 8-hour run loop.
-"""
+# Created by Oliver Meihls
+
+# Tests for scripts/kalshi_auto_cycle.py — automated 8-hour run loop.
 from __future__ import annotations
 
 import subprocess
@@ -28,7 +28,7 @@ def test_help_flag_exits_cleanly():
 
 
 def test_archive_dry_run_does_not_create_file(tmp_path, monkeypatch):
-    """Dry run must not copy the file."""
+    # Dry run must not copy the file.
     monkeypatch.setattr(ac, "ROOT", tmp_path)
     src = tmp_path / "logs" / "paper_trades.jsonl"
     src.parent.mkdir(parents=True)
@@ -40,7 +40,7 @@ def test_archive_dry_run_does_not_create_file(tmp_path, monkeypatch):
 
 
 def test_archive_real_copies_file(tmp_path, monkeypatch):
-    """Real archive must copy file into training_data/."""
+    # Real archive must copy file into training_data/.
     monkeypatch.setattr(ac, "ROOT", tmp_path)
     src = tmp_path / "logs" / "paper_trades.jsonl"
     src.parent.mkdir(parents=True)
@@ -54,7 +54,7 @@ def test_archive_real_copies_file(tmp_path, monkeypatch):
 
 
 def test_archive_skips_empty_file(tmp_path, monkeypatch):
-    """Empty paper_trades.jsonl must return None (no archive created)."""
+    # Empty paper_trades.jsonl must return None (no archive created).
     monkeypatch.setattr(ac, "ROOT", tmp_path)
     src = tmp_path / "logs" / "paper_trades.jsonl"
     src.parent.mkdir(parents=True)
@@ -65,7 +65,7 @@ def test_archive_skips_empty_file(tmp_path, monkeypatch):
 
 
 def test_archive_skips_missing_file(tmp_path, monkeypatch):
-    """Missing paper_trades.jsonl must return None gracefully."""
+    # Missing paper_trades.jsonl must return None gracefully.
     monkeypatch.setattr(ac, "ROOT", tmp_path)
     (tmp_path / "logs").mkdir(parents=True)
 
@@ -74,11 +74,9 @@ def test_archive_skips_missing_file(tmp_path, monkeypatch):
 
 
 def test_dry_run_cycle_calls_all_scripts(tmp_path, monkeypatch):
-    """
-    A full dry-run cycle (skip_farm=True, duration=0) must invoke
-    kalshi_run_pack, kalshi_apply_promotion, and reset_kalshi_paper
-    — all with dry_run=True — and archive the paper trades file.
-    """
+    # A full dry-run cycle (skip_farm=True, duration=0) must invoke
+    # kalshi_run_pack, kalshi_apply_promotion, and reset_kalshi_paper
+    # — all with dry_run=True — and archive the paper trades file.
     monkeypatch.setattr(ac, "ROOT", tmp_path)
 
     # Create a non-empty paper_trades.jsonl so archive is triggered

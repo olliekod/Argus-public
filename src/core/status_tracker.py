@@ -1,8 +1,8 @@
-"""
-Activity status tracker for providers and detectors.
+# Created by Oliver Meihls
 
-Includes per-symbol tick tracking for fine-grained staleness detection.
-"""
+# Activity status tracker for providers and detectors.
+#
+# Includes per-symbol tick tracking for fine-grained staleness detection.
 
 from __future__ import annotations
 
@@ -19,13 +19,12 @@ _MAX_SYMBOL_ENTRIES = 500       # Cap per-symbol tracking to bound memory
 
 
 class ActivityStatusTracker:
-    """Track provider + detector activity based on bus events.
-
-    Now includes per-symbol tick tracking: each ``record_provider_event``
-    call with a ``symbol`` kwarg updates a per-symbol last-seen timestamp.
-    ``get_stale_symbols`` returns symbols that haven't been seen within
-    ``symbol_stale_s`` seconds.
-    """
+    # Track provider + detector activity based on bus events.
+    #
+    # Now includes per-symbol tick tracking: each ``record_provider_event``
+    # call with a ``symbol`` kwarg updates a per-symbol last-seen timestamp.
+    # ``get_stale_symbols`` returns symbols that haven't been seen within
+    # ``symbol_stale_s`` seconds.
 
     def __init__(
         self,
@@ -240,19 +239,16 @@ class ActivityStatusTracker:
             }
         return statuses
 
-    # ------------------------------------------------------------------
-    # Per-symbol staleness
-    # ------------------------------------------------------------------
+# Per-symbol staleness
 
     def get_stale_symbols(
         self,
         now: Optional[float] = None,
         stale_after_s: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
-        """Return symbols whose last tick is older than *stale_after_s*.
-
-        Each entry is ``{"provider": ..., "symbol": ..., "age_s": ..., "last_ts": ...}``.
-        """
+        # Return symbols whose last tick is older than *stale_after_s*.
+        #
+        # Each entry is ``{"provider": ..., "symbol": ..., "age_s": ..., "last_ts": ...}``.
         now = now or time.time()
         threshold = stale_after_s if stale_after_s is not None else self._symbol_stale_s
         stale: List[Dict[str, Any]] = []
@@ -273,10 +269,9 @@ class ActivityStatusTracker:
         provider: Optional[str] = None,
         now: Optional[float] = None,
     ) -> Dict[str, Dict[str, Any]]:
-        """Return per-symbol health statuses, optionally filtered by provider.
-
-        Returns ``{ "provider::symbol": {"health": ..., "age_s": ...} }``.
-        """
+        # Return per-symbol health statuses, optionally filtered by provider.
+        #
+        # Returns ``{ "provider::symbol": {"health": ..., "age_s": ...} }``.
         now = now or time.time()
         result: Dict[str, Dict[str, Any]] = {}
         for key, last_ts in self._symbol_ticks.items():

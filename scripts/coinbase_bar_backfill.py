@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-"""
-Coinbase BTC Bar Backfill
-=========================
+# Created by Oliver Meihls
 
-Fetches historical 1-minute BTC bars from Coinbase and persists to the Argus database.
-Uses the public Coinbase Exchange candles API (US-friendly).
-
-Usage::
-
-    # Backfill last 24 hours of BTC
-    python scripts/coinbase_bar_backfill.py --hours 24
-
-    # Backfill from 2021-01-01 to 2021-02-01
-    python scripts/coinbase_bar_backfill.py --start 2021-01-01 --end 2021-02-01
-
-    # Dry-run
-    python scripts/coinbase_bar_backfill.py --dry-run
-"""
+# Coinbase BTC Bar Backfill
+#
+# Fetches historical 1-minute BTC bars from Coinbase and persists to the Argus database.
+# Uses the public Coinbase Exchange candles API (US-friendly).
+#
+# Usage::
+#
+# # Backfill last 24 hours of BTC
+# python scripts/coinbase_bar_backfill.py --hours 24
+#
+# # Backfill from 2021-01-01 to 2021-02-01
+# python scripts/coinbase_bar_backfill.py --start 2021-01-01 --end 2021-02-01
+#
+# # Dry-run
+# python scripts/coinbase_bar_backfill.py --dry-run
 
 import argparse
 import asyncio
@@ -52,7 +51,7 @@ async def fetch_candles_chunk(
     end_dt: datetime,
     granularity: int = 60
 ) -> List[List]:
-    """Fetch a single chunk of candles from Coinbase."""
+    # Fetch a single chunk of candles from Coinbase.
     url = COINBASE_API_URL.format(product_id)
     params = {
         "start": start_dt.isoformat(),
@@ -73,7 +72,7 @@ async def backfill(
     db_path: str = "data/argus.db",
     dry_run: bool = False,
 ):
-    """Run the backfill by chunking requests."""
+    # Run the backfill by chunking requests.
     db = Database(db_path)
     await db.connect()
 

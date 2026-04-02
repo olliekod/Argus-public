@@ -1,24 +1,21 @@
-"""
-Argus Query Layer
-=================
+# Created by Oliver Meihls
 
-Unified command interface that pulls latest state from the event bus
-and historical data from the database.
-
-Commands
---------
-/status  — Health / lag for every component
-/market  — Current regime, prices, IV
-/signals — Last 10 signal events
-/db      — Storage size, retention, row counts
-
-Stream 2 additions
-------------------
-* **Status snapshots** — ``snapshot()`` serialises the full status dict
-  for periodic DB / JSON persistence.
-* **Equity-gap-aware continuity** — equity symbols (IBIT, BITO, SPY, QQQ, NVDA) are not
-  flagged stale during known market-close hours (weekends, overnight).
-"""
+# Argus Query Layer
+#
+# Unified command interface that pulls latest state from the event bus
+# and historical data from the database.
+#
+# Commands
+# /status  — Health / lag for every component
+# /market  — Current regime, prices, IV
+# /signals — Last 10 signal events
+# /db      — Storage size, retention, row counts
+#
+# Stream 2 additions
+# * **Status snapshots** — ``snapshot()`` serialises the full status dict
+# for periodic DB / JSON persistence.
+# * **Equity-gap-aware continuity** — equity symbols (IBIT, BITO, SPY, QQQ, NVDA) are not
+# flagged stale during known market-close hours (weekends, overnight).
 
 from __future__ import annotations
 
@@ -49,7 +46,7 @@ _EQUITY_SYMBOLS = {"IBIT", "BITO", "SPY", "QQQ", "NVDA"}
 
 
 def _is_equity_market_open(now_utc: Optional[datetime] = None) -> bool:
-    """Return True if US equity markets are open (Mon-Fri 09:30-16:00 ET)."""
+    # Return True if US equity markets are open (Mon-Fri 09:30-16:00 ET).
     if now_utc is None:
         now_utc = datetime.now(timezone.utc)
     now_et = now_utc.astimezone(_EASTERN)
@@ -61,19 +58,17 @@ def _is_equity_market_open(now_utc: Optional[datetime] = None) -> bool:
 
 
 class QueryLayer:
-    """Provides a unified read interface over bus state + DB history.
-
-    Parameters
-    ----------
-    bus : EventBus
-        The running event bus (used for live queue depth / stats).
-    db : Database
-        Argus async database handle.
-    detectors : dict
-        Name → detector instance mapping (for regime info).
-    connectors : dict
-        Name → connector instance mapping (for health info).
-    """
+    # Provides a unified read interface over bus state + DB history.
+    #
+    # Parameters
+    # bus : EventBus
+    # The running event bus (used for live queue depth / stats).
+    # db : Database
+    # Argus async database handle.
+    # detectors : dict
+    # Name → detector instance mapping (for regime info).
+    # connectors : dict
+    # Name → connector instance mapping (for health info).
 
     def __init__(
         self,
@@ -109,14 +104,13 @@ class QueryLayer:
     # ── /status ─────────────────────────────────────────────
 
     async def status(self) -> Dict[str, Any]:
-        """Health and lag for every component.
-
-        Returns a dict with:
-        - ``bus``: per-topic queue depth and publish/process stats
-        - ``providers``: per-connector health snapshot
-        - ``internal``: BarBuilder/Persistence status
-        - ``db``: connection status and size
-        """
+        # Health and lag for every component.
+        #
+        # Returns a dict with:
+        # - ``bus``: per-topic queue depth and publish/process stats
+        # - ``providers``: per-connector health snapshot
+        # - ``internal``: BarBuilder/Persistence status
+        # - ``db``: connection status and size
         bus_stats = self._bus.get_status_summary()
 
         connector_health: Dict[str, Any] = {}
@@ -256,11 +250,10 @@ class QueryLayer:
     # ── /market ─────────────────────────────────────────────
 
     async def market(self) -> Dict[str, Any]:
-        """Current regime, latest prices, and IV.
-
-        Pulls live price caches from connectors and regime info
-        from volatility / conditions detectors.
-        """
+        # Current regime, latest prices, and IV.
+        #
+        # Pulls live price caches from connectors and regime info
+        # from volatility / conditions detectors.
         prices: Dict[str, Any] = {}
 
         # Bybit tickers
@@ -318,7 +311,7 @@ class QueryLayer:
     # ── /signals ────────────────────────────────────────────
 
     async def signals(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Last *limit* signal events from the database."""
+        # Last *limit* signal events from the database.
         try:
             rows = await self._db.fetch_all(
                 "SELECT * FROM signal_events ORDER BY id DESC LIMIT ?",
@@ -332,7 +325,7 @@ class QueryLayer:
     # ── /db ─────────────────────────────────────────────────
 
     async def db(self) -> Dict[str, Any]:
-        """Storage size, retention policy, and row counts."""
+        # Storage size, retention policy, and row counts.
         stats = await self._db.get_db_stats()
 
         # Latest timestamps per key table
@@ -357,7 +350,7 @@ class QueryLayer:
     # ── Status snapshot (Stream 2) ──────────────────────────
 
     async def snapshot(self) -> Dict[str, Any]:
-        """Return a full status snapshot suitable for DB / JSON persistence."""
+        # Return a full status snapshot suitable for DB / JSON persistence.
         status_data = await self.status()
         market_data = await self.market()
         db_data = await self.db()
@@ -369,10 +362,9 @@ class QueryLayer:
         }
 
     async def persist_snapshot(self) -> None:
-        """Dump a status snapshot into the system_health table as JSON.
-
-        Called periodically by the orchestrator to create an audit trail.
-        """
+        # Dump a status snapshot into the system_health table as JSON.
+        #
+        # Called periodically by the orchestrator to create an audit trail.
         try:
             snap = await self.snapshot()
             ts_iso = snap["snapshot_ts"]

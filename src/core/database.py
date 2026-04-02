@@ -1,10 +1,9 @@
-"""
-Argus Database Module
-=====================
+# Created by Oliver Meihls
 
-SQLite database for storing detections, market data, and system health.
-Uses aiosqlite for async operations.
-"""
+# Argus Database Module
+#
+# SQLite database for storing detections, market data, and system health.
+# Uses aiosqlite for async operations.
 
 import asyncio
 import aiosqlite
@@ -19,32 +18,28 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
-    """
-    Async SQLite database manager for Argus.
-    
-    Handles:
-    - Detection logging
-    - Funding rate history
-    - Options IV data
-    - Liquidation events
-    - Price snapshots
-    - System health monitoring
-    """
+    # Async SQLite database manager for Argus.
+    #
+    # Handles:
+    # - Detection logging
+    # - Funding rate history
+    # - Options IV data
+    # - Liquidation events
+    # - Price snapshots
+    # - System health monitoring
     
     def __init__(self, db_path: str):
-        """
-        Initialize database connection.
-        
-        Args:
-            db_path: Path to SQLite database file
-        """
+        # Initialize database connection.
+        #
+        # Args:
+        # db_path: Path to SQLite database file
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection: Optional[aiosqlite.Connection] = None
         self._write_lock: Optional[asyncio.Lock] = None
     
     async def connect(self) -> None:
-        """Establish database connection and create tables."""
+        # Establish database connection and create tables.
         self._connection = await aiosqlite.connect(str(self.db_path))
         self._write_lock = asyncio.Lock()
         self._connection.row_factory = aiosqlite.Row
@@ -60,7 +55,7 @@ class Database:
         logger.info(f"Database connected: {self.db_path}")
 
     async def checkpoint(self) -> None:
-        """Perform a WAL checkpoint to truncate the -wal file."""
+        # Perform a WAL checkpoint to truncate the -wal file.
         if self._connection and self._write_lock:
             try:
                 # RESTART: Truncates the WAL file and resets it.
@@ -72,14 +67,14 @@ class Database:
                 logger.error(f"Failed to perform WAL checkpoint: {e}")
 
     async def close(self) -> None:
-        """Close database connection."""
+        # Close database connection.
         if self._connection:
             await self._connection.close()
             self._connection = None
             logger.info("Database connection closed")
     
     async def execute(self, sql: str, params: tuple = ()) -> None:
-        """Execute a SQL statement (for external use)."""
+        # Execute a SQL statement (for external use).
         if self._write_lock is None:
             raise RuntimeError("Database is not connected")
         async with self._write_lock:
@@ -87,7 +82,7 @@ class Database:
             await self._connection.commit()
 
     async def execute_many(self, sql: str, params_list: List[tuple]) -> None:
-        """Execute a SQL statement with multiple parameter sets in a single transaction."""
+        # Execute a SQL statement with multiple parameter sets in a single transaction.
         if self._write_lock is None:
             raise RuntimeError("Database is not connected")
         async with self._write_lock:
@@ -95,17 +90,17 @@ class Database:
             await self._connection.commit()
 
     async def fetch_one(self, sql: str, params: tuple = ()) -> Optional[tuple]:
-        """Fetch one row from a query."""
+        # Fetch one row from a query.
         cursor = await self._connection.execute(sql, params)
         return await cursor.fetchone()
     
     async def fetch_all(self, sql: str, params: tuple = ()) -> List[tuple]:
-        """Fetch all rows from a query."""
+        # Fetch all rows from a query.
         cursor = await self._connection.execute(sql, params)
         return await cursor.fetchall()
     
     async def _create_tables(self) -> None:
-        """Create all database tables if they don't exist."""
+        # Create all database tables if they don't exist.
 
         # Followed traders list (for best-trader follow feature)
         await self._connection.execute("""
@@ -573,7 +568,7 @@ class Database:
         start_ms: Optional[int] = None, 
         end_ms: Optional[int] = None
     ) -> List[Dict[str, Any]]:
-        """Fetch historical metrics for a symbol and date range."""
+        # Fetch historical metrics for a symbol and date range.
         query = "SELECT timestamp, source, symbol, metric, value, metadata_json FROM market_metrics WHERE symbol = ?"
         params = [symbol]
         
@@ -907,9 +902,7 @@ class Database:
 
         logger.debug("Database tables created/verified")
 
-    # =========================================================================
-    # Phase 3B: Options Persistence (idempotent upserts)
-    # =========================================================================
+# Phase 3B: Options Persistence (idempotent upserts)
 
     async def upsert_option_contract(
         self,
@@ -924,13 +917,12 @@ class Database:
         multiplier: int = 100,
         style: str = "american",
     ) -> bool:
-        """Upsert option contract metadata (idempotent).
-        
-        Unique constraint: option_symbol (globally unique OCC symbol).
-        
-        Returns:
-            True if inserted, False if updated existing.
-        """
+        # Upsert option contract metadata (idempotent).
+        #
+        # Unique constraint: option_symbol (globally unique OCC symbol).
+        #
+        # Returns:
+        # True if inserted, False if updated existing.
         try:
             await self._connection.execute("""
                 INSERT INTO option_contracts (
@@ -963,14 +955,13 @@ class Database:
         provider: str,
         quotes_json: str,
     ) -> bool:
-        """Upsert option chain snapshot (idempotent).
-        
-        Unique constraint: (provider, symbol, timestamp_ms).
-        Expiration is stored in payload, not in uniqueness key.
-        
-        Returns:
-            True if inserted, False if already exists.
-        """
+        # Upsert option chain snapshot (idempotent).
+        #
+        # Unique constraint: (provider, symbol, timestamp_ms).
+        # Expiration is stored in payload, not in uniqueness key.
+        #
+        # Returns:
+        # True if inserted, False if already exists.
         try:
             await self._connection.execute("""
                 INSERT INTO option_chain_snapshots (
@@ -991,13 +982,12 @@ class Database:
             return False
 
     async def get_latest_chain_timestamp(self, symbol: str) -> int | None:
-        """Get latest chain snapshot timestamp for a symbol.
-        
-        Used for restart initialization to avoid duplicate polling.
-        
-        Returns:
-            Latest timestamp_ms or None if no snapshots exist.
-        """
+        # Get latest chain snapshot timestamp for a symbol.
+        #
+        # Used for restart initialization to avoid duplicate polling.
+        #
+        # Returns:
+        # Latest timestamp_ms or None if no snapshots exist.
         cursor = await self._connection.execute("""
             SELECT MAX(timestamp_ms) FROM option_chain_snapshots WHERE symbol = ?
         """, (symbol,))
@@ -1005,7 +995,7 @@ class Database:
         return row[0] if row and row[0] else None
 
     async def _migrate_option_chain_snapshots_if_old_schema(self) -> None:
-        """If the table has old UNIQUE(symbol, expiration_ms, timestamp_ms), recreate with UNIQUE(provider, symbol, timestamp_ms)."""
+        # If the table has old UNIQUE(symbol, expiration_ms, timestamp_ms), recreate with UNIQUE(provider, symbol, timestamp_ms).
         cursor = await self._connection.execute(
             "PRAGMA index_list('option_chain_snapshots')"
         )
@@ -1075,18 +1065,15 @@ class Database:
 
     
     # Detection Operations
-    # =========================================================================
     
     async def insert_detection(self, detection: Dict[str, Any]) -> int:
-        """
-        Insert a new detection record.
-        
-        Args:
-            detection: Detection data dictionary
-            
-        Returns:
-            ID of inserted record
-        """
+        # Insert a new detection record.
+        #
+        # Args:
+        # detection: Detection data dictionary
+        #
+        # Returns:
+        # ID of inserted record
         detection_data = detection.get('detection_data')
         if isinstance(detection_data, dict):
             try:
@@ -1145,7 +1132,7 @@ class Database:
         is_paper: bool = True,
         bot_id: str = "default",
     ) -> bool:
-        """Insert a Kalshi trade outcome (settlement result)."""
+        # Insert a Kalshi trade outcome (settlement result).
         try:
             if self._write_lock is None:
                 raise RuntimeError("Database is not connected")
@@ -1166,7 +1153,7 @@ class Database:
             return False
 
     async def get_kalshi_daily_pnl(self, days: int = 30, is_paper: bool = True, bot_id: str = "default") -> List[Dict[str, Any]]:
-        """Get daily Kalshi PnL totals for the last N days."""
+        # Get daily Kalshi PnL totals for the last N days.
         # Convert settled_at_ms to YYYY-MM-DD
         query = """
             SELECT 
@@ -1184,11 +1171,11 @@ class Database:
         return [{"date": row["date"], "pnl": row["daily_pnl"], "daily_pnl": row["daily_pnl"], "trade_count": row["trade_count"]} for row in rows]
 
     async def get_kalshi_daily_pnl_history(self, days: int = 30, is_paper: bool = True, bot_id: str = "default") -> List[Dict[str, Any]]:
-        """Return daily Kalshi PnL time series filtered by bot_id."""
+        # Return daily Kalshi PnL time series filtered by bot_id.
         return await self.get_kalshi_daily_pnl(days=days, is_paper=is_paper, bot_id=bot_id)
 
     async def get_kalshi_outcome_stats(self) -> dict:
-        """Return all-time PnL and win rate from kalshi_outcomes (for UI)."""
+        # Return all-time PnL and win rate from kalshi_outcomes (for UI).
         try:
             if self._connection is None:
                 return {"total_pnl": 0.0, "wins": 0, "total": 0}
@@ -1219,15 +1206,13 @@ class Database:
         pnl_percent: float,
         pnl_usd: float
     ) -> None:
-        """
-        Update a detection with resolution data.
-        
-        Args:
-            detection_id: ID of detection to update
-            outcome: 'normalized', 'stopped', 'profit_taken', 'expired'
-            pnl_percent: Hypothetical P&L percentage
-            pnl_usd: Hypothetical P&L in USD
-        """
+        # Update a detection with resolution data.
+        #
+        # Args:
+        # detection_id: ID of detection to update
+        # outcome: 'normalized', 'stopped', 'profit_taken', 'expired'
+        # pnl_percent: Hypothetical P&L percentage
+        # pnl_usd: Hypothetical P&L in USD
         await self._connection.execute("""
             UPDATE detections
             SET resolution_timestamp = ?,
@@ -1246,7 +1231,7 @@ class Database:
         logger.debug(f"Updated detection {detection_id}: {outcome}, {pnl_percent:.2f}%")
     
     async def mark_alert_sent(self, detection_id: int) -> None:
-        """Mark a detection's alert as sent."""
+        # Mark a detection's alert as sent.
         await self._connection.execute(
             "UPDATE detections SET alert_sent = 1 WHERE id = ?",
             (detection_id,)
@@ -1258,16 +1243,14 @@ class Database:
         hours: int = 24,
         opportunity_type: Optional[str] = None
     ) -> List[Dict]:
-        """
-        Get recent detections.
-        
-        Args:
-            hours: How many hours back to look
-            opportunity_type: Filter by type (optional)
-            
-        Returns:
-            List of detection dictionaries
-        """
+        # Get recent detections.
+        #
+        # Args:
+        # hours: How many hours back to look
+        # opportunity_type: Filter by type (optional)
+        #
+        # Returns:
+        # List of detection dictionaries
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
         
         if opportunity_type:
@@ -1287,7 +1270,7 @@ class Database:
         return [dict(row) for row in rows]
     
     async def get_unresolved_detections(self) -> List[Dict]:
-        """Get detections that would trigger entry but haven't been resolved."""
+        # Get detections that would trigger entry but haven't been resolved.
         cursor = await self._connection.execute("""
             SELECT * FROM detections
             WHERE would_trigger_entry = 1
@@ -1297,9 +1280,7 @@ class Database:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
     
-    # =========================================================================
-    # Funding Rate Operations
-    # =========================================================================
+# Funding Rate Operations
     
     async def insert_funding_rate(
         self,
@@ -1308,7 +1289,7 @@ class Database:
         funding_rate: float,
         **kwargs
     ) -> None:
-        """Insert a funding rate record."""
+        # Insert a funding rate record.
         await self._connection.execute("""
             INSERT INTO funding_rates (
                 timestamp, exchange, asset, funding_rate,
@@ -1333,17 +1314,15 @@ class Database:
         periods: int = 30,
         exchange: Optional[str] = None
     ) -> List[Dict]:
-        """
-        Get recent funding rate history.
-        
-        Args:
-            asset: Asset symbol
-            periods: Number of periods to retrieve
-            exchange: Filter by exchange (optional)
-            
-        Returns:
-            List of funding rate records
-        """
+        # Get recent funding rate history.
+        #
+        # Args:
+        # asset: Asset symbol
+        # periods: Number of periods to retrieve
+        # exchange: Filter by exchange (optional)
+        #
+        # Returns:
+        # List of funding rate records
         if exchange:
             cursor = await self._connection.execute("""
                 SELECT * FROM funding_rates
@@ -1362,9 +1341,7 @@ class Database:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
     
-    # =========================================================================
-    # Options IV Operations
-    # =========================================================================
+# Options IV Operations
     
     async def insert_options_iv(
         self,
@@ -1375,7 +1352,7 @@ class Database:
         iv: float,
         **kwargs
     ) -> None:
-        """Insert an options IV record."""
+        # Insert an options IV record.
         await self._connection.execute("""
             INSERT INTO options_iv (
                 timestamp, asset, expiry, strike, option_type,
@@ -1403,7 +1380,7 @@ class Database:
         asset: str,
         days: int = 30
     ) -> List[Dict]:
-        """Get IV history for an asset."""
+        # Get IV history for an asset.
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
         cursor = await self._connection.execute("""
             SELECT * FROM options_iv
@@ -1413,9 +1390,7 @@ class Database:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
     
-    # =========================================================================
-    # Liquidation Operations
-    # =========================================================================
+# Liquidation Operations
     
     async def insert_liquidation(
         self,
@@ -1426,7 +1401,7 @@ class Database:
         price: float,
         timestamp: Optional[str] = None
     ) -> None:
-        """Insert a liquidation event."""
+        # Insert a liquidation event.
         await self._connection.execute("""
             INSERT INTO liquidations (timestamp, exchange, asset, side, liquidation_amount_usd, price)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -1445,7 +1420,7 @@ class Database:
         asset: str,
         minutes: int = 5
     ) -> List[Dict]:
-        """Get recent liquidations for cascade detection."""
+        # Get recent liquidations for cascade detection.
         cutoff = (datetime.now(timezone.utc) - timedelta(minutes=minutes)).isoformat()
         cursor = await self._connection.execute("""
             SELECT * FROM liquidations
@@ -1455,9 +1430,7 @@ class Database:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
     
-    # =========================================================================
-    # Price Snapshot Operations
-    # =========================================================================
+# Price Snapshot Operations
     
     async def insert_price_snapshot(
         self,
@@ -1467,7 +1440,7 @@ class Database:
         price: float,
         volume: Optional[float] = None
     ) -> None:
-        """Insert a price snapshot."""
+        # Insert a price snapshot.
         await self._connection.execute("""
             INSERT INTO price_snapshots (timestamp, exchange, asset, price_type, price, volume)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -1488,7 +1461,7 @@ class Database:
         price_type: str = 'spot',
         minutes: int = 60
     ) -> List[float]:
-        """Get price history for volatility calculations."""
+        # Get price history for volatility calculations.
         cutoff = (datetime.now(timezone.utc) - timedelta(minutes=minutes)).isoformat()
         cursor = await self._connection.execute("""
             SELECT price FROM price_snapshots
@@ -1498,9 +1471,7 @@ class Database:
         rows = await cursor.fetchall()
         return [row['price'] for row in rows]
     
-    # =========================================================================
-    # System Health Operations
-    # =========================================================================
+# System Health Operations
     
     async def insert_health_check(
         self,
@@ -1509,7 +1480,7 @@ class Database:
         error_message: Optional[str] = None,
         latency_ms: Optional[float] = None
     ) -> None:
-        """Record a system health check."""
+        # Record a system health check.
         await self._connection.execute("""
             INSERT INTO system_health (timestamp, component, status, error_message, latency_ms)
             VALUES (?, ?, ?, ?, ?)
@@ -1523,7 +1494,7 @@ class Database:
         await self._connection.commit()
     
     async def get_component_status(self, component: str) -> Optional[Dict]:
-        """Get the most recent status for a component."""
+        # Get the most recent status for a component.
         cursor = await self._connection.execute("""
             SELECT * FROM system_health
             WHERE component = ?
@@ -1533,9 +1504,7 @@ class Database:
         row = await cursor.fetchone()
         return dict(row) if row else None
 
-    # =========================================================================
-    # Market Metrics Operations
-    # =========================================================================
+# Market Metrics Operations
 
     async def insert_market_metric(
         self,
@@ -1546,7 +1515,7 @@ class Database:
         value: float,
         metadata_json: Optional[str] = None
     ) -> None:
-        """Insert a generic market metric record (deduplicated)."""
+        # Insert a generic market metric record (deduplicated).
         await self._connection.execute("""
             INSERT OR IGNORE INTO market_metrics (
                 timestamp, source, symbol, metric, value, metadata_json
@@ -1555,7 +1524,7 @@ class Database:
         await self._connection.commit()
 
     async def get_latest_timestamps(self, tables: List[str]) -> Dict[str, Optional[str]]:
-        """Fetch the most recent timestamp for each table."""
+        # Fetch the most recent timestamp for each table.
         results: Dict[str, Optional[str]] = {}
         for table in tables:
             cursor = await self._connection.execute(
@@ -1572,7 +1541,7 @@ class Database:
         price_type: str,
         cutoff_timestamp: str,
     ) -> Optional[Dict[str, Any]]:
-        """Fetch the most recent price at or before a cutoff timestamp."""
+        # Fetch the most recent price at or before a cutoff timestamp.
         cursor = await self._connection.execute("""
             SELECT price, timestamp
             FROM price_snapshots
@@ -1590,11 +1559,10 @@ class Database:
         min_trades: int = 1,
         epoch_start: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Get per-trader realized PnL statistics for /pnl analytics.
-
-        Computes per-trader return as realized_pnl / starting_equity.
-        Each trader starts with the same notional ($5000), so return = total_pnl / 5000.
-        """
+        # Get per-trader realized PnL statistics for /pnl analytics.
+        #
+        # Computes per-trader return as realized_pnl / starting_equity.
+        # Each trader starts with the same notional ($5000), so return = total_pnl / 5000.
         params: List[Any] = [f"-{days} days", min_trades]
         epoch_clause = ""
         if epoch_start:
@@ -1623,16 +1591,15 @@ class Database:
         return [dict(row) for row in rows]
 
     async def get_zombie_positions(self, stale_hours: int = 48) -> List[Dict[str, Any]]:
-        """Find zombie positions: open trades with no updates for stale_hours.
-
-        A zombie position is an open position that is no longer reachable by the
-        strategy lifecycle (e.g., missing close event, orphan order, expired option
-        not settled, process crash before DB update).
-
-        Detection rules:
-        1. Status = 'open' AND timestamp < (now - stale_hours)
-        2. Status = 'open' AND expiry date is in the past
-        """
+        # Find zombie positions: open trades with no updates for stale_hours.
+        #
+        # A zombie position is an open position that is no longer reachable by the
+        # strategy lifecycle (e.g., missing close event, orphan order, expired option
+        # not settled, process crash before DB update).
+        #
+        # Detection rules:
+        # 1. Status = 'open' AND timestamp < (now - stale_hours)
+        # 2. Status = 'open' AND expiry date is in the past
         cursor = await self._connection.execute("""
             SELECT id, trader_id, strategy_type, symbol, timestamp,
                    strikes, expiry, entry_credit, contracts, status,
@@ -1649,7 +1616,7 @@ class Database:
         return [dict(row) for row in rows]
 
     async def mark_zombies(self, trade_ids: List[str], reason: str = 'zombie_detected') -> int:
-        """Mark a list of trades as zombie (expired with reason)."""
+        # Mark a list of trades as zombie (expired with reason).
         if not trade_ids:
             return 0
         now = datetime.now(timezone.utc).isoformat()
@@ -1669,7 +1636,7 @@ class Database:
         return len(trade_ids)
 
     async def get_followed_traders(self) -> List[Dict[str, Any]]:
-        """Get the list of followed traders."""
+        # Get the list of followed traders.
         cursor = await self._connection.execute(
             "SELECT * FROM followed_traders ORDER BY score DESC"
         )
@@ -1677,7 +1644,7 @@ class Database:
         return [dict(row) for row in rows]
 
     async def set_followed_traders(self, traders: List[Dict[str, Any]]) -> None:
-        """Replace the followed traders list."""
+        # Replace the followed traders list.
         await self._connection.execute("DELETE FROM followed_traders")
         for t in traders:
             await self._connection.execute("""
@@ -1695,7 +1662,7 @@ class Database:
         await self._connection.commit()
 
     async def get_trader_performance(self, days: int = 60) -> List[Dict[str, Any]]:
-        """Get aggregated trader performance over a window."""
+        # Get aggregated trader performance over a window.
         cursor = await self._connection.execute("""
             SELECT 
                 trader_id,
@@ -1711,19 +1678,15 @@ class Database:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
     
-    # =========================================================================
-    # Statistics Operations
-    # =========================================================================
+# Statistics Operations
     
     async def get_statistics(self, days: int = 14) -> Dict:
-        """
-        Get aggregated statistics for analysis.
-        
-        Returns dict with:
-        - total_detections
-        - detections_by_type
-        - trade_statistics
-        """
+        # Get aggregated statistics for analysis.
+        #
+        # Returns dict with:
+        # - total_detections
+        # - detections_by_type
+        # - trade_statistics
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
         
         # Total detections
@@ -1777,22 +1740,18 @@ class Database:
             'trade_statistics': trade_stats
         }
     
-    # =========================================================================
-    # Maintenance Operations
-    # =========================================================================
+# Maintenance Operations
     
     async def cleanup_old_data(self, retention_days: Dict[str, int]) -> None:
-        """
-        Delete old data based on retention policy.
-        
-        Args:
-            retention_days: Dict mapping table names to retention days.
-                Special keys:
-                - ``"option_chain_snapshots"`` — uses ``timestamp_ms``
-                  (epoch ms) instead of an ISO ``timestamp`` column.
-                - ``"option_quotes"`` — same ``timestamp_ms`` column.
-                - ``"paper_trades"`` — only deletes closed trades.
-        """
+        # Delete old data based on retention policy.
+        #
+        # Args:
+        # retention_days: Dict mapping table names to retention days.
+        # Special keys:
+        # - ``"option_chain_snapshots"`` — uses ``timestamp_ms``
+        # (epoch ms) instead of an ISO ``timestamp`` column.
+        # - ``"option_quotes"`` — same ``timestamp_ms`` column.
+        # - ``"paper_trades"`` — only deletes closed trades.
         # Tables with epoch-ms timestamps need a different cutoff
         _MS_TABLES = {"option_chain_snapshots", "option_quotes"}
 
@@ -1830,41 +1789,36 @@ class Database:
             await self._connection.commit()
     
     async def vacuum(self) -> None:
-        """Optimize database by reclaiming space."""
+        # Optimize database by reclaiming space.
         await self._connection.execute("VACUUM")
         logger.info("Database vacuumed")
 
     async def run_maintenance(self) -> Dict[str, Any]:
-        """Run periodic maintenance: PRAGMA optimize + retention cleanup."""
+        # Run periodic maintenance: PRAGMA optimize + retention cleanup.
         await self._connection.execute("PRAGMA optimize")
         logger.info("PRAGMA optimize completed")
         return await self.get_db_stats()
 
-    # =========================================================================
-    # Bar Query Operations (for restart dedupe)
-    # =========================================================================
+# Bar Query Operations (for restart dedupe)
 
     async def get_latest_bar_ts(
         self, source: str, symbol: str, bar_duration: int = 60
     ) -> Optional[int]:
-        """Get the latest bar timestamp (ms) for a provider+symbol+timeframe.
-        
-        Used by connectors on startup to initialize last_bar_ts for dedupe.
-        
-        Parameters
-        ----------
-        source : str
-            Provider name (e.g., 'alpaca', 'bybit').
-        symbol : str
-            Trading symbol.
-        bar_duration : int
-            Bar duration in seconds (default 60 for 1m bars).
-        
-        Returns
-        -------
-        int or None
-            Latest bar timestamp in milliseconds (bar open time), or None if no bars.
-        """
+        # Get the latest bar timestamp (ms) for a provider+symbol+timeframe.
+        #
+        # Used by connectors on startup to initialize last_bar_ts for dedupe.
+        #
+        # Parameters
+        # source : str
+        # Provider name (e.g., 'alpaca', 'bybit').
+        # symbol : str
+        # Trading symbol.
+        # bar_duration : int
+        # Bar duration in seconds (default 60 for 1m bars).
+        #
+        # Returns
+        # int or None
+        # Latest bar timestamp in milliseconds (bar open time), or None if no bars.
         cursor = await self._connection.execute(
             """
             SELECT timestamp FROM market_bars
@@ -1885,9 +1839,8 @@ class Database:
     async def get_latest_bar_close(
         self, source: str, symbol: str, bar_duration: int = 60
     ) -> Optional[float]:
-        """Get the close price of the most recent bar for a source+symbol (e.g. for underlying price in IV enrichment).
-        Returns None if no bars exist.
-        """
+        # Get the close price of the most recent bar for a source+symbol (e.g. for underlying price in IV enrichment).
+        # Returns None if no bars exist.
         cursor = await self._connection.execute(
             """
             SELECT close FROM market_bars
@@ -1903,7 +1856,7 @@ class Database:
         return None
 
     async def get_db_stats(self) -> Dict[str, Any]:
-        """Get database size and table row counts."""
+        # Get database size and table row counts.
         import os
         db_size = os.path.getsize(str(self.db_path)) if self.db_path.exists() else 0
         tables = [
@@ -1937,12 +1890,12 @@ class Database:
         }
 
     def get_size_mb(self) -> float:
-        """Return DB size in MB without row scans (fast)."""
+        # Return DB size in MB without row scans (fast).
         db_size = os.path.getsize(str(self.db_path)) if self.db_path.exists() else 0
         return round(db_size / (1024 * 1024), 1)
 
     async def reset_paper_epoch(self, starting_equity: float, scope: str = 'all', reason: str = 'manual_reset') -> str:
-        """Start a new paper equity epoch. Old data remains but is excluded from current metrics."""
+        # Start a new paper equity epoch. Old data remains but is excluded from current metrics.
         epoch_start = datetime.now(timezone.utc).isoformat()
         await self._connection.execute("""
             INSERT INTO paper_equity_epochs (epoch_start, starting_equity, reason, scope)
@@ -1953,16 +1906,14 @@ class Database:
         return epoch_start
 
     async def get_current_epoch_start(self) -> Optional[str]:
-        """Get the start timestamp of the current paper equity epoch."""
+        # Get the start timestamp of the current paper equity epoch.
         cursor = await self._connection.execute(
             "SELECT epoch_start FROM paper_equity_epochs ORDER BY id DESC LIMIT 1"
         )
         row = await cursor.fetchone()
         return row['epoch_start'] if row else None
 
-    # =========================================================================
-    # Regime Operations
-    # =========================================================================
+# Regime Operations
 
     async def write_regime(
         self,
@@ -1983,13 +1934,11 @@ class Database:
         data_quality_flags: int = 0,
         metrics_json: Optional[str] = None,
     ) -> None:
-        """
-        Upsert a regime event.
-
-        Uses INSERT OR REPLACE for idempotency.
-        All new fields (liquidity_regime, spread_pct, volume_pctile) are
-        optional and default to NULL for backward compatibility.
-        """
+        # Upsert a regime event.
+        #
+        # Uses INSERT OR REPLACE for idempotency.
+        # All new fields (liquidity_regime, spread_pct, volume_pctile) are
+        # optional and default to NULL for backward compatibility.
         await self._connection.execute("""
             INSERT OR REPLACE INTO regimes (
                 event_type, scope, timeframe, timestamp, config_hash,
@@ -2016,26 +1965,22 @@ class Database:
         end_ms: Optional[int] = None,
         limit: int = 100_000,
     ) -> List[Dict[str, Any]]:
-        """
-        Load regime rows for a given scope (symbol or market).
-
-        Parameters
-        ----------
-        scope : str
-            Symbol (e.g. "SPY") or market (e.g. "EQUITIES").
-        event_type : str, optional
-            Filter by "symbol" or "market". If None, returns both.
-        start_ms / end_ms : int, optional
-            Epoch-ms range filter on ``timestamp``.
-        limit : int
-            Max rows returned (default 100k).
-
-        Returns
-        -------
-        List[Dict[str, Any]]
-            Rows ordered by timestamp ascending, each with ``timestamp_ms``
-            normalised from the DB ``timestamp`` column.
-        """
+        # Load regime rows for a given scope (symbol or market).
+        #
+        # Parameters
+        # scope : str
+        # Symbol (e.g. "SPY") or market (e.g. "EQUITIES").
+        # event_type : str, optional
+        # Filter by "symbol" or "market". If None, returns both.
+        # start_ms / end_ms : int, optional
+        # Epoch-ms range filter on ``timestamp``.
+        # limit : int
+        # Max rows returned (default 100k).
+        #
+        # Returns
+        # List[Dict[str, Any]]
+        # Rows ordered by timestamp ascending, each with ``timestamp_ms``
+        # normalised from the DB ``timestamp`` column.
         clauses = ["scope = ?"]
         params: list = [scope]
         if event_type is not None:
@@ -2070,12 +2015,10 @@ class Database:
         asof_ms: int,
         event_type: str = "symbol",
     ) -> Optional[Dict[str, Any]]:
-        """
-        Return the most recent regime for *scope* at or before *asof_ms*.
-
-        This is the primary helper for replay: it answers
-        "what regime was in effect for SPY at simulation time T?"
-        """
+        # Return the most recent regime for *scope* at or before *asof_ms*.
+        #
+        # This is the primary helper for replay: it answers
+        # "what regime was in effect for SPY at simulation time T?"
         cursor = await self._connection.execute(
             """SELECT * FROM regimes
                WHERE scope = ? AND event_type = ? AND timestamp <= ?
@@ -2097,7 +2040,7 @@ class Database:
         end_ms: int,
         limit: int = 100_000,
     ) -> List[Dict[str, Any]]:
-        """Load option chain snapshot rows for replay."""
+        # Load option chain snapshot rows for replay.
         cursor = await self._connection.execute(
             """SELECT * FROM option_chain_snapshots
                WHERE symbol = ? AND timestamp_ms >= ? AND timestamp_ms <= ?
@@ -2115,11 +2058,9 @@ class Database:
         timeframe: int,
         n: int,
     ) -> List[Dict[str, Any]]:
-        """
-        Get the most recent N bars for warmup.
-        
-        Returns bars in ascending timestamp order (oldest first).
-        """
+        # Get the most recent N bars for warmup.
+        #
+        # Returns bars in ascending timestamp order (oldest first).
         cursor = await self._connection.execute("""
             SELECT * FROM market_bars
             WHERE source = ? AND symbol = ? AND bar_duration = ?
@@ -2139,11 +2080,9 @@ class Database:
         symbol: str,
         bar_duration: int = 60,
     ) -> Optional[int]:
-        """
-        Get the latest bar timestamp in milliseconds.
-        
-        Returns None if no bars exist for this source/symbol/bar_duration.
-        """
+        # Get the latest bar timestamp in milliseconds.
+        #
+        # Returns None if no bars exist for this source/symbol/bar_duration.
         cursor = await self._connection.execute("""
             SELECT timestamp FROM market_bars
             WHERE source = ? AND symbol = ? AND bar_duration = ?
@@ -2162,9 +2101,7 @@ class Database:
         except Exception:
             return None
 
-    # =========================================================================
-    # Signal Operations (Phase 3)
-    # =========================================================================
+# Signal Operations (Phase 3)
 
     async def write_signal(
         self,
@@ -2188,11 +2125,9 @@ class Database:
         features_snapshot_json: Optional[str] = None,
         explain: str = "",
     ) -> None:
-        """
-        Upsert a signal event.
-        
-        Uses INSERT OR IGNORE for idempotency (idempotency_key is UNIQUE).
-        """
+        # Upsert a signal event.
+        #
+        # Uses INSERT OR IGNORE for idempotency (idempotency_key is UNIQUE).
         await self._connection.execute("""
             INSERT OR IGNORE INTO signals (
                 idempotency_key, timestamp_ms, strategy_id, config_hash,
@@ -2223,11 +2158,9 @@ class Database:
         pnl_1bar: Optional[float] = None,
         pnl_5bar: Optional[float] = None,
     ) -> None:
-        """
-        Upsert a signal outcome (markout).
-        
-        Uses INSERT OR REPLACE for updating partial markouts.
-        """
+        # Upsert a signal outcome (markout).
+        #
+        # Uses INSERT OR REPLACE for updating partial markouts.
         await self._connection.execute("""
             INSERT OR REPLACE INTO signal_outcomes (
                 idempotency_key, timestamp_ms, symbol, strategy_id,
@@ -2246,11 +2179,9 @@ class Database:
         strategy_id: Optional[str] = None,
         limit: int = 100,
     ) -> List[Dict[str, Any]]:
-        """
-        Get signals that need markout computation.
-        
-        Returns signals without corresponding outcomes.
-        """
+        # Get signals that need markout computation.
+        #
+        # Returns signals without corresponding outcomes.
         if strategy_id:
             cursor = await self._connection.execute("""
                 SELECT s.* FROM signals s
@@ -2272,7 +2203,7 @@ class Database:
         return [dict(row) for row in rows]
 
     async def backup(self, backup_path: str) -> None:
-        """Create a database backup."""
+        # Create a database backup.
         backup_db = Path(backup_path)
         backup_db.parent.mkdir(parents=True, exist_ok=True)
         
@@ -2281,9 +2212,7 @@ class Database:
         
         logger.info(f"Database backed up to {backup_path}")
 
-    # =========================================================================
-    # Phase 3B: Options Data Operations
-    # =========================================================================
+# Phase 3B: Options Data Operations
 
     async def upsert_option_contract(
         self,
@@ -2298,7 +2227,7 @@ class Database:
         multiplier: int = 100,
         style: str = "american",
     ) -> None:
-        """Upsert an option contract (insert or update last_updated_ms)."""
+        # Upsert an option contract (insert or update last_updated_ms).
         await self._connection.execute("""
             INSERT INTO option_contracts (
                 contract_id, symbol, option_symbol, strike, expiration_ms,
@@ -2335,7 +2264,7 @@ class Database:
         source_ts_ms: int = None,
         provider: str = "",
     ) -> None:
-        """Insert an option quote (append-only)."""
+        # Insert an option quote (append-only).
         await self._connection.execute("""
             INSERT INTO option_quotes (
                 contract_id, symbol, strike, expiration_ms, option_type,
@@ -2364,7 +2293,7 @@ class Database:
         source_ts_ms: int = None,
         provider: str = "",
     ) -> None:
-        """Insert or replace an option chain snapshot (atomic)."""
+        # Insert or replace an option chain snapshot (atomic).
         await self._connection.execute("""
             INSERT OR REPLACE INTO option_chain_snapshots (
                 snapshot_id, symbol, expiration_ms, underlying_price,
@@ -2382,10 +2311,9 @@ class Database:
         expiration_ms: int,
         timestamp_ms: int = None,
     ) -> Optional[Dict[str, Any]]:
-        """Get an option chain snapshot.
-        
-        If timestamp_ms is None, returns the most recent snapshot.
-        """
+        # Get an option chain snapshot.
+        #
+        # If timestamp_ms is None, returns the most recent snapshot.
         if timestamp_ms:
             cursor = await self._connection.execute("""
                 SELECT * FROM option_chain_snapshots
@@ -2406,7 +2334,7 @@ class Database:
         symbol: str,
         expiration_ms: int = None,
     ) -> List[Dict[str, Any]]:
-        """Get option contracts for a symbol, optionally filtered by expiration."""
+        # Get option contracts for a symbol, optionally filtered by expiration.
         if expiration_ms:
             cursor = await self._connection.execute("""
                 SELECT * FROM option_contracts
@@ -2422,9 +2350,7 @@ class Database:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
-    # =========================================================================
-    # Phase 4A.1: Bar Outcomes (Backtest Ground Truth)
-    # =========================================================================
+# Phase 4A.1: Bar Outcomes (Backtest Ground Truth)
 
     async def upsert_bar_outcome(
         self,
@@ -2455,15 +2381,14 @@ class Database:
         gap_count: int,
         computed_at_ms: int | None,
     ) -> bool:
-        """Upsert a bar outcome record (idempotent).
-        
-        Status upgrade rules:
-        - INCOMPLETE records can be updated to OK or GAP
-        - OK/GAP records are only updated if outcome_version changes
-        
-        Returns:
-            True if inserted/updated, False on error.
-        """
+        # Upsert a bar outcome record (idempotent).
+        #
+        # Status upgrade rules:
+        # - INCOMPLETE records can be updated to OK or GAP
+        # - OK/GAP records are only updated if outcome_version changes
+        #
+        # Returns:
+        # True if inserted/updated, False on error.
         try:
             await self._connection.execute("""
                 INSERT INTO bar_outcomes (
@@ -2554,11 +2479,10 @@ class Database:
         self,
         outcomes: List[tuple],
     ) -> int:
-        """Batch upsert bar outcomes. Returns count of rows affected.
-        
-        Each outcome tuple should have 26 elements matching upsert_bar_outcome params.
-        Uses executemany for efficiency.
-        """
+        # Batch upsert bar outcomes. Returns count of rows affected.
+        #
+        # Each outcome tuple should have 26 elements matching upsert_bar_outcome params.
+        # Uses executemany for efficiency.
         if not outcomes:
             return 0
         try:
@@ -2647,11 +2571,10 @@ class Database:
         end_ms: int,
         limit: int = 100000,
     ) -> List[Dict[str, Any]]:
-        """Fetch bars for outcome computation, ordered by timestamp.
-        
-        Returns bars in [start_ms, end_ms] range plus lookahead bars
-        needed for forward returns.
-        """
+        # Fetch bars for outcome computation, ordered by timestamp.
+        #
+        # Returns bars in [start_ms, end_ms] range plus lookahead bars
+        # needed for forward returns.
         cursor = await self._connection.execute("""
             SELECT 
                 source, symbol, bar_duration, timestamp,
@@ -2676,7 +2599,7 @@ class Database:
         end_ms: int | None = None,
         limit: int = 10000,
     ) -> List[Dict[str, Any]]:
-        """Query bar outcomes with optional filters."""
+        # Query bar outcomes with optional filters.
         sql = "SELECT * FROM bar_outcomes WHERE provider = ? AND symbol = ?"
         params: list = [provider, symbol]
         
@@ -2708,10 +2631,9 @@ class Database:
         provider: str | None = None,
         symbol: str | None = None,
     ) -> Dict[str, Any]:
-        """Get coverage statistics for bar outcomes.
-        
-        Returns min/max timestamps, counts by status, and coverage metrics.
-        """
+        # Get coverage statistics for bar outcomes.
+        #
+        # Returns min/max timestamps, counts by status, and coverage metrics.
         where_parts = []
         params: list = []
         if provider:
@@ -2742,10 +2664,9 @@ class Database:
         source: str | None = None,
         symbol: str | None = None,
     ) -> Dict[str, Any]:
-        """Get coverage statistics for market_bars.
-        
-        Returns min/max timestamps, total count, and span.
-        """
+        # Get coverage statistics for market_bars.
+        #
+        # Returns min/max timestamps, total count, and span.
         where_parts = []
         params: list = []
         if source:
@@ -2769,12 +2690,11 @@ class Database:
         return dict(row) if row else {}
 
     async def get_bar_inventory(self) -> List[Dict[str, Any]]:
-        """List all distinct (source, symbol, bar_duration) keys in market_bars.
-
-        Returns rows with: source, symbol, bar_duration, count, min_ts, max_ts.
-        Used by the CLI ``list`` command so users can discover exact key strings
-        without needing a sqlite3 shell.
-        """
+        # List all distinct (source, symbol, bar_duration) keys in market_bars.
+        #
+        # Returns rows with: source, symbol, bar_duration, count, min_ts, max_ts.
+        # Used by the CLI ``list`` command so users can discover exact key strings
+        # without needing a sqlite3 shell.
         cursor = await self._connection.execute("""
             SELECT
                 source,
@@ -2791,12 +2711,11 @@ class Database:
         return [dict(row) for row in rows]
 
     async def get_outcome_inventory(self) -> List[Dict[str, Any]]:
-        """List all distinct (provider, symbol, bar_duration_seconds, horizon_seconds)
-        keys in bar_outcomes with counts by status.
-
-        Returns rows with: provider, symbol, bar_duration_seconds, horizon_seconds,
-        total, ok_count, incomplete_count, gap_count, min_ts_ms, max_ts_ms.
-        """
+        # List all distinct (provider, symbol, bar_duration_seconds, horizon_seconds)
+        # keys in bar_outcomes with counts by status.
+        #
+        # Returns rows with: provider, symbol, bar_duration_seconds, horizon_seconds,
+        # total, ok_count, incomplete_count, gap_count, min_ts_ms, max_ts_ms.
         cursor = await self._connection.execute("""
             SELECT
                 provider,
@@ -2816,9 +2735,7 @@ class Database:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
-    # =========================================================================
-    # System Heartbeat (uptime tracking)
-    # =========================================================================
+# System Heartbeat (uptime tracking)
 
     async def write_heartbeat(
         self,
@@ -2826,7 +2743,7 @@ class Database:
         timestamp_ms: int,
         metadata_json: Optional[str] = None,
     ) -> None:
-        """Write a system heartbeat (idempotent via PK)."""
+        # Write a system heartbeat (idempotent via PK).
         await self._connection.execute(
             "INSERT OR IGNORE INTO system_heartbeat "
             "(component, timestamp_ms, metadata_json) VALUES (?, ?, ?)",
@@ -2840,7 +2757,7 @@ class Database:
         start_ms: int,
         end_ms: int,
     ) -> List[int]:
-        """Return sorted list of heartbeat timestamp_ms for a component in range."""
+        # Return sorted list of heartbeat timestamp_ms for a component in range.
         cursor = await self._connection.execute(
             "SELECT timestamp_ms FROM system_heartbeat "
             "WHERE component = ? AND timestamp_ms >= ? AND timestamp_ms <= ? "
@@ -2858,11 +2775,10 @@ class Database:
         start_ms: int,
         end_ms: int,
     ) -> List[int]:
-        """Return sorted list of bar open timestamps (as epoch ms) for gap analysis.
-
-        Converts the ISO-string ``timestamp`` column to epoch ms using
-        ``strftime`` in SQLite for efficiency (avoids pulling all rows into Python).
-        """
+        # Return sorted list of bar open timestamps (as epoch ms) for gap analysis.
+        #
+        # Converts the ISO-string ``timestamp`` column to epoch ms using
+        # ``strftime`` in SQLite for efficiency (avoids pulling all rows into Python).
         cursor = await self._connection.execute(
             "SELECT CAST(strftime('%s', timestamp) AS INTEGER) * 1000 as ts_ms "
             "FROM market_bars "
@@ -2877,10 +2793,9 @@ class Database:
         return [row[0] for row in rows]
 
     async def get_heartbeat_inventory(self) -> List[Dict[str, Any]]:
-        """List distinct components in system_heartbeat with counts and ranges.
-
-        Returns rows with: component, count, min_ts_ms, max_ts_ms.
-        """
+        # List distinct components in system_heartbeat with counts and ranges.
+        #
+        # Returns rows with: component, count, min_ts_ms, max_ts_ms.
         cursor = await self._connection.execute("""
             SELECT
                 component,
@@ -2894,9 +2809,7 @@ class Database:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
-    # =========================================================================
-    # Bar backfill helpers
-    # =========================================================================
+# Bar backfill helpers
 
     async def get_last_bar_timestamp_ms(
         self,
@@ -2904,7 +2817,7 @@ class Database:
         symbol: str,
         bar_duration: int = 60,
     ) -> Optional[int]:
-        """Return the latest bar timestamp as epoch ms, or None if no bars."""
+        # Return the latest bar timestamp as epoch ms, or None if no bars.
         cursor = await self._connection.execute(
             "SELECT MAX(timestamp) FROM market_bars "
             "WHERE source = ? AND symbol = ? AND bar_duration = ?",
@@ -2932,7 +2845,7 @@ class Database:
         symbol: str,
         bar_duration: int = 60,
     ) -> Optional[int]:
-        """Return the earliest bar timestamp as epoch ms, or None if no bars."""
+        # Return the earliest bar timestamp as epoch ms, or None if no bars.
         cursor = await self._connection.execute(
             "SELECT MIN(timestamp) FROM market_bars "
             "WHERE source = ? AND symbol = ? AND bar_duration = ?",
@@ -2955,25 +2868,22 @@ class Database:
         return None
 
     async def upsert_bars_backfill(self, rows: List[tuple]) -> int:
-        """Insert backfilled bars using INSERT OR IGNORE.
-
-        Existing bars (by unique key) are NOT overwritten.
-        This ensures live-collected bars (which have tick-level fidelity)
-        are never replaced by REST backfill bars.
-
-        Parameters
-        ----------
-        rows : list of tuple
-            Each tuple matches market_bars columns:
-            (timestamp, symbol, source, open, high, low, close, volume,
-             tick_count, n_ticks, first_source_ts, last_source_ts,
-             late_ticks_dropped, close_reason, bar_duration)
-
-        Returns
-        -------
-        int
-            Number of rows actually inserted (new bars).
-        """
+        # Insert backfilled bars using INSERT OR IGNORE.
+        #
+        # Existing bars (by unique key) are NOT overwritten.
+        # This ensures live-collected bars (which have tick-level fidelity)
+        # are never replaced by REST backfill bars.
+        #
+        # Parameters
+        # rows : list of tuple
+        # Each tuple matches market_bars columns:
+        # (timestamp, symbol, source, open, high, low, close, volume,
+        # tick_count, n_ticks, first_source_ts, last_source_ts,
+        # late_ticks_dropped, close_reason, bar_duration)
+        #
+        # Returns
+        # int
+        # Number of rows actually inserted (new bars).
         if not rows:
             return 0
 
@@ -2995,11 +2905,10 @@ class Database:
         return after - before
 
     async def get_bar_health(self) -> List[Dict[str, Any]]:
-        """Return last-bar timestamps per source/symbol for health reporting.
-
-        Returns rows with: source, symbol, bar_duration, bar_count,
-        last_ts (text), last_ts_age_s (seconds since last bar, approximate).
-        """
+        # Return last-bar timestamps per source/symbol for health reporting.
+        #
+        # Returns rows with: source, symbol, bar_duration, bar_count,
+        # last_ts (text), last_ts_age_s (seconds since last bar, approximate).
         cursor = await self._connection.execute("""
             SELECT
                 source,
@@ -3038,25 +2947,22 @@ class Database:
         end_ms: int,
         lookback_days: int = 365,
     ) -> Dict[str, List[Dict[str, Any]]]:
-        """Fetch daily bars for risk-flow computation.
-
-        Parameters
-        ----------
-        source : str
-            Bar source (e.g. ``"alphavantage"``).
-        symbols : list[str]
-            Symbols to retrieve (e.g. ``["SPY", "EWJ", "FX:EURUSD"]``).
-        end_ms : int
-            Strict upper bound (exclusive) — bars with timestamp < end_ms.
-        lookback_days : int
-            How far back to look (default 365).
-
-        Returns
-        -------
-        dict[str, list[dict]]
-            ``{symbol: [{timestamp_ms, open, high, low, close, volume}, ...]}``
-            Bars are sorted ascending by timestamp.
-        """
+        # Fetch daily bars for risk-flow computation.
+        #
+        # Parameters
+        # source : str
+        # Bar source (e.g. ``"alphavantage"``).
+        # symbols : list[str]
+        # Symbols to retrieve (e.g. ``["SPY", "EWJ", "FX:EURUSD"]``).
+        # end_ms : int
+        # Strict upper bound (exclusive) — bars with timestamp < end_ms.
+        # lookback_days : int
+        # How far back to look (default 365).
+        #
+        # Returns
+        # dict[str, list[dict]]
+        # ``{symbol: [{timestamp_ms, open, high, low, close, volume}, ...]}``
+        # Bars are sorted ascending by timestamp.
         start_epoch = (end_ms / 1000.0) - (lookback_days * 86400)
         result: Dict[str, List[Dict[str, Any]]] = {}
         for sym in symbols:

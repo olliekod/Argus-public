@@ -1,4 +1,6 @@
-"""Tests for trade tape: KalshiTradeEvent model and flow imbalance computation."""
+# Created by Oliver Meihls
+
+# Tests for trade tape: KalshiTradeEvent model and flow imbalance computation.
 
 import time
 
@@ -7,9 +9,7 @@ import pytest
 from argus_kalshi.models import KalshiTradeEvent
 
 
-# ---------------------------------------------------------------------------
 #  KalshiTradeEvent
-# ---------------------------------------------------------------------------
 
 def test_trade_event_fields():
     ev = KalshiTradeEvent(
@@ -25,17 +25,15 @@ def test_trade_event_fields():
 
 
 def test_trade_event_frozen():
-    """KalshiTradeEvent uses slots=True and should be immutable-ish."""
+    # KalshiTradeEvent uses slots=True and should be immutable-ish.
     ev = KalshiTradeEvent("TICKER", "yes", 10, 1000.0)
     assert ev.taker_side == "yes"
 
 
-# ---------------------------------------------------------------------------
 #  Flow imbalance computation (inline helper mirrors FarmDispatcher logic)
-# ---------------------------------------------------------------------------
 
 def _compute_flow(trades, window_s=60.0):
-    """Helper matching FarmDispatcher._consume_trades imbalance logic."""
+    # Helper matching FarmDispatcher._consume_trades imbalance logic.
     now = time.time()
     cutoff = now - window_s
     yes_vol = sum(c for ts, side, c in trades if ts >= cutoff and side == "yes")

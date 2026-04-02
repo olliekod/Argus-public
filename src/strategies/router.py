@@ -1,10 +1,9 @@
-"""
-Signal Router and Ranker
-========================
+# Created by Oliver Meihls
 
-Collects raw signals from strategy modules, scores them,
-and emits ranked signals for downstream consumption.
-"""
+# Signal Router and Ranker
+#
+# Collects raw signals from strategy modules, scores them,
+# and emits ranked signals for downstream consumption.
 
 from __future__ import annotations
 
@@ -24,9 +23,7 @@ from ..core.signals import (
 logger = logging.getLogger("argus.strategies.router")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Default Ranker Configuration
-# ═══════════════════════════════════════════════════════════════════════════
 
 DEFAULT_RANKER_CONFIG = {
     # Data quality penalties (subtracted from score)
@@ -48,17 +45,13 @@ DEFAULT_RANKER_CONFIG = {
 }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Signal Router
-# ═══════════════════════════════════════════════════════════════════════════
 
 class SignalRouter:
-    """
-    Collects, scores, and ranks signals from all active strategies.
-    
-    Signals are bucketed by timestamp (to the second) and ranked
-    within each bucket. Top signals are emitted to signals.ranked.
-    """
+    # Collects, scores, and ranks signals from all active strategies.
+    #
+    # Signals are bucketed by timestamp (to the second) and ranked
+    # within each bucket. Top signals are emitted to signals.ranked.
     
     def __init__(
         self,
@@ -92,7 +85,7 @@ class SignalRouter:
         )
     
     def _on_raw_signal(self, signal: SignalEvent) -> None:
-        """Handle incoming raw signal."""
+        # Handle incoming raw signal.
         with self._lock:
             self._signals_received += 1
             
@@ -107,7 +100,7 @@ class SignalRouter:
             self._pending_signals.append(signal)
     
     def _flush_bucket(self) -> None:
-        """Score and rank pending signals, emit top N."""
+        # Score and rank pending signals, emit top N.
         if not self._pending_signals:
             return
         
@@ -151,11 +144,9 @@ class SignalRouter:
         self._pending_signals = []
     
     def _score_signal(self, signal: SignalEvent) -> tuple:
-        """
-        Compute deterministic score for a signal.
-        
-        Returns (total_score, breakdown_dict).
-        """
+        # Compute deterministic score for a signal.
+        #
+        # Returns (total_score, breakdown_dict).
         cfg = self._config
         breakdown: Dict[str, float] = {}
         
@@ -216,12 +207,12 @@ class SignalRouter:
         return score, breakdown
     
     def flush(self) -> None:
-        """Force flush current bucket (e.g., on shutdown)."""
+        # Force flush current bucket (e.g., on shutdown).
         with self._lock:
             self._flush_bucket()
     
     def get_status(self) -> Dict[str, Any]:
-        """Return router telemetry."""
+        # Return router telemetry.
         with self._lock:
             pending = len(self._pending_signals)
         return {

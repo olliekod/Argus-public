@@ -1,60 +1,58 @@
-"""
-Settlement probability model for Kalshi BTC strike contracts.
+# Created by Oliver Meihls
 
-The contract resolves YES if the 60-second simple average of CF Benchmarks
-BRTI immediately prior to settlement is **at or above** the strike price K.
-
-Model
------
-We model the BTC mid-price as geometric Brownian motion:
-
-    dS / S = σ dW
-
-(zero drift over the short horizons relevant here — sub-minute to a few
-minutes).
-
-The 60-second arithmetic average A = (1/60) Σ S_t is approximated by
-treating the integrand as a continuous integral of GBM, which — for
-small σ√T — has a distribution well-approximated by a normal.
-
-**Case 1: time_to_settle > 60 s**
-    The entire averaging window is in the future.  We approximate:
-
-        E[A] ≈ S_now
-        Var[A] ≈ S_now² · σ² · T_avg / 3
-
-    where T_avg = 60 s expressed in the same units as σ (seconds).
-
-    P(YES) = Φ((E[A] - K) / √Var[A])
-
-**Case 2: time_to_settle ≤ 60 s (inside the window)**
-    Some seconds have already been observed.  Let:
-        n_obs = 60 - τ    (observed seconds, already locked in)
-        S_obs = Σ observed prices
-        τ      = remaining seconds
-    Then:
-        A = (S_obs + Σ_{remaining} S_t) / 60
-    We need  Σ_{remaining} ≥ 60·K - S_obs  =: R
-    Required per-second mean: m_req = R / τ
-
-    P(YES) = Φ((S_now - m_req) / (S_now · σ · √(τ/3)))
-
-    This is derived from the same integral-of-GBM normal approximation
-    applied only to the remaining τ seconds.
-
-Volatility estimator
---------------------
-Use the last 120 seconds of log-returns from the truth feed.  Robust to
-missing seconds (we only use available pairs).
-
-Deviation from spec
--------------------
-* The spec's formula for the inside-window case computes ``m_req`` then
-  evaluates a diffusion CDF.  We refine this slightly: rather than using
-  ``m_req`` as if it were a single-price level, we properly compute the
-  probability that the *average* of the remaining τ prices exceeds
-  ``m_req``, accounting for the variance reduction from averaging.
-"""
+# Settlement probability model for Kalshi BTC strike contracts.
+#
+# The contract resolves YES if the 60-second simple average of CF Benchmarks
+# BRTI immediately prior to settlement is **at or above** the strike price K.
+#
+# Model
+# -----
+# We model the BTC mid-price as geometric Brownian motion:
+#
+# dS / S = σ dW
+#
+# (zero drift over the short horizons relevant here — sub-minute to a few
+# minutes).
+#
+# The 60-second arithmetic average A = (1/60) Σ S_t is approximated by
+# treating the integrand as a continuous integral of GBM, which — for
+# small σ√T — has a distribution well-approximated by a normal.
+#
+# **Case 1: time_to_settle > 60 s**
+# The entire averaging window is in the future.  We approximate:
+#
+# E[A] ≈ S_now
+# Var[A] ≈ S_now² · σ² · T_avg / 3
+#
+# where T_avg = 60 s expressed in the same units as σ (seconds).
+#
+# P(YES) = Φ((E[A] - K) / √Var[A])
+#
+# **Case 2: time_to_settle ≤ 60 s (inside the window)**
+# Some seconds have already been observed.  Let:
+# n_obs = 60 - τ    (observed seconds, already locked in)
+# S_obs = Σ observed prices
+# τ      = remaining seconds
+# Then:
+# A = (S_obs + Σ_{remaining} S_t) / 60
+# We need  Σ_{remaining} ≥ 60·K - S_obs  =: R
+# Required per-second mean: m_req = R / τ
+#
+# P(YES) = Φ((S_now - m_req) / (S_now · σ · √(τ/3)))
+#
+# This is derived from the same integral-of-GBM normal approximation
+# applied only to the remaining τ seconds.
+#
+# Volatility estimator
+# Use the last 120 seconds of log-returns from the truth feed.  Robust to
+# missing seconds (we only use available pairs).
+#
+# Deviation from spec
+# * The spec's formula for the inside-window case computes ``m_req`` then
+# evaluates a diffusion CDF.  We refine this slightly: rather than using
+# ``m_req`` as if it were a single-price level, we properly compute the
+# probability that the *average* of the remaining τ prices exceeds
+# ``m_req``, accounting for the variance reduction from averaging.
 
 from __future__ import annotations
 
@@ -71,25 +69,20 @@ from .models import BtcWindowState, FairProbability, MarketMetadata
 
 log = ComponentLogger("probability")
 
-# ---------------------------------------------------------------------------
 #  Standard normal CDF (no scipy dependency)
-# ---------------------------------------------------------------------------
 
 def _norm_cdf(x: float) -> float:
-    """Standard normal CDF using the Abramowitz & Stegun approximation."""
+    # Standard normal CDF using the Abramowitz & Stegun approximation.
     return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
 
 
-# ---------------------------------------------------------------------------
 #  Volatility estimator
-# ---------------------------------------------------------------------------
 
 def estimate_volatility(prices: List[float], dt: float = 1.0) -> float:
-    """Annualised-style σ from log-returns, but in per-second units.
-
-    Returns σ such that the variance of a 1-second log-return is σ².
-    Uses only consecutive non-NaN price pairs.
-    """
+    # Annualised-style σ from log-returns, but in per-second units.
+    #
+    # Returns σ such that the variance of a 1-second log-return is σ².
+    # Uses only consecutive non-NaN price pairs.
     if len(prices) < 2:
         return 0.0
 
@@ -110,7 +103,7 @@ def estimate_volatility(prices: List[float], dt: float = 1.0) -> float:
 
 
 def estimate_excess_kurtosis(prices: List[float]) -> float:
-    """Estimate excess kurtosis of log-returns for heavy-tail adjustment."""
+    # Estimate excess kurtosis of log-returns for heavy-tail adjustment.
     if len(prices) < 5:
         return 0.0
 
@@ -132,9 +125,7 @@ def estimate_excess_kurtosis(prices: List[float]) -> float:
     return max(0.0, kurtosis - 3.0)
 
 
-# ---------------------------------------------------------------------------
 #  HAR-J (Heterogeneous Autoregressive with Jumps) volatility estimator
-# ---------------------------------------------------------------------------
 
 # Jump detection threshold: a return is classified as a jump if its
 # absolute value exceeds this many standard deviations of the sample.
@@ -145,21 +136,20 @@ def estimate_volatility_harj(
     prices: List[float],
     dt: float = 1.0,
 ) -> float:
-    """Jump-aware short-horizon volatility estimator (HAR-J style).
-
-    1.  Compute log-returns from *prices*.
-    2.  Estimate the continuous-component σ by excluding returns that
-        exceed ``_JUMP_THRESHOLD_SIGMA`` standard deviations (jumps).
-    3.  If jumps were detected, inflate σ using the Bipower Variation
-        ratio so the model accounts for the higher realised variance
-        without being dominated by outliers.
-
-    Falls back to :func:`estimate_volatility` when there are too few
-    data points for jump detection (< 10 prices).
-
-    Returns σ in per-second units (same convention as
-    :func:`estimate_volatility`).
-    """
+    # Jump-aware short-horizon volatility estimator (HAR-J style).
+    #
+    # 1.  Compute log-returns from *prices*.
+    # 2.  Estimate the continuous-component σ by excluding returns that
+    # exceed ``_JUMP_THRESHOLD_SIGMA`` standard deviations (jumps).
+    # 3.  If jumps were detected, inflate σ using the Bipower Variation
+    # ratio so the model accounts for the higher realised variance
+    # without being dominated by outliers.
+    #
+    # Falls back to :func:`estimate_volatility` when there are too few
+    # data points for jump detection (< 10 prices).
+    #
+    # Returns σ in per-second units (same convention as
+    # :func:`estimate_volatility`).
     if len(prices) < 10:
         return estimate_volatility(prices, dt)
 
@@ -211,12 +201,11 @@ def estimate_volatility_harj(
 
 
 def estimate_momentum(prices: List[float], window: int = 30) -> float:
-    """Estimate short-term per-second log-drift via OLS slope of log-prices.
-
-    Uses only the last ``window`` prices from ``prices``.  Returns drift
-    in per-second units (same scale as sigma from estimate_volatility*).
-    Positive → uptrend, negative → downtrend, 0.0 → flat or insufficient data.
-    """
+    # Estimate short-term per-second log-drift via OLS slope of log-prices.
+    #
+    # Uses only the last ``window`` prices from ``prices``.  Returns drift
+    # in per-second units (same scale as sigma from estimate_volatility*).
+    # Positive → uptrend, negative → downtrend, 0.0 → flat or insufficient data.
     if len(prices) < 3:
         return 0.0
     tail = prices[-min(window, len(prices)):]
@@ -237,9 +226,7 @@ def estimate_momentum(prices: List[float], window: int = 30) -> float:
     return num / den if den > 0 else 0.0
 
 
-# ---------------------------------------------------------------------------
 #  Core probability computation
-# ---------------------------------------------------------------------------
 
 # Volatility bounds — prevent degenerate model behaviour.
 _SIGMA_FLOOR = 1e-10    # below this, model is effectively deterministic
@@ -256,23 +243,21 @@ def compute_probability(
     tail_scale: float = 1.0,
     drift: float = 0.0,          # per-second log-drift
 ) -> float:
-    """Return P(YES) — probability the 60-s average ≥ strike.
-
-    The return value is always clamped to [0.0, 1.0].
-
-    Parameters
-    ----------
-    strike : float
-        Contract strike price.
-    current_price : float
-        Latest BTC mid price.
-    sigma : float
-        Per-second volatility of log-returns.
-    time_to_settle_s : float
-        Seconds until settlement.
-    window_state : BtcWindowState, optional
-        Current 60-second window state (needed when inside the window).
-    """
+    # Return P(YES) — probability the 60-s average ≥ strike.
+    #
+    # The return value is always clamped to [0.0, 1.0].
+    #
+    # Parameters
+    # strike : float
+    # Contract strike price.
+    # current_price : float
+    # Latest BTC mid price.
+    # sigma : float
+    # Per-second volatility of log-returns.
+    # time_to_settle_s : float
+    # Seconds until settlement.
+    # window_state : BtcWindowState, optional
+    # Current 60-second window state (needed when inside the window).
     if current_price <= 0 or sigma < 0:
         return 0.5  # no information
 
@@ -338,19 +323,17 @@ def compute_probability(
 
 
 def _clamp_prob(p: float) -> float:
-    """Ensure probability is in [0.0, 1.0]."""
+    # Ensure probability is in [0.0, 1.0].
     if math.isnan(p) or math.isinf(p):
         return 0.5
     return max(0.0, min(1.0, p))
 
 
-# ---------------------------------------------------------------------------
 #  Sync recompute for executor (off main event loop)
-# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class _RecomputeSnapshot:
-    """Immutable snapshot of engine state for running recompute in a thread."""
+    # Immutable snapshot of engine state for running recompute in a thread.
     now: float
     markets: Dict[str, MarketMetadata]
     last_price_by_asset: Dict[str, float]
@@ -363,7 +346,7 @@ class _RecomputeSnapshot:
 def _recompute_chunk_sync(
     snapshot: _RecomputeSnapshot, tickers: List[str]
 ) -> List[FairProbability]:
-    """Compute FairProbability for a subset of tickers. Runs in thread; no bus."""
+    # Compute FairProbability for a subset of tickers. Runs in thread; no bus.
     from datetime import datetime, timezone
 
     now = snapshot.now
@@ -445,16 +428,14 @@ def _recompute_chunk_sync(
 
 
 def _recompute_all_sync(snapshot: _RecomputeSnapshot) -> List[FairProbability]:
-    """Compute FairProbability for all near-money markets. Runs in thread; no bus."""
+    # Compute FairProbability for all near-money markets. Runs in thread; no bus.
     return _recompute_chunk_sync(snapshot, list(snapshot.markets.keys()))
 
 
-# ---------------------------------------------------------------------------
 #  Bus-integrated probability engine
-# ---------------------------------------------------------------------------
 
 class ProbabilityEngine:
-    """Subscribes to window state + orderbook, publishes FairProbability."""
+    # Subscribes to window state + orderbook, publishes FairProbability.
 
     def __init__(
         self,
@@ -496,7 +477,7 @@ class ProbabilityEngine:
         self._first_fair_prob_logged: bool = False
         
     def _ingest_price(self, asset: str, price: float) -> None:
-        """Update per-asset vol deque and recompute sigma. Called from _consume_prices."""
+        # Update per-asset vol deque and recompute sigma. Called from _consume_prices.
         if asset not in self._vol_prices_by_asset:
             self._vol_prices_by_asset[asset] = deque(maxlen=120)
         self._vol_prices_by_asset[asset].append(price)
@@ -507,7 +488,7 @@ class ProbabilityEngine:
         self._momentum_by_asset[asset] = estimate_momentum(vol_prices, window=30)
 
     async def update_markets(self, added: Dict[str, MarketMetadata], removed: List[str]) -> None:
-        """Dynamically update tracked markets during a session."""
+        # Dynamically update tracked markets during a session.
         for ticker in removed:
             self._markets.pop(ticker, None)
         for ticker, meta in added.items():
@@ -528,7 +509,7 @@ class ProbabilityEngine:
         self._tasks.append(asyncio.create_task(self._recompute_loop()))
 
     def stop(self) -> None:
-        """Cancel all background consumer tasks."""
+        # Cancel all background consumer tasks.
         for task in self._tasks:
             task.cancel()
 
@@ -574,7 +555,7 @@ class ProbabilityEngine:
             pass
 
     async def _recompute_loop(self) -> None:
-        """Throttled recomputation — runs at most every 250ms instead of on every tick."""
+        # Throttled recomputation — runs at most every 250ms instead of on every tick.
         try:
             while True:
                 await asyncio.sleep(self._recompute_interval)
@@ -585,11 +566,10 @@ class ProbabilityEngine:
             pass
 
     async def _recompute_all(self) -> None:
-        """Recompute P(YES) for tracked markets and publish.
-
-        When an executor is configured, runs the heavy math in a worker thread
-        and only publishes on the event loop, keeping the loop responsive.
-        """
+        # Recompute P(YES) for tracked markets and publish.
+        #
+        # When an executor is configured, runs the heavy math in a worker thread
+        # and only publishes on the event loop, keeping the loop responsive.
         if self._executor is not None:
             # Offload CPU-bound work to worker threads; parallelize by market chunks.
             import time as _time

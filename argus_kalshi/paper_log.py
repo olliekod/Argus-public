@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 import json
@@ -14,7 +16,7 @@ _PAPER_LOG_LOCK = threading.Lock()
 
 
 def append_paper_log_sync(record: Dict[str, Any]) -> None:
-    """Thread-safe JSONL append used by execution + settlement paths."""
+    # Thread-safe JSONL append used by execution + settlement paths.
     try:
         os.makedirs("logs", exist_ok=True)
         line = json.dumps(record, separators=(",", ":"), ensure_ascii=False) + "\n"

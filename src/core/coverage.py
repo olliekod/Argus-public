@@ -1,13 +1,12 @@
-"""
-Argus Coverage Diagnostics
-==========================
+# Created by Oliver Meihls
 
-Pure-function module for computing uptime, gap analysis, and coverage
-diagnostics.  All functions operate on plain lists of int timestamps (ms)
-so they can be tested without DB access.
-
-Phase 4A.1+ — does NOT modify outcome computation semantics.
-"""
+# Argus Coverage Diagnostics
+#
+# Pure-function module for computing uptime, gap analysis, and coverage
+# diagnostics.  All functions operate on plain lists of int timestamps (ms)
+# so they can be tested without DB access.
+#
+# Phase 4A.1+ — does NOT modify outcome computation semantics.
 
 from __future__ import annotations
 
@@ -17,14 +16,12 @@ from typing import List, Optional, Tuple
 from src.core.liquid_etf_universe import LIQUID_ETF_UNIVERSE
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  A) Uptime from heartbeats
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 @dataclass
 class UptimeResult:
-    """Result of uptime computation from heartbeat timestamps."""
+    # Result of uptime computation from heartbeat timestamps.
     wall_span_s: int          # total wall-clock span in seconds
     uptime_s: int             # estimated seconds the system was ON
     downtime_s: int           # estimated seconds the system was OFF
@@ -32,7 +29,7 @@ class UptimeResult:
     gap_threshold_ms: int     # threshold used to detect OFF intervals
     median_cadence_ms: int = 0  # median delta between consecutive heartbeats
     off_intervals: List[Tuple[int, int]] = field(default_factory=list)
-    """List of (start_ms, end_ms) intervals where system was OFF."""
+    # List of (start_ms, end_ms) intervals where system was OFF.
 
 
 def compute_uptime(
@@ -41,28 +38,25 @@ def compute_uptime(
     end_ms: int,
     gap_threshold_ms: int = 120_000,  # 2× default 60s heartbeat cadence
 ) -> UptimeResult:
-    """Compute uptime from a sorted list of heartbeat timestamps.
-
-    Algorithm:
-    - Walk consecutive heartbeat pairs.
-    - If delta <= gap_threshold_ms: the system was ON for that interval.
-    - If delta > gap_threshold_ms: the system was OFF.  The OFF interval
-      starts at ``hb[i] + gap_threshold_ms`` (allow for one missed beat)
-      and ends at ``hb[i+1]``.
-
-    Parameters
-    ----------
-    heartbeat_ms : list of int
-        Sorted heartbeat timestamps in epoch milliseconds.
-    start_ms, end_ms : int
-        The wall-clock range to report on.
-    gap_threshold_ms : int
-        Maximum gap between heartbeats before declaring the system OFF.
-
-    Returns
-    -------
-    UptimeResult
-    """
+    # Compute uptime from a sorted list of heartbeat timestamps.
+    #
+    # Algorithm:
+    # - Walk consecutive heartbeat pairs.
+    # - If delta <= gap_threshold_ms: the system was ON for that interval.
+    # - If delta > gap_threshold_ms: the system was OFF.  The OFF interval
+    # starts at ``hb[i] + gap_threshold_ms`` (allow for one missed beat)
+    # and ends at ``hb[i+1]``.
+    #
+    # Parameters
+    # heartbeat_ms : list of int
+    # Sorted heartbeat timestamps in epoch milliseconds.
+    # start_ms, end_ms : int
+    # The wall-clock range to report on.
+    # gap_threshold_ms : int
+    # Maximum gap between heartbeats before declaring the system OFF.
+    #
+    # Returns
+    # UptimeResult
     wall_span_s = max(0, (end_ms - start_ms)) // 1000
 
     if len(heartbeat_ms) < 2:
@@ -118,14 +112,12 @@ def compute_uptime(
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  B) Bar gap analysis
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 @dataclass
 class GapInfo:
-    """A single gap between consecutive bars."""
+    # A single gap between consecutive bars.
     start_ms: int   # timestamp of bar before gap
     end_ms: int     # timestamp of bar after gap
     gap_seconds: int
@@ -133,7 +125,7 @@ class GapInfo:
 
 @dataclass
 class BarContinuityResult:
-    """Continuity statistics for a bar series."""
+    # Continuity statistics for a bar series.
     bar_count: int
     span_seconds: int
     expected_bars: int
@@ -150,23 +142,20 @@ def analyze_bar_continuity(
     gap_threshold_seconds: int = 300,
     top_n: int = 10,
 ) -> BarContinuityResult:
-    """Analyze bar timestamp continuity.
-
-    Parameters
-    ----------
-    bar_timestamps_ms : list of int
-        Sorted bar open timestamps in epoch ms.
-    bar_duration_seconds : int
-        Expected cadence between bars (e.g. 60 for 1m).
-    gap_threshold_seconds : int
-        Threshold above which gaps are counted / flagged.
-    top_n : int
-        How many largest gaps to keep.
-
-    Returns
-    -------
-    BarContinuityResult
-    """
+    # Analyze bar timestamp continuity.
+    #
+    # Parameters
+    # bar_timestamps_ms : list of int
+    # Sorted bar open timestamps in epoch ms.
+    # bar_duration_seconds : int
+    # Expected cadence between bars (e.g. 60 for 1m).
+    # gap_threshold_seconds : int
+    # Threshold above which gaps are counted / flagged.
+    # top_n : int
+    # How many largest gaps to keep.
+    #
+    # Returns
+    # BarContinuityResult
     n = len(bar_timestamps_ms)
     if n < 2:
         return BarContinuityResult(
@@ -220,14 +209,12 @@ def analyze_bar_continuity(
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  C) Diagnose: uptime-aware bar coverage
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 @dataclass
 class DiagnoseResult:
-    """Full diagnosis combining uptime + bar coverage."""
+    # Full diagnosis combining uptime + bar coverage.
     wall_span_s: int
     uptime_s: int
     downtime_s: int
@@ -247,7 +234,7 @@ class DiagnoseResult:
 
 def _intervals_overlap(a_start: int, a_end: int,
                        b_start: int, b_end: int) -> int:
-    """Return overlap in ms between two intervals, or 0."""
+    # Return overlap in ms between two intervals, or 0.
     overlap_start = max(a_start, b_start)
     overlap_end = min(a_end, b_end)
     return max(0, overlap_end - overlap_start)
@@ -261,11 +248,10 @@ def diagnose_coverage(
     end_ms: int,
     is_equity: bool = False,
 ) -> DiagnoseResult:
-    """Combine uptime info with bar timestamps to produce a diagnosis.
-
-    Bars that fall inside OFF intervals are attributed to "Argus was OFF"
-    rather than "feed missing while ON".
-    """
+    # Combine uptime info with bar timestamps to produce a diagnosis.
+    #
+    # Bars that fall inside OFF intervals are attributed to "Argus was OFF"
+    # rather than "feed missing while ON".
     wall_span_s = max(0, (end_ms - start_ms)) // 1000
     bar_dur_ms = bar_duration_seconds * 1000
 
@@ -349,9 +335,7 @@ def diagnose_coverage(
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  D) Equity session heuristic
-# ═══════════════════════════════════════════════════════════════════════════════
 
 # Known equity/ETF providers whose symbols trade US market hours only
 EQUITY_PROVIDERS = {"yahoo", "alpaca"}
@@ -361,8 +345,8 @@ EQUITY_SYMBOLS = set(LIQUID_ETF_UNIVERSE) | {"IBIT", "BITO", "NVDA"}
 
 
 def is_likely_equity(provider: str, symbol: str) -> bool:
-    """Heuristic: return True if this provider/symbol pair is likely
-    an equity/ETF with limited trading hours."""
+    # Heuristic: return True if this provider/symbol pair is likely
+    # an equity/ETF with limited trading hours.
     if provider.lower() in EQUITY_PROVIDERS:
         return True
     if symbol.upper() in EQUITY_SYMBOLS:

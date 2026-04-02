@@ -1,14 +1,13 @@
-"""
-Alpha Vantage Daily Batch Collector
-===================================
+# Created by Oliver Meihls
 
-Performs a single batch pull of daily bars and FX rates at 09:00 AM ET.
-This ensures the DB has the latest Asia close and yesterday's Europe/US close
-before the NY open.
-
-Budget: config daily_symbols (e.g. 10) + fx_pairs (4) = 14 calls/day (under 25 free tier).
-Uses 15s between requests to stay under 5 calls/min; no retries on rate limit.
-"""
+# Alpha Vantage Daily Batch Collector
+#
+# Performs a single batch pull of daily bars and FX rates at 09:00 AM ET.
+# This ensures the DB has the latest Asia close and yesterday's Europe/US close
+# before the NY open.
+#
+# Budget: config daily_symbols (e.g. 10) + fx_pairs (4) = 14 calls/day (under 25 free tier).
+# Uses 15s between requests to stay under 5 calls/min; no retries on rate limit.
 
 import asyncio
 import logging
@@ -29,7 +28,7 @@ _CALL_INTERVAL_SECONDS = 15.0
 
 
 def _symbols_from_config(config: Dict[str, Any]) -> List[str]:
-    """Build ordered list: daily_symbols (ETFs) then FX pairs as FX:XXXYYY."""
+    # Build ordered list: daily_symbols (ETFs) then FX pairs as FX:XXXYYY.
     av_cfg = (config.get("exchanges") or {}).get("alphavantage") or {}
     symbols: List[str] = list(av_cfg.get("daily_symbols") or [])
     for pair in av_cfg.get("fx_pairs") or []:
@@ -41,7 +40,7 @@ def _symbols_from_config(config: Dict[str, Any]) -> List[str]:
 
 
 class AlphaVantageCollector:
-    """Daily batch polling of AV daily data into market_bars."""
+    # Daily batch polling of AV daily data into market_bars.
 
     def __init__(
         self,
@@ -79,7 +78,7 @@ class AlphaVantageCollector:
             )
 
     async def run_forever(self) -> None:
-        """Main loop: wait for 9am ET, run batch, sleep."""
+        # Main loop: wait for 9am ET, run batch, sleep.
         if not self._enabled:
             return
 
@@ -108,7 +107,7 @@ class AlphaVantageCollector:
                 await asyncio.sleep(60) # Back off on error
 
     def _should_run_now(self, now_et: datetime, target_time: dt_time) -> bool:
-        """True if we haven't run today and it's past target_time."""
+        # True if we haven't run today and it's past target_time.
         current_date = now_et.date()
         
         # Skip weekends (Saturday, Sunday)
@@ -126,7 +125,7 @@ class AlphaVantageCollector:
         return False
 
     def _calculate_wait_seconds(self, now_et: datetime, target_time: dt_time) -> float:
-        """Calculate wait until next 9am ET, or a small check interval."""
+        # Calculate wait until next 9am ET, or a small check interval.
         current_date = now_et.date()
         
         # If we already ran today, wait until tomorrow 9am
@@ -145,7 +144,7 @@ class AlphaVantageCollector:
         return 300
 
     async def _run_batch(self) -> None:
-        """Execute pull for all symbols."""
+        # Execute pull for all symbols.
         n = len(self._symbols)
         logger.info(
             "Starting Alpha Vantage daily batch pull (%d requests, budget 25/day, ~15s apart)",
@@ -207,7 +206,7 @@ class AlphaVantageCollector:
             self._last_run_date = datetime.now(ZoneInfo("America/New_York")).date()
 
     async def _collect_symbol(self, symbol: str) -> int:
-        """Fetch and save a single symbol/pair. Returns number of new bars."""
+        # Fetch and save a single symbol/pair. Returns number of new bars.
         logger.info("Polling Alpha Vantage for %s...", symbol)
         
         bars: List[Dict[str, Any]] = []
@@ -261,7 +260,7 @@ class AlphaVantageCollector:
         return new_count
 
     def set_telegram(self, telegram: Any) -> None:
-        """Set telegram bot instance for notifications."""
+        # Set telegram bot instance for notifications.
         self._telegram = telegram
 
     def stop(self) -> None:

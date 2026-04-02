@@ -1,13 +1,12 @@
-"""
-Strategy Registry
-==================
+# Created by Oliver Meihls
 
-Minimal registry that tracks candidate strategies (those that survived
-all deploy gates) with their parameters and metadata.
-
-The registry is the bridge between the StrategyEvaluator (which produces
-rankings) and the AllocationEngine (which consumes forecasts).
-"""
+# Strategy Registry
+#
+# Minimal registry that tracks candidate strategies (those that survived
+# all deploy gates) with their parameters and metadata.
+#
+# The registry is the bridge between the StrategyEvaluator (which produces
+# rankings) and the AllocationEngine (which consumes forecasts).
 
 from __future__ import annotations
 
@@ -20,27 +19,25 @@ logger = logging.getLogger("argus.strategy_registry")
 
 @dataclass
 class StrategyEntry:
-    """A single strategy entry in the registry.
-
-    Attributes
-    ----------
-    strategy_id : str
-        Unique identifier (e.g. ``VRP_v1``).
-    strategy_class : str
-        Fully-qualified class name (e.g. ``VRPCreditSpreadStrategy``).
-    params : dict
-        Strategy parameters used in the evaluation.
-    run_id : str
-        Experiment run ID that produced this candidate.
-    composite_score : float
-        Composite score from StrategyEvaluator.
-    sharpe : float
-        Sharpe ratio from evaluation.
-    dsr : float
-        Deflated Sharpe Ratio (0 if not computed).
-    meta : dict
-        Additional metadata (kill reasons, cost sensitivity, etc.).
-    """
+    # A single strategy entry in the registry.
+    #
+    # Attributes
+    # strategy_id : str
+    # Unique identifier (e.g. ``VRP_v1``).
+    # strategy_class : str
+    # Fully-qualified class name (e.g. ``VRPCreditSpreadStrategy``).
+    # params : dict
+    # Strategy parameters used in the evaluation.
+    # run_id : str
+    # Experiment run ID that produced this candidate.
+    # composite_score : float
+    # Composite score from StrategyEvaluator.
+    # sharpe : float
+    # Sharpe ratio from evaluation.
+    # dsr : float
+    # Deflated Sharpe Ratio (0 if not computed).
+    # meta : dict
+    # Additional metadata (kill reasons, cost sensitivity, etc.).
     strategy_id: str
     strategy_class: str
     params: Dict[str, Any] = field(default_factory=dict)
@@ -52,28 +49,26 @@ class StrategyEntry:
 
 
 class StrategyRegistry:
-    """Registry of candidate strategies that survived deploy gates.
-
-    Usage::
-
-        registry = StrategyRegistry()
-
-        # Populate from evaluator rankings
-        registry.load_from_rankings(rankings, min_dsr=0.95)
-
-        # Iterate candidates
-        for entry in registry.candidates:
-            print(entry.strategy_id, entry.composite_score)
-    """
+    # Registry of candidate strategies that survived deploy gates.
+    #
+    # Usage::
+    #
+    # registry = StrategyRegistry()
+    #
+    # # Populate from evaluator rankings
+    # registry.load_from_rankings(rankings, min_dsr=0.95)
+    #
+    # # Iterate candidates
+    # for entry in registry.candidates:
+    # print(entry.strategy_id, entry.composite_score)
 
     def __init__(self) -> None:
         self._entries: Dict[str, StrategyEntry] = {}
 
     def register(self, entry: StrategyEntry) -> None:
-        """Register a strategy entry.
-
-        Overwrites any existing entry with the same ``strategy_id``.
-        """
+        # Register a strategy entry.
+        #
+        # Overwrites any existing entry with the same ``strategy_id``.
         self._entries[entry.strategy_id] = entry
         logger.info(
             "Registered strategy %s (class=%s, score=%.4f, dsr=%.4f)",
@@ -82,7 +77,7 @@ class StrategyRegistry:
         )
 
     def remove(self, strategy_id: str) -> bool:
-        """Remove a strategy by ID.  Returns True if found."""
+        # Remove a strategy by ID.  Returns True if found.
         if strategy_id in self._entries:
             del self._entries[strategy_id]
             logger.info("Removed strategy %s", strategy_id)
@@ -90,12 +85,12 @@ class StrategyRegistry:
         return False
 
     def get(self, strategy_id: str) -> Optional[StrategyEntry]:
-        """Get a strategy entry by ID, or None."""
+        # Get a strategy entry by ID, or None.
         return self._entries.get(strategy_id)
 
     @property
     def candidates(self) -> List[StrategyEntry]:
-        """All registered candidates, sorted by composite score descending."""
+        # All registered candidates, sorted by composite score descending.
         return sorted(
             self._entries.values(),
             key=lambda e: (-e.composite_score, e.strategy_id),
@@ -115,24 +110,21 @@ class StrategyRegistry:
         min_dsr: float = 0.0,
         exclude_killed: bool = True,
     ) -> int:
-        """Populate registry from StrategyEvaluator rankings output.
-
-        Parameters
-        ----------
-        rankings : list of dict
-            The ``rankings`` list from StrategyEvaluator output.
-        min_composite_score : float
-            Minimum composite score to include (default 0).
-        min_dsr : float
-            Minimum DSR to include (default 0 = no filter).
-        exclude_killed : bool
-            Whether to exclude strategies with kill reasons (default True).
-
-        Returns
-        -------
-        int
-            Number of strategies registered.
-        """
+        # Populate registry from StrategyEvaluator rankings output.
+        #
+        # Parameters
+        # rankings : list of dict
+        # The ``rankings`` list from StrategyEvaluator output.
+        # min_composite_score : float
+        # Minimum composite score to include (default 0).
+        # min_dsr : float
+        # Minimum DSR to include (default 0 = no filter).
+        # exclude_killed : bool
+        # Whether to exclude strategies with kill reasons (default True).
+        #
+        # Returns
+        # int
+        # Number of strategies registered.
         count = 0
         for rec in rankings:
             if exclude_killed and rec.get("killed", False):
@@ -169,7 +161,7 @@ class StrategyRegistry:
         return count
 
     def to_list(self) -> List[Dict[str, Any]]:
-        """Serialize all entries to a list of dicts."""
+        # Serialize all entries to a list of dicts.
         return [
             {
                 "strategy_id": e.strategy_id,

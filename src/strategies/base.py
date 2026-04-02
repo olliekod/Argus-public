@@ -1,10 +1,9 @@
-"""
-Strategy Base Classes
-=====================
+# Created by Oliver Meihls
 
-Provides the abstract base class for all strategy modules.
-Strategies are bar-clocked, deterministic, and emit SignalEvents.
-"""
+# Strategy Base Classes
+#
+# Provides the abstract base class for all strategy modules.
+# Strategies are bar-clocked, deterministic, and emit SignalEvents.
 
 from __future__ import annotations
 
@@ -27,19 +26,17 @@ logger = logging.getLogger("argus.strategies.base")
 
 
 class BaseStrategy(ABC):
-    """
-    Abstract base class for all trading strategies.
-    
-    Strategies must be:
-    - **Bar-clocked**: Only evaluate when a BarEvent arrives
-    - **Deterministic**: Same bars + regimes → same signals
-    - **Config-versioned**: Include config_hash in all signals
-    
-    Subclasses must implement:
-    - `strategy_id` property
-    - `default_config` property
-    - `evaluate()` method
-    """
+    # Abstract base class for all trading strategies.
+    #
+    # Strategies must be:
+    # - **Bar-clocked**: Only evaluate when a BarEvent arrives
+    # - **Deterministic**: Same bars + regimes → same signals
+    # - **Config-versioned**: Include config_hash in all signals
+    #
+    # Subclasses must implement:
+    # - `strategy_id` property
+    # - `default_config` property
+    # - `evaluate()` method
     
     def __init__(
         self,
@@ -77,13 +74,13 @@ class BaseStrategy(ABC):
     @property
     @abstractmethod
     def strategy_id(self) -> str:
-        """Unique identifier for this strategy (e.g., 'FVG_BREAKOUT_V1')."""
+        # Unique identifier for this strategy (e.g., 'FVG_BREAKOUT_V1').
         ...
     
     @property
     @abstractmethod
     def default_config(self) -> Dict[str, Any]:
-        """Default configuration thresholds for this strategy."""
+        # Default configuration thresholds for this strategy.
         ...
     
     # ─── Abstract Methods ────────────────────────────────────────────────────
@@ -95,18 +92,16 @@ class BaseStrategy(ABC):
         symbol_regime: Optional[SymbolRegimeEvent],
         market_regime: Optional[MarketRegimeEvent],
     ) -> Optional[SignalEvent]:
-        """
-        Evaluate the strategy for a given bar.
-        
-        Returns a SignalEvent if conditions are met, None otherwise.
-        Must be deterministic.
-        """
+        # Evaluate the strategy for a given bar.
+        #
+        # Returns a SignalEvent if conditions are met, None otherwise.
+        # Must be deterministic.
         ...
     
     # ─── Event Handlers ──────────────────────────────────────────────────────
     
     def _on_bar(self, bar: BarEvent) -> None:
-        """Process incoming bar event."""
+        # Process incoming bar event.
         self._bars_processed += 1
         
         # Get cached regimes
@@ -121,17 +116,17 @@ class BaseStrategy(ABC):
             self._emit_signal(signal)
     
     def _on_symbol_regime(self, event: SymbolRegimeEvent) -> None:
-        """Cache latest symbol regime."""
+        # Cache latest symbol regime.
         self._symbol_regimes[event.symbol] = event
     
     def _on_market_regime(self, event: MarketRegimeEvent) -> None:
-        """Cache latest market regime."""
+        # Cache latest market regime.
         self._market_regimes[event.market] = event
     
     # ─── Signal Emission ─────────────────────────────────────────────────────
     
     def _emit_signal(self, signal: SignalEvent) -> None:
-        """Publish signal to the bus."""
+        # Publish signal to the bus.
         self._signals_emitted += 1
         self._bus.publish(TOPIC_SIGNALS_RAW, signal)
         logger.debug(
@@ -142,7 +137,7 @@ class BaseStrategy(ABC):
     # ─── Helper Methods ──────────────────────────────────────────────────────
     
     def _get_market_for_symbol(self, symbol: str) -> str:
-        """Determine market for a symbol."""
+        # Determine market for a symbol.
         from ..core.regimes import get_market_for_symbol
         return get_market_for_symbol(symbol)
     
@@ -160,7 +155,7 @@ class BaseStrategy(ABC):
         features_snapshot: Optional[Dict[str, float]] = None,
         explain: str = "",
     ) -> SignalEvent:
-        """Create a SignalEvent with proper attribution."""
+        # Create a SignalEvent with proper attribution.
         timestamp_ms = int(bar.timestamp * 1000)
         
         return SignalEvent(
@@ -189,7 +184,7 @@ class BaseStrategy(ABC):
         )
     
     def get_status(self) -> Dict[str, Any]:
-        """Return strategy telemetry."""
+        # Return strategy telemetry.
         return {
             "strategy_id": self.strategy_id,
             "config_hash": self._config_hash,

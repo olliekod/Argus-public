@@ -1,9 +1,8 @@
-"""
-Yahoo Finance Client
-====================
+# Created by Oliver Meihls
 
-Fetches IBIT ETF price data for options monitoring.
-"""
+# Yahoo Finance Client
+#
+# Fetches IBIT ETF price data for options monitoring.
 
 import asyncio
 import time
@@ -19,7 +18,7 @@ logger = get_connector_logger('yahoo')
 
 
 def _parse_yahoo_source_ts(meta: Dict[str, Any]) -> Tuple[Optional[float], Optional[str], Optional[float]]:
-    """Extract and normalize Yahoo's source timestamp to epoch seconds."""
+    # Extract and normalize Yahoo's source timestamp to epoch seconds.
     raw = meta.get("regularMarketTime")
     if raw is None:
         return None, "missing", None
@@ -40,11 +39,9 @@ def _parse_yahoo_source_ts(meta: Dict[str, Any]) -> Tuple[Optional[float], Optio
 
 
 class YahooFinanceClient:
-    """
-    Yahoo Finance client for ETF price data.
-    
-    Used to monitor equities/ETFs (IBIT, BITO, SPY, QQQ, NVDA).
-    """
+    # Yahoo Finance client for ETF price data.
+    #
+    # Used to monitor equities/ETFs (IBIT, BITO, SPY, QQQ, NVDA).
     
     BASE_URL = "https://query1.finance.yahoo.com/v8/finance/chart"
     
@@ -54,14 +51,12 @@ class YahooFinanceClient:
         on_update: Optional[Callable] = None,
         event_bus=None,
     ):
-        """
-        Initialize Yahoo Finance client.
-
-        Args:
-            symbols: List of stock/ETF symbols
-            on_update: Callback for price updates
-            event_bus: Optional EventBus instance for publishing QuoteEvents
-        """
+        # Initialize Yahoo Finance client.
+        #
+        # Args:
+        # symbols: List of stock/ETF symbols
+        # on_update: Callback for price updates
+        # event_bus: Optional EventBus instance for publishing QuoteEvents
         self.symbols = symbols or ['IBIT', 'BITO', 'SPY', 'QQQ', 'NVDA']
         self.on_update = on_update
         self._event_bus = event_bus
@@ -86,27 +81,25 @@ class YahooFinanceClient:
         logger.info(f"Yahoo Finance client initialized for {self.symbols}")
     
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session."""
+        # Get or create HTTP session.
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession()
         return self._session
     
     async def close(self) -> None:
-        """Close HTTP session."""
+        # Close HTTP session.
         self._running = False
         if self._session and not self._session.closed:
             await self._session.close()
     
     async def get_quote(self, symbol: str) -> Optional[Dict]:
-        """
-        Get current quote for a symbol.
-        
-        Args:
-            symbol: Stock/ETF symbol (e.g., 'IBIT')
-            
-        Returns:
-            Quote data or None
-        """
+        # Get current quote for a symbol.
+        #
+        # Args:
+        # symbol: Stock/ETF symbol (e.g., 'IBIT')
+        #
+        # Returns:
+        # Quote data or None
         session = await self._get_session()
         url = f"{self.BASE_URL}/{symbol}"
         
@@ -227,7 +220,7 @@ class YahooFinanceClient:
             return None
     
     async def poll_once(self) -> None:
-        """Run a single poll cycle (all symbols once)."""
+        # Run a single poll cycle (all symbols once).
         for symbol in self.symbols:
             try:
                 data = await self.get_quote(symbol)
@@ -279,12 +272,10 @@ class YahooFinanceClient:
             await asyncio.sleep(1)
 
     async def poll(self, interval_seconds: int = 60) -> None:
-        """
-        Continuously poll for price updates.
-
-        Args:
-            interval_seconds: Polling interval (default 60s for stocks)
-        """
+        # Continuously poll for price updates.
+        #
+        # Args:
+        # interval_seconds: Polling interval (default 60s for stocks)
         self._running = True
         logger.info(f"Starting Yahoo Finance polling ({interval_seconds}s interval)")
 
@@ -298,16 +289,16 @@ class YahooFinanceClient:
             await asyncio.sleep(interval_seconds)
     
     def get_price(self, symbol: str) -> Optional[float]:
-        """Get latest price for a symbol."""
+        # Get latest price for a symbol.
         data = self.prices.get(symbol)
         return data['price'] if data else None
     
     def get_ibit_data(self) -> Optional[Dict]:
-        """Get IBIT data specifically."""
+        # Get IBIT data specifically.
         return self.prices.get('IBIT')
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Return health for dashboard."""
+        # Return health for dashboard.
         now = time.time()
         age = (now - self.last_message_ts) if self.last_message_ts else None
         if self.consecutive_failures > 0:

@@ -1,20 +1,18 @@
-"""
-Tests for OutcomeEngine (Phase 4A.1)
-=====================================
+# Created by Oliver Meihls
 
-Run with::
-
-    python -m pytest tests/test_outcome_engine.py -v
-
-Test suites
------------
-1. Determinism       — same bars → identical outcomes across runs
-2. Idempotency       — run twice via DB → same row count + values
-3. Gap handling       — missing bar → status=GAP, path metrics NULL
-4. Window semantics  — reference is bar close; horizon boundary correct
-5. Status upgrade    — INCOMPLETE → OK when future bars arrive
-6. Golden vector     — analytically computed expected values, exact match
-"""
+# Tests for OutcomeEngine (Phase 4A.1)
+#
+# Run with::
+#
+# python -m pytest tests/test_outcome_engine.py -v
+#
+# Test suites
+# 1. Determinism       — same bars → identical outcomes across runs
+# 2. Idempotency       — run twice via DB → same row count + values
+# 3. Gap handling       — missing bar → status=GAP, path metrics NULL
+# 4. Window semantics  — reference is bar close; horizon boundary correct
+# 5. Status upgrade    — INCOMPLETE → OK when future bars arrive
+# 6. Golden vector     — analytically computed expected values, exact match
 
 from __future__ import annotations
 
@@ -35,9 +33,7 @@ from src.core.outcome_engine import (
 from src.core.database import Database
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Helpers / Fixtures
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 BAR_DUR = 60  # 1-minute bars in seconds
@@ -54,10 +50,9 @@ BASE_TS_MS = 1_735_689_600_000
 def _bar(index: int, close: float, high: float | None = None,
          low: float | None = None, open_: float | None = None,
          volume: float = 100.0) -> BarData:
-    """Create a synthetic bar at BASE + index*60s.
-
-    Defaults: open=close, high=close, low=close unless overridden.
-    """
+    # Create a synthetic bar at BASE + index*60s.
+    #
+    # Defaults: open=close, high=close, low=close unless overridden.
     return BarData(
         timestamp_ms=BASE_TS_MS + index * BAR_DUR_MS,
         open=open_ if open_ is not None else close,
@@ -69,7 +64,7 @@ def _bar(index: int, close: float, high: float | None = None,
 
 
 def _make_engine(config_overrides: dict | None = None) -> OutcomeEngine:
-    """Build an OutcomeEngine with no DB (for sync tests)."""
+    # Build an OutcomeEngine with no DB (for sync tests).
     cfg: Dict = {
         "outcome_version": VERSION,
         "gap_tolerance_bars": 1,
@@ -83,12 +78,11 @@ def _make_engine(config_overrides: dict | None = None) -> OutcomeEngine:
 
 def _make_linear_bars(n: int, start_close: float = 100.0,
                       step: float = 1.0) -> List[BarData]:
-    """Create n bars with linearly increasing close prices.
-
-    close[i] = start_close + i*step
-    high[i]  = close[i] + 0.5
-    low[i]   = close[i] - 0.5
-    """
+    # Create n bars with linearly increasing close prices.
+    #
+    # close[i] = start_close + i*step
+    # high[i]  = close[i] + 0.5
+    # low[i]   = close[i] - 0.5
     return [
         _bar(i,
              close=start_close + i * step,
@@ -98,16 +92,14 @@ def _make_linear_bars(n: int, start_close: float = 100.0,
     ]
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  1. Determinism
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestDeterminism:
-    """Same bar data → identical outcomes across repeated runs."""
+    # Same bar data → identical outcomes across repeated runs.
 
     def test_two_runs_identical(self):
-        """Compute outcomes twice on the same bars; all fields must match."""
+        # Compute outcomes twice on the same bars; all fields must match.
         engine = _make_engine()
         bars = _make_linear_bars(20)
 
@@ -129,7 +121,7 @@ class TestDeterminism:
             )
 
     def test_determinism_multiple_horizons(self):
-        """Multiple horizons produce identical results across runs."""
+        # Multiple horizons produce identical results across runs.
         cfg = {"horizons_seconds_by_bar": {60: [300, 600]}}
         engine = _make_engine(cfg)
         bars = _make_linear_bars(30)
@@ -147,21 +139,19 @@ class TestDeterminism:
             assert t1 == t2
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  2. Idempotency (via in-memory DB)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 @pytest.fixture
 def event_loop():
-    """Provide a fresh event loop for async tests."""
+    # Provide a fresh event loop for async tests.
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
 
 async def _make_db() -> Database:
-    """Create a fresh in-memory database."""
+    # Create a fresh in-memory database.
     db = Database(":memory:")
     await db.connect()
     return db
@@ -171,7 +161,7 @@ async def _insert_bars(db: Database, bars: List[BarData],
                        provider: str = PROVIDER,
                        symbol: str = SYMBOL,
                        bar_duration: int = BAR_DUR) -> None:
-    """Insert synthetic bars into market_bars as ISO strings."""
+    # Insert synthetic bars into market_bars as ISO strings.
     from datetime import datetime, timezone
     for b in bars:
         ts_dt = datetime.fromtimestamp(b.timestamp_ms / 1000, tz=timezone.utc)
@@ -187,7 +177,7 @@ async def _insert_bars(db: Database, bars: List[BarData],
 
 
 class TestIdempotency:
-    """Run engine twice on the same data → same row count and values."""
+    # Run engine twice on the same data → same row count and values.
 
     @pytest.mark.asyncio
     async def test_double_run_same_rows(self):
@@ -262,16 +252,14 @@ class TestIdempotency:
             await db.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  3. Gap Handling
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestGapHandling:
-    """Missing bars within the window → status=GAP, path metrics NULL."""
+    # Missing bars within the window → status=GAP, path metrics NULL.
 
     def test_gap_beyond_tolerance(self):
-        """Remove bars 3 and 4 from window → gap_count > 1 → GAP."""
+        # Remove bars 3 and 4 from window → gap_count > 1 → GAP.
         engine = _make_engine({"gap_tolerance_bars": 1})
         # 10 bars, but remove indices 3 and 4 (creating a 2-bar gap)
         bars = [_bar(i, close=100.0 + i) for i in range(10)]
@@ -298,7 +286,7 @@ class TestGapHandling:
         # (or None if no future bars at all — here we do have some)
 
     def test_gap_within_tolerance(self):
-        """Remove 1 bar when tolerance=1 → status=OK."""
+        # Remove 1 bar when tolerance=1 → status=OK.
         engine = _make_engine({"gap_tolerance_bars": 1})
         bars = [_bar(i, close=100.0 + i) for i in range(10)]
         # Remove bar at index 3 (1 bar missing in a 5-bar horizon window)
@@ -315,7 +303,7 @@ class TestGapHandling:
         assert r0.max_drawdown is not None
 
     def test_no_future_bars(self):
-        """Single bar with no future data → INCOMPLETE."""
+        # Single bar with no future data → INCOMPLETE.
         engine = _make_engine()
         bars = [_bar(0, close=100.0)]
 
@@ -328,16 +316,14 @@ class TestGapHandling:
         assert results[0].fwd_return is None
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  4. Window Semantics
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestWindowSemantics:
-    """Verify reference point, window boundaries, and close_at_horizon."""
+    # Verify reference point, window boundaries, and close_at_horizon.
 
     def test_window_starts_at_bar_close(self):
-        """close_ref_ms = bar.timestamp_ms + bar_duration_ms."""
+        # close_ref_ms = bar.timestamp_ms + bar_duration_ms.
         engine = _make_engine()
         bars = _make_linear_bars(10)
 
@@ -351,8 +337,8 @@ class TestWindowSemantics:
         assert r0.window_end_ms == expected_close_ref + 300 * 1000
 
     def test_close_at_horizon_is_last_bar_in_window(self):
-        """close_at_horizon should be the close of the last bar whose
-        close_time <= window_end_ms."""
+        # close_at_horizon should be the close of the last bar whose
+        # close_time <= window_end_ms.
         engine = _make_engine()
         # 10 bars: close = 100, 101, 102, ..., 109
         bars = [_bar(i, close=100.0 + i) for i in range(10)]
@@ -366,7 +352,7 @@ class TestWindowSemantics:
         assert r0.close_at_horizon == 105.0
 
     def test_bars_expected_count(self):
-        """bars_expected = horizon_seconds / bar_duration_seconds."""
+        # bars_expected = horizon_seconds / bar_duration_seconds.
         engine = _make_engine()
         bars = _make_linear_bars(10)
         results = engine.compute_outcomes_from_bars_sync(
@@ -374,8 +360,8 @@ class TestWindowSemantics:
         assert results[0].bars_expected == 300 // BAR_DUR  # 5
 
     def test_future_bar_boundary_exclusive(self):
-        """Bars exactly at the edge: a bar whose close_time == window_end
-        should be included."""
+        # Bars exactly at the edge: a bar whose close_time == window_end
+        # should be included.
         engine = _make_engine()
         # horizon=120s (2 bars), bar 0 window: [60000, 180000]
         # Bar 1 close at 120000ms (ts=60000 + 60000 = 120000) → ≤ 180000 → included
@@ -392,18 +378,16 @@ class TestWindowSemantics:
         assert r0.close_at_horizon == 102.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  5. Status Upgrade (INCOMPLETE → OK)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStatusUpgrade:
-    """INCOMPLETE records get upgraded to OK when future bars arrive."""
+    # INCOMPLETE records get upgraded to OK when future bars arrive.
 
     @pytest.mark.asyncio
     async def test_incomplete_to_ok(self):
-        """Insert only the anchor bar → INCOMPLETE (no future bars),
-        then add future bars → upgrade to OK."""
+        # Insert only the anchor bar → INCOMPLETE (no future bars),
+        # then add future bars → upgrade to OK.
         db = await _make_db()
         try:
             cfg = {
@@ -456,7 +440,7 @@ class TestStatusUpgrade:
 
     @pytest.mark.asyncio
     async def test_ok_not_overwritten(self):
-        """Once a record is OK, re-running doesn't change it."""
+        # Once a record is OK, re-running doesn't change it.
         db = await _make_db()
         try:
             cfg = {
@@ -497,44 +481,41 @@ class TestStatusUpgrade:
             await db.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  6. Golden Test Vector
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestGoldenVector:
-    """Analytically computed expected values — exact equality after quantization.
-
-    Synthetic dataset (10 bars, 1-min, horizon=300s = 5 bars lookahead):
-
-        Bar 0: ts=BASE, OHLC = (100, 102, 98,  100), vol=1000
-        Bar 1: ts=BASE+60k, OHLC = (100, 103, 99,  101), vol=800
-        Bar 2: ts=BASE+120k, OHLC = (101, 106, 100, 104), vol=1200  ← max high in window for bar 0
-        Bar 3: ts=BASE+180k, OHLC = (104, 105, 97,  98),  vol=900   ← min low in window for bar 0
-        Bar 4: ts=BASE+240k, OHLC = (98,  101, 96,  99),  vol=600
-        Bar 5: ts=BASE+300k, OHLC = (99,  100, 95,  97),  vol=700   ← close_at_horizon for bar 0
-        Bar 6: ts=BASE+360k, OHLC = (97,  98,  94,  96),  vol=500
-        Bar 7: ts=BASE+420k, OHLC = (96,  97,  93,  95),  vol=400
-        Bar 8: ts=BASE+480k, OHLC = (95,  96,  92,  94),  vol=350
-        Bar 9: ts=BASE+540k, OHLC = (94,  95,  91,  93),  vol=300
-
-    For bar 0 with horizon=300s:
-        close_now = 100.0
-        window: bars 1-5 (close times from BASE+120k to BASE+360k,
-                          which is ≤ BASE+60k+300k = BASE+360k ✓)
-        close_at_horizon = bar[5].close = 97.0
-        fwd_return = (97/100) - 1 = -0.03
-        max_high_in_window = 106.0 (bar 2)
-        min_low_in_window  = 95.0 (bar 5)
-        max_runup = (106/100) - 1 = 0.06
-        max_drawdown = (95/100) - 1 = -0.05
-        max_runup_ts_ms = bar[2].ts + 60000 = BASE + 180000
-        max_drawdown_ts_ms = bar[5].ts + 60000 = BASE + 360000
-        time_to_max_runup_ms = (BASE+180000) - (BASE+60000) = 120000
-        time_to_max_drawdown_ms = (BASE+360000) - (BASE+60000) = 300000
-        bars_expected = 5, bars_found = 5, gap_count = 0
-        status = OK
-    """
+    # Analytically computed expected values — exact equality after quantization.
+    #
+    # Synthetic dataset (10 bars, 1-min, horizon=300s = 5 bars lookahead):
+    #
+    # Bar 0: ts=BASE, OHLC = (100, 102, 98,  100), vol=1000
+    # Bar 1: ts=BASE+60k, OHLC = (100, 103, 99,  101), vol=800
+    # Bar 2: ts=BASE+120k, OHLC = (101, 106, 100, 104), vol=1200  ← max high in window for bar 0
+    # Bar 3: ts=BASE+180k, OHLC = (104, 105, 97,  98),  vol=900   ← min low in window for bar 0
+    # Bar 4: ts=BASE+240k, OHLC = (98,  101, 96,  99),  vol=600
+    # Bar 5: ts=BASE+300k, OHLC = (99,  100, 95,  97),  vol=700   ← close_at_horizon for bar 0
+    # Bar 6: ts=BASE+360k, OHLC = (97,  98,  94,  96),  vol=500
+    # Bar 7: ts=BASE+420k, OHLC = (96,  97,  93,  95),  vol=400
+    # Bar 8: ts=BASE+480k, OHLC = (95,  96,  92,  94),  vol=350
+    # Bar 9: ts=BASE+540k, OHLC = (94,  95,  91,  93),  vol=300
+    #
+    # For bar 0 with horizon=300s:
+    # close_now = 100.0
+    # window: bars 1-5 (close times from BASE+120k to BASE+360k,
+    # which is ≤ BASE+60k+300k = BASE+360k ✓)
+    # close_at_horizon = bar[5].close = 97.0
+    # fwd_return = (97/100) - 1 = -0.03
+    # max_high_in_window = 106.0 (bar 2)
+    # min_low_in_window  = 95.0 (bar 5)
+    # max_runup = (106/100) - 1 = 0.06
+    # max_drawdown = (95/100) - 1 = -0.05
+    # max_runup_ts_ms = bar[2].ts + 60000 = BASE + 180000
+    # max_drawdown_ts_ms = bar[5].ts + 60000 = BASE + 360000
+    # time_to_max_runup_ms = (BASE+180000) - (BASE+60000) = 120000
+    # time_to_max_drawdown_ms = (BASE+360000) - (BASE+60000) = 300000
+    # bars_expected = 5, bars_found = 5, gap_count = 0
+    # status = OK
 
     GOLDEN_BARS = [
         BarData(BASE_TS_MS + 0 * BAR_DUR_MS, 100.0, 102.0, 98.0, 100.0, 1000.0),
@@ -550,7 +531,7 @@ class TestGoldenVector:
     ]
 
     def test_golden_bar0_horizon300(self):
-        """Bar 0, horizon=300s — exact match of all fields."""
+        # Bar 0, horizon=300s — exact match of all fields.
         engine = _make_engine()
         results = engine.compute_outcomes_from_bars_sync(
             self.GOLDEN_BARS, PROVIDER, SYMBOL, BAR_DUR, [300])
@@ -591,7 +572,7 @@ class TestGoldenVector:
         assert r.window_end_ms == BASE_TS_MS + BAR_DUR_MS + 300_000
 
     def test_golden_bar0_realized_vol(self):
-        """Realized vol for bar 0 should match annualized stddev of log returns."""
+        # Realized vol for bar 0 should match annualized stddev of log returns.
         engine = _make_engine()
         results = engine.compute_outcomes_from_bars_sync(
             self.GOLDEN_BARS, PROVIDER, SYMBOL, BAR_DUR, [300])
@@ -613,7 +594,7 @@ class TestGoldenVector:
         assert r.realized_vol == _quantize(expected_vol, QUANTIZE)
 
     def test_golden_last_bar_incomplete(self):
-        """Last bar (index 9) has no future data → INCOMPLETE."""
+        # Last bar (index 9) has no future data → INCOMPLETE.
         engine = _make_engine()
         results = engine.compute_outcomes_from_bars_sync(
             self.GOLDEN_BARS, PROVIDER, SYMBOL, BAR_DUR, [300])
@@ -623,8 +604,8 @@ class TestGoldenVector:
         assert r_last.status == STATUS_INCOMPLETE
 
     def test_golden_bar4_partial_window(self):
-        """Bar 4 (index=4) with horizon=300s: only bars 5-9 available,
-        all 5 fit in window → OK."""
+        # Bar 4 (index=4) with horizon=300s: only bars 5-9 available,
+        # all 5 fit in window → OK.
         engine = _make_engine()
         results = engine.compute_outcomes_from_bars_sync(
             self.GOLDEN_BARS, PROVIDER, SYMBOL, BAR_DUR, [300])
@@ -643,8 +624,8 @@ class TestGoldenVector:
         assert r4.fwd_return == _quantize((93.0 / 99.0) - 1, QUANTIZE)
 
     def test_golden_with_gap(self):
-        """Remove bar 3 from golden set → bar 0 should have gap_count=1.
-        With tolerance=1, should still be OK."""
+        # Remove bar 3 from golden set → bar 0 should have gap_count=1.
+        # With tolerance=1, should still be OK.
         engine = _make_engine({"gap_tolerance_bars": 1})
         bars_with_gap = [b for b in self.GOLDEN_BARS
                          if b.timestamp_ms != BASE_TS_MS + 3 * BAR_DUR_MS]
@@ -658,8 +639,8 @@ class TestGoldenVector:
         assert r0.status == STATUS_OK
 
     def test_golden_with_gap_beyond_tolerance(self):
-        """Remove bars 3 and 4 → gap_count=2 > tolerance=1 → GAP.
-        Path metrics must be NULL."""
+        # Remove bars 3 and 4 → gap_count=2 > tolerance=1 → GAP.
+        # Path metrics must be NULL.
         engine = _make_engine({"gap_tolerance_bars": 1})
         bars_with_gap = [b for b in self.GOLDEN_BARS
                          if b.timestamp_ms not in (
@@ -679,7 +660,7 @@ class TestGoldenVector:
         assert r0.min_low_in_window is None
 
     def test_golden_fwd_return_sign(self):
-        """Sanity check: bar 0 is a decline (100→97), fwd_return < 0."""
+        # Sanity check: bar 0 is a decline (100→97), fwd_return < 0.
         engine = _make_engine()
         results = engine.compute_outcomes_from_bars_sync(
             self.GOLDEN_BARS, PROVIDER, SYMBOL, BAR_DUR, [300])
@@ -687,7 +668,7 @@ class TestGoldenVector:
         assert r0.fwd_return < 0
 
     def test_golden_runup_positive_drawdown_negative(self):
-        """max_runup > 0 (max high > close_now), max_drawdown < 0."""
+        # max_runup > 0 (max high > close_now), max_drawdown < 0.
         engine = _make_engine()
         results = engine.compute_outcomes_from_bars_sync(
             self.GOLDEN_BARS, PROVIDER, SYMBOL, BAR_DUR, [300])
@@ -696,13 +677,11 @@ class TestGoldenVector:
         assert r0.max_drawdown < 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  Quantization helper
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestQuantize:
-    """Verify the _quantize helper."""
+    # Verify the _quantize helper.
 
     def test_basic(self):
         assert _quantize(0.123456789012345, 10) == round(0.123456789012345, 10)
@@ -720,13 +699,11 @@ class TestQuantize:
         assert _quantize(0.0, 10) == 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  DB integration: full round-trip golden vector
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestDBRoundTrip:
-    """Full round-trip: insert bars → compute → read from DB → verify golden values."""
+    # Full round-trip: insert bars → compute → read from DB → verify golden values.
 
     @pytest.mark.asyncio
     async def test_golden_roundtrip(self):
@@ -774,13 +751,11 @@ class TestDBRoundTrip:
             await db.close()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 #  DB inventory methods (used by CLI `list` / `list-outcomes`)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestBarInventory:
-    """Verify get_bar_inventory returns correct keys and counts."""
+    # Verify get_bar_inventory returns correct keys and counts.
 
     @pytest.mark.asyncio
     async def test_empty_db(self):
@@ -843,7 +818,7 @@ class TestBarInventory:
 
 
 class TestOutcomeInventory:
-    """Verify get_outcome_inventory returns correct keys and status counts."""
+    # Verify get_outcome_inventory returns correct keys and status counts.
 
     @pytest.mark.asyncio
     async def test_empty_db(self):
@@ -891,11 +866,11 @@ class TestOutcomeInventory:
 
 
 class TestBackfillKeyValidation:
-    """The backfill CLI should catch wrong provider/symbol before computing."""
+    # The backfill CLI should catch wrong provider/symbol before computing.
 
     @pytest.mark.asyncio
     async def test_wrong_provider_returns_zero(self):
-        """Engine returns (0,0,0) when provider doesn't match any bars."""
+        # Engine returns (0,0,0) when provider doesn't match any bars.
         db = await _make_db()
         try:
             bars = _make_linear_bars(10)

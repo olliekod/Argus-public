@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""
-kalshi_auto_promote.py - Promote the single best Kalshi paper bot for UI review.
+# Created by Oliver Meihls
 
-Reads cumulative lifetime performance, derives per-bot lifetime risk diagnostics
-from archived training runs, applies strict promotion gates, optionally runs an
-offline stress replay, and writes the promoted bot metadata used by the terminal
-UI. This never changes execution settings.
-"""
+# kalshi_auto_promote.py - Promote the single best Kalshi paper bot for UI review.
+#
+# Reads cumulative lifetime performance, derives per-bot lifetime risk diagnostics
+# from archived training runs, applies strict promotion gates, optionally runs an
+# offline stress replay, and writes the promoted bot metadata used by the terminal
+# UI. This never changes execution settings.
 
 from __future__ import annotations
 

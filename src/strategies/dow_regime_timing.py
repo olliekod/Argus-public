@@ -1,9 +1,9 @@
-"""
-Day-of-Week + Regime Timing Gate Strategy.
+# Created by Oliver Meihls
 
-Emits FILTER signals that act as deterministic gating context for
-downstream strategy routing (no trades).
-"""
+# Day-of-Week + Regime Timing Gate Strategy.
+#
+# Emits FILTER signals that act as deterministic gating context for
+# downstream strategy routing (no trades).
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ logger = logging.getLogger("argus.strategies.dow_regime_timing")
 
 
 class DowRegimeTimingGateStrategy(BaseStrategy):
-    """Deterministic gating strategy based on session, regimes, and DOW."""
+    # Deterministic gating strategy based on session, regimes, and DOW.
 
     @property
     def strategy_id(self) -> str:
@@ -291,9 +291,7 @@ class DowRegimeTimingGateStrategy(BaseStrategy):
         return status
 
 
-# ---------------------------------------------------------------------------
 # Replay-compatible adapter
-# ---------------------------------------------------------------------------
 
 _DOW_REPLAY_DEFAULT_CONFIG: Dict[str, Any] = {
     "gates": {
@@ -318,12 +316,11 @@ _DOW_REPLAY_DEFAULT_CONFIG: Dict[str, Any] = {
 
 
 class DowRegimeTimingGateReplayStrategy:
-    """Replay-compatible adapter for DowRegimeTimingGateStrategy.
-
-    This is a FILTER-only strategy — it evaluates timing gates but never
-    generates trade intents.  Research loop and ExperimentRunner can use
-    this to assess gate behavior over historical data.
-    """
+    # Replay-compatible adapter for DowRegimeTimingGateStrategy.
+    #
+    # This is a FILTER-only strategy — it evaluates timing gates but never
+    # generates trade intents.  Research loop and ExperimentRunner can use
+    # this to assess gate behavior over historical data.
 
     def __init__(self, params: Dict[str, Any]) -> None:
         self._params = params
@@ -346,7 +343,7 @@ class DowRegimeTimingGateReplayStrategy:
         visible_regimes=None,
         visible_snapshots=None,
     ) -> None:
-        """Evaluate gates based on available regime data."""
+        # Evaluate gates based on available regime data.
         self._gates_evaluated += 1
 
         dow_weights = self._config.get("dow_weights", {})
@@ -405,7 +402,7 @@ class DowRegimeTimingGateReplayStrategy:
         }
 
     def generate_intents(self, sim_ts_ms: int) -> List:
-        """Filter strategy — never generates trade intents."""
+        # Filter strategy — never generates trade intents.
         return []
 
     def on_fill(self, intent, fill) -> None:

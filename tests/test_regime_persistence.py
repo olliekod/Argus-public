@@ -1,13 +1,13 @@
-"""
-Tests for end-to-end regime persistence.
+# Created by Oliver Meihls
 
-Validates:
-- DB schema (new liquidity columns, indexes)
-- write_regime / get_regimes / get_latest_regime round-trip
-- PersistenceManager subscription wiring
-- Replay harness regime lookahead barrier
-- get_latest_regime helper
-"""
+# Tests for end-to-end regime persistence.
+#
+# Validates:
+# - DB schema (new liquidity columns, indexes)
+# - write_regime / get_regimes / get_latest_regime round-trip
+# - PersistenceManager subscription wiring
+# - Replay harness regime lookahead barrier
+# - get_latest_regime helper
 
 from __future__ import annotations
 
@@ -28,20 +28,18 @@ from src.analysis.replay_harness import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 @pytest.fixture
 def event_loop():
-    """Provide a fresh event loop for each test."""
+    # Provide a fresh event loop for each test.
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
 
 def run(coro, loop=None):
-    """Helper to run async code in sync tests."""
+    # Helper to run async code in sync tests.
     if loop is None:
         loop = asyncio.new_event_loop()
         try:
@@ -52,7 +50,7 @@ def run(coro, loop=None):
 
 
 async def _create_test_db():
-    """Create an in-memory Database instance with schema."""
+    # Create an in-memory Database instance with schema.
     import aiosqlite
     from src.core.database import Database
     db = Database.__new__(Database)
@@ -63,9 +61,7 @@ async def _create_test_db():
     return db
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Schema Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRegimeSchema:
     def test_table_has_liquidity_columns(self):
@@ -121,13 +117,11 @@ class TestRegimeSchema:
         run(_test())
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Write / Read Round-Trip Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestWriteReadRegime:
     def test_write_symbol_regime_full(self):
-        """All fields round-trip correctly."""
+        # All fields round-trip correctly.
         async def _test():
             db = await _create_test_db()
             await db.write_regime(
@@ -165,7 +159,7 @@ class TestWriteReadRegime:
         run(_test())
 
     def test_write_market_regime(self):
-        """Market regime without liquidity fields stores NULLs."""
+        # Market regime without liquidity fields stores NULLs.
         async def _test():
             db = await _create_test_db()
             await db.write_regime(
@@ -191,7 +185,7 @@ class TestWriteReadRegime:
         run(_test())
 
     def test_backward_compatible_write_no_new_fields(self):
-        """Writing without liquidity fields works (all default to NULL)."""
+        # Writing without liquidity fields works (all default to NULL).
         async def _test():
             db = await _create_test_db()
             await db.write_regime(
@@ -211,7 +205,7 @@ class TestWriteReadRegime:
         run(_test())
 
     def test_get_regimes_time_range(self):
-        """start_ms / end_ms filtering works."""
+        # start_ms / end_ms filtering works.
         async def _test():
             db = await _create_test_db()
             for ts in [1000, 2000, 3000, 4000, 5000]:
@@ -226,7 +220,7 @@ class TestWriteReadRegime:
         run(_test())
 
     def test_get_regimes_ascending_order(self):
-        """Results are in ascending timestamp order."""
+        # Results are in ascending timestamp order.
         async def _test():
             db = await _create_test_db()
             for ts in [3000, 1000, 5000, 2000, 4000]:
@@ -241,7 +235,7 @@ class TestWriteReadRegime:
         run(_test())
 
     def test_get_latest_regime_asof(self):
-        """get_latest_regime returns the most recent regime at or before asof."""
+        # get_latest_regime returns the most recent regime at or before asof.
         async def _test():
             db = await _create_test_db()
             await db.write_regime(
@@ -273,7 +267,7 @@ class TestWriteReadRegime:
         run(_test())
 
     def test_get_latest_regime_wrong_scope(self):
-        """get_latest_regime returns None for a non-matching scope."""
+        # get_latest_regime returns None for a non-matching scope.
         async def _test():
             db = await _create_test_db()
             await db.write_regime(
@@ -286,25 +280,23 @@ class TestWriteReadRegime:
         run(_test())
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Persistence Manager Wiring Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestPersistenceSubscription:
     def test_persistence_imports_regime_topics(self):
-        """PersistenceManager can import regime topic constants."""
+        # PersistenceManager can import regime topic constants.
         from src.core.events import TOPIC_REGIMES_SYMBOL, TOPIC_REGIMES_MARKET
         assert TOPIC_REGIMES_SYMBOL == "regimes.symbol"
         assert TOPIC_REGIMES_MARKET == "regimes.market"
 
     def test_persistence_has_regime_handlers(self):
-        """PersistenceManager has the regime handler methods."""
+        # PersistenceManager has the regime handler methods.
         from src.core.persistence import PersistenceManager
         assert hasattr(PersistenceManager, "_on_symbol_regime")
         assert hasattr(PersistenceManager, "_on_market_regime")
 
     def test_symbol_regime_handler_builds_correct_payload(self):
-        """_on_symbol_regime extracts the right fields from the event."""
+        # _on_symbol_regime extracts the right fields from the event.
         from src.core.regimes import SymbolRegimeEvent
 
         # Create a real event
@@ -336,12 +328,10 @@ class TestPersistenceSubscription:
         assert event.config_hash == "test_hash"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Replay Harness Regime Barrier Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _make_bars(n, start_ms=1_000_000, interval_ms=60_000, price=100.0):
-    """Generate n synthetic bars."""
+    # Generate n synthetic bars.
     bars = []
     for i in range(n):
         ts = start_ms + i * interval_ms
@@ -354,7 +344,7 @@ def _make_bars(n, start_ms=1_000_000, interval_ms=60_000, price=100.0):
 
 
 def _make_regimes(timestamps_ms, scope="SPY"):
-    """Generate regime dicts at given timestamps."""
+    # Generate regime dicts at given timestamps.
     regimes = []
     for i, ts in enumerate(timestamps_ms):
         regimes.append({
@@ -372,7 +362,7 @@ def _make_regimes(timestamps_ms, scope="SPY"):
 
 
 class RegimeLeakDetector(ReplayStrategy):
-    """Records which regimes are visible at each bar to detect lookahead leaks."""
+    # Records which regimes are visible at each bar to detect lookahead leaks.
 
     def __init__(self):
         self._observations: List[Dict[str, Any]] = []
@@ -400,7 +390,7 @@ class RegimeLeakDetector(ReplayStrategy):
 
 class TestReplayRegimeBarrier:
     def test_regimes_not_visible_before_timestamp(self):
-        """The invariant: no regime is visible before its timestamp_ms."""
+        # The invariant: no regime is visible before its timestamp_ms.
         bars = _make_bars(10, start_ms=1_000_000, interval_ms=60_000)
         # Regimes at bar 3 and bar 7
         regimes = _make_regimes([
@@ -425,7 +415,7 @@ class TestReplayRegimeBarrier:
                 )
 
     def test_no_regimes_before_first_regime_timestamp(self):
-        """Bars before the first regime should see 0 regimes."""
+        # Bars before the first regime should see 0 regimes.
         bars = _make_bars(10, start_ms=1_000_000, interval_ms=60_000)
         # Regime arrives at bar 5 timestamp
         regime_ts = 1_000_000 + 5 * 60_000
@@ -446,8 +436,8 @@ class TestReplayRegimeBarrier:
                 )
 
     def test_latest_regime_overwrites_older(self):
-        """When multiple regimes exist for the same scope, only the latest
-        (up to sim_time) is visible."""
+        # When multiple regimes exist for the same scope, only the latest
+        # (up to sim_time) is visible.
         bars = _make_bars(10, start_ms=1_000_000, interval_ms=60_000)
         regimes = _make_regimes([
             1_000_000 + 1 * 60_000,  # bar 1
@@ -468,7 +458,7 @@ class TestReplayRegimeBarrier:
             assert last_obs["regimes"]["SPY"]["vol_regime"] == "VOL_2"  # 3rd regime
 
     def test_empty_regimes_safe(self):
-        """Replay works fine with no regimes at all."""
+        # Replay works fine with no regimes at all.
         bars = _make_bars(5)
         strategy = RegimeLeakDetector()
         harness = ReplayHarness(
@@ -482,7 +472,7 @@ class TestReplayRegimeBarrier:
             assert o["regime_count"] == 0
 
     def test_regimes_loaded_count(self):
-        """ReplayResult.regimes_loaded reflects the input count."""
+        # ReplayResult.regimes_loaded reflects the input count.
         bars = _make_bars(5)
         regimes = _make_regimes([1_000_000, 1_060_000, 1_120_000])
         strategy = RegimeLeakDetector()
@@ -494,9 +484,7 @@ class TestReplayRegimeBarrier:
         assert result.regimes_loaded == 3
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # get_latest_regime helper tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestGetLatestRegimeHelper:
     def test_returns_latest_at_or_before(self):

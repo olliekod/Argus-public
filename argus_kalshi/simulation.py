@@ -1,13 +1,13 @@
-"""
-Simulation fidelity, robustness scoring, and population management.
+# Created by Oliver Meihls
 
-This module provides:
-- ScenarioProfile: execution scenario presets (best/base/stress)
-- BotEquityLedger: isolated $5,000 bankroll tracking per bot
-- BotRunRecord: lineage metadata for retire/reseed lifecycle
-- PopulationManager: exploit/explore epoch-based parameter search
-- calculate_robustness_score / project_execution_scenarios: scoring helpers
-"""
+# Simulation fidelity, robustness scoring, and population management.
+#
+# This module provides:
+# - ScenarioProfile: execution scenario presets (best/base/stress)
+# - BotEquityLedger: isolated $5,000 bankroll tracking per bot
+# - BotRunRecord: lineage metadata for retire/reseed lifecycle
+# - PopulationManager: exploit/explore epoch-based parameter search
+# - calculate_robustness_score / project_execution_scenarios: scoring helpers
 
 from __future__ import annotations
 
@@ -19,13 +19,11 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 
-# ---------------------------------------------------------------------------
 #  Scenario profiles — configurable execution assumptions
-# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True, slots=True)
 class ScenarioProfile:
-    """Execution assumption profile applied to paper fills."""
+    # Execution assumption profile applied to paper fills.
     name: str
     latency_min_ms: int
     latency_max_ms: int
@@ -74,19 +72,16 @@ def get_scenario_profile(name: str) -> ScenarioProfile:
     return SCENARIO_PROFILES.get(name, SCENARIO_BASE)
 
 
-# ---------------------------------------------------------------------------
 #  Equity ledger — per-bot isolated bankroll tracking
-# ---------------------------------------------------------------------------
 
 _DEFAULT_START_EQUITY = 5000.0
 
 
 class BotEquityLedger:
-    """Isolated equity tracking for one bot run.
-
-    Tracks running equity, peak, drawdown, and per-trade cost breakdown.
-    Start equity is always exactly $5,000 unless overridden.
-    """
+    # Isolated equity tracking for one bot run.
+    #
+    # Tracks running equity, peak, drawdown, and per-trade cost breakdown.
+    # Start equity is always exactly $5,000 unless overridden.
 
     __slots__ = (
         "start_equity", "equity", "peak_equity",
@@ -114,7 +109,7 @@ class BotEquityLedger:
         slippage_usd: float = 0.0,
         spread_drag_usd: float = 0.0,
     ) -> float:
-        """Record a completed trade. Returns net PnL after all costs."""
+        # Record a completed trade. Returns net PnL after all costs.
         net = gross_pnl - fee_usd - slippage_usd - spread_drag_usd
         self.equity += net
         self.total_fees += fee_usd
@@ -136,13 +131,13 @@ class BotEquityLedger:
         return net
 
     def drawdown_pct(self) -> float:
-        """Current drawdown as % of start equity."""
+        # Current drawdown as % of start equity.
         if self.start_equity <= 0:
             return 0.0
         return max(0.0, (self.peak_equity - self.equity) / self.start_equity)
 
     def tail_loss(self, percentile: float = 0.10) -> float:
-        """Average of worst N% of trade PnLs (CVaR-like)."""
+        # Average of worst N% of trade PnLs (CVaR-like).
         if not self.trade_pnls:
             return 0.0
         sorted_pnls = sorted(self.trade_pnls)
@@ -164,13 +159,11 @@ class BotEquityLedger:
         }
 
 
-# ---------------------------------------------------------------------------
 #  Bot run record — lineage tracking for retire/reseed
-# ---------------------------------------------------------------------------
 
 @dataclass
 class BotRunRecord:
-    """Immutable record of one bot run for lineage tracking."""
+    # Immutable record of one bot run for lineage tracking.
     run_id: str
     bot_id: str
     parent_run_id: str = ""
@@ -190,9 +183,7 @@ class BotRunRecord:
         return uuid.uuid4().hex[:12]
 
 
-# ---------------------------------------------------------------------------
 #  Execution scenario projection
-# ---------------------------------------------------------------------------
 
 # Per-contract drag/relief constants (match terminal_ui.py originals)
 SCALP_BEST_RELIEF_USD = 0.005
@@ -204,7 +195,7 @@ MIN_SETTLED_TRADES_FOR_SCORE = 5
 
 
 def project_execution_scenarios(stats: Dict[str, Any]) -> Dict[str, float]:
-    """Project PnL under best/base/stress execution scenarios."""
+    # Project PnL under best/base/stress execution scenarios.
     pnl = float(stats.get("pnl", 0.0))
     qty_s = float(stats.get("qty_s_contracts", 0.0))
     qty_e = float(stats.get("qty_e_contracts", 0.0))
@@ -216,18 +207,17 @@ def project_execution_scenarios(stats: Dict[str, Any]) -> Dict[str, float]:
 
 
 def calculate_robustness_score(stats: Dict[str, Any]) -> float:
-    """Rank bots by worst-case execution resilience, not optimistic PnL.
-
-    Incorporates:
-    - Worst-scenario expectancy (45%)
-    - Base-case expectancy (20%)
-    - Max drawdown penalty (15%)
-    - Win rate (10%)
-    - Trade significance (10%)
-    - Fragility penalty (how much PnL varies across scenarios)
-    - Tail-loss penalty (worst 10% of trades)
-    - Small-sample penalty
-    """
+    # Rank bots by worst-case execution resilience, not optimistic PnL.
+    #
+    # Incorporates:
+    # - Worst-scenario expectancy (45%)
+    # - Base-case expectancy (20%)
+    # - Max drawdown penalty (15%)
+    # - Win rate (10%)
+    # - Trade significance (10%)
+    # - Fragility penalty (how much PnL varies across scenarios)
+    # - Tail-loss penalty (worst 10% of trades)
+    # - Small-sample penalty
     wins = int(stats.get("wins", 0))
     losses = int(stats.get("losses", 0))
     trade_count = int(stats.get("trade_count", wins + losses))
@@ -288,18 +278,15 @@ def calculate_robustness_score(stats: Dict[str, Any]) -> float:
 calculate_alpha_score = calculate_robustness_score
 
 
-# ---------------------------------------------------------------------------
 #  Family classification
-# ---------------------------------------------------------------------------
 
 FAMILIES = ("BTC 15m", "BTC 60m", "BTC Range", "ETH 15m", "ETH 60m", "ETH Range")
 
 
 def assign_family(ticker: str, asset: str = "", window_minutes: int = 0, is_range: bool = False) -> str:
-    """Extract family key from ticker string or explicit metadata.
-
-    Returns one of the 6 core families or "Other".
-    """
+    # Extract family key from ticker string or explicit metadata.
+    #
+    # Returns one of the 6 core families or "Other".
     if asset and window_minutes:
         a = asset.upper()
         if is_range:
@@ -331,16 +318,13 @@ def assign_family(ticker: str, asset: str = "", window_minutes: int = 0, is_rang
         return "Other"
 
 
-# ---------------------------------------------------------------------------
 #  Population manager — exploration + exploitation with epoch lifecycle
-# ---------------------------------------------------------------------------
 
 class PopulationManager:
-    """Manages exploit/explore population split and epoch-based retire/reseed.
-
-    Does NOT mutate bot params in-place. Instead returns instructions for
-    the farm runner to stop old bots and create new ones with new run_ids.
-    """
+    # Manages exploit/explore population split and epoch-based retire/reseed.
+    #
+    # Does NOT mutate bot params in-place. Instead returns instructions for
+    # the farm runner to stop old bots and create new ones with new run_ids.
 
     def __init__(
         self,
@@ -362,10 +346,9 @@ class PopulationManager:
         peak_equity: float,
         start_equity: float = _DEFAULT_START_EQUITY,
     ) -> Optional[str]:
-        """Check if a bot's drawdown exceeds the hard-stop threshold.
-
-        Returns "retired_drawdown" if breached, None otherwise.
-        """
+        # Check if a bot's drawdown exceeds the hard-stop threshold.
+        #
+        # Returns "retired_drawdown" if breached, None otherwise.
         if start_equity <= 0:
             return None
         dd_pct = max(0.0, (peak_equity - current_equity) / start_equity)
@@ -377,17 +360,16 @@ class PopulationManager:
         self,
         bot_scores: List[Tuple[str, float, Dict[str, Any]]],
     ) -> Tuple[List[str], int, int]:
-        """Evaluate an epoch: identify bots to retire (global ranking).
-
-        Args:
-            bot_scores: list of (bot_id, robustness_score, stats_dict)
-
-        Returns:
-            (retire_ids, exploit_count, explore_count) where:
-            - retire_ids: bot_ids to retire at epoch end
-            - exploit_count: how many replacements should be exploit (perturbation)
-            - explore_count: how many should be explore (random)
-        """
+        # Evaluate an epoch: identify bots to retire (global ranking).
+        #
+        # Args:
+        # bot_scores: list of (bot_id, robustness_score, stats_dict)
+        #
+        # Returns:
+        # (retire_ids, exploit_count, explore_count) where:
+        # - retire_ids: bot_ids to retire at epoch end
+        # - exploit_count: how many replacements should be exploit (perturbation)
+        # - explore_count: how many should be explore (random)
         self._epoch_count += 1
         if not bot_scores:
             return [], 0, 0
@@ -407,16 +389,15 @@ class PopulationManager:
         bot_family_map: Dict[str, str],
         bot_scores: List[Tuple[str, float, Dict[str, Any]]],
     ) -> Tuple[List[str], Dict[str, Tuple[int, int]]]:
-        """Evaluate epoch within each family bucket independently.
-
-        Args:
-            bot_family_map: bot_id -> primary family (from config/metadata).
-            bot_scores: list of (bot_id, robustness_score, stats_dict).
-
-        Returns:
-            (retire_ids, family_split) where family_split maps
-            family -> (n_exploit, n_explore) for replacement generation.
-        """
+        # Evaluate epoch within each family bucket independently.
+        #
+        # Args:
+        # bot_family_map: bot_id -> primary family (from config/metadata).
+        # bot_scores: list of (bot_id, robustness_score, stats_dict).
+        #
+        # Returns:
+        # (retire_ids, family_split) where family_split maps
+        # family -> (n_exploit, n_explore) for replacement generation.
         self._epoch_count += 1
         if not bot_scores:
             return [], {}
@@ -455,18 +436,17 @@ class PopulationManager:
         generation: int,
         parent_run_ids: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
-        """Generate replacement bot configs.
-
-        Args:
-            top_configs: configs of top-performing bots to perturb
-            n_exploit: number of exploitation (perturbation) configs
-            n_explore: number of exploration (random) configs
-            generation: current generation number
-            parent_run_ids: run_ids of parent bots (for lineage)
-
-        Returns:
-            list of new config dicts with run_id, parent_run_id, generation set.
-        """
+        # Generate replacement bot configs.
+        #
+        # Args:
+        # top_configs: configs of top-performing bots to perturb
+        # n_exploit: number of exploitation (perturbation) configs
+        # n_explore: number of exploration (random) configs
+        # generation: current generation number
+        # parent_run_ids: run_ids of parent bots (for lineage)
+        #
+        # Returns:
+        # list of new config dicts with run_id, parent_run_id, generation set.
         results: List[Dict[str, Any]] = []
 
         # Exploit: perturb top performers
@@ -494,18 +474,15 @@ class PopulationManager:
         return results
 
 
-# ---------------------------------------------------------------------------
 #  FamilyWeightManager — dynamic per-family allocation
-# ---------------------------------------------------------------------------
 
 class FamilyWeightManager:
-    """Dynamic per-family execution weight allocation.
-
-    Replaces binary drop-loser behavior with continuous weight adaptation.
-    Families never go to zero — min_weight floor guarantees continued
-    exploration.  Weights are applied as a qty multiplier at order sizing
-    time (not just diagnostics).
-    """
+    # Dynamic per-family execution weight allocation.
+    #
+    # Replaces binary drop-loser behavior with continuous weight adaptation.
+    # Families never go to zero — min_weight floor guarantees continued
+    # exploration.  Weights are applied as a qty multiplier at order sizing
+    # time (not just diagnostics).
 
     def __init__(
         self,
@@ -528,7 +505,7 @@ class FamilyWeightManager:
         self._last_rebalance_ts: float = 0.0
 
     def record_family_trade(self, family: str, pnl: float) -> None:
-        """Update per-family EMA performance tracker."""
+        # Update per-family EMA performance tracker.
         if family not in self._family_pnl_ema:
             self._family_pnl_ema[family] = 0.0
             self._family_trade_count[family] = 0
@@ -539,15 +516,14 @@ class FamilyWeightManager:
         self._family_trade_count[family] = self._family_trade_count.get(family, 0) + 1
 
     def record_family_reseed(self, family: str) -> None:
-        """Increment reseed counter for a family."""
+        # Increment reseed counter for a family.
         self._family_reseed_count[family] = self._family_reseed_count.get(family, 0) + 1
 
     def rebalance(self, now_ts: float) -> bool:
-        """Recompute weights from EMA performance. Returns True if rebalanced.
-
-        Uses softmax-like allocation: higher EMA → more weight.
-        Clamps to [min_weight, max_weight], then normalizes to sum=1.
-        """
+        # Recompute weights from EMA performance. Returns True if rebalanced.
+        #
+        # Uses softmax-like allocation: higher EMA → more weight.
+        # Clamps to [min_weight, max_weight], then normalizes to sum=1.
         # Always allow the first rebalance call; interval applies afterward.
         if (
             self._last_rebalance_ts > 0.0
@@ -592,11 +568,11 @@ class FamilyWeightManager:
         return True
 
     def get_weight(self, family: str) -> float:
-        """Return current weight for a family (used as qty multiplier)."""
+        # Return current weight for a family (used as qty multiplier).
         return self.weights.get(family, 1.0 / max(1, len(self.families)))
 
     def get_diagnostics(self) -> Dict[str, Any]:
-        """Return current weights, EMAs, trade counts, reseed counts."""
+        # Return current weights, EMAs, trade counts, reseed counts.
         return {
             "weights": dict(self.weights),
             "pnl_ema": {k: round(v, 4) for k, v in self._family_pnl_ema.items()},
@@ -605,9 +581,7 @@ class FamilyWeightManager:
         }
 
 
-# ---------------------------------------------------------------------------
 #  Config perturbation / exploration helpers
-# ---------------------------------------------------------------------------
 
 # Numeric params that can be perturbed
 _PERTURBABLE_PARAMS = {
@@ -639,7 +613,7 @@ FAMILY_PARAM_DOMAINS: Dict[str, Dict[str, Tuple[Any, Any]]] = {
 def _resolve_param_bounds(
     family: str = "",
 ) -> Dict[str, Tuple[Any, Any]]:
-    """Return perturbable param bounds, applying family overrides if any."""
+    # Return perturbable param bounds, applying family overrides if any.
     bounds = dict(_PERTURBABLE_PARAMS)
     if family and family in FAMILY_PARAM_DOMAINS:
         bounds.update(FAMILY_PARAM_DOMAINS[family])
@@ -652,7 +626,7 @@ def perturb_config(
     magnitude: float = 0.15,
     family: str = "",
 ) -> Dict[str, Any]:
-    """Generate a neighbor config by perturbing numeric params ±magnitude."""
+    # Generate a neighbor config by perturbing numeric params ±magnitude.
     result = dict(config)
     bounds = _resolve_param_bounds(family)
     for key, (lo, hi) in bounds.items():
@@ -681,7 +655,7 @@ def perturb_config_tight(
     rng: random.Random,
     family: str = "",
 ) -> Dict[str, Any]:
-    """Exploit lane: perturb top survivors with 50% tighter step sizes."""
+    # Exploit lane: perturb top survivors with 50% tighter step sizes.
     return perturb_config(config, rng, magnitude=0.075, family=family)
 
 
@@ -689,7 +663,7 @@ def random_explore_config(
     rng: random.Random,
     family: str = "",
 ) -> Dict[str, Any]:
-    """Sample a fully random config from the param space for exploration."""
+    # Sample a fully random config from the param space for exploration.
     config: Dict[str, Any] = {}
     bounds = _resolve_param_bounds(family)
     for key, (lo, hi) in bounds.items():
@@ -728,12 +702,11 @@ def novelty_distance(
     candidate: Dict[str, Any],
     population: List[Dict[str, Any]],
 ) -> float:
-    """Compute minimum normalized Euclidean distance from candidate to population.
-
-    Returns 0.0 if population is empty, otherwise a distance in [0, 1] range
-    where 0 = exact clone and 1 = maximally different.
-    Used as a novelty penalty to prevent near-clone configs from being spawned.
-    """
+    # Compute minimum normalized Euclidean distance from candidate to population.
+    #
+    # Returns 0.0 if population is empty, otherwise a distance in [0, 1] range
+    # where 0 = exact clone and 1 = maximally different.
+    # Used as a novelty penalty to prevent near-clone configs from being spawned.
     if not population:
         return 1.0
 

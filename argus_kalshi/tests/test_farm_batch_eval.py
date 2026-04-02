@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 import time
@@ -580,7 +582,7 @@ def test_param_region_context_upweights_winning_bucket():
 
 
 def test_momentum_scalp_exit_source_matches_entry():
-    """Exit signal source tag must match the entry path that opened the position."""
+    # Exit signal source tag must match the entry path that opened the position.
     pos = _ScalpPosition(
         ticker="FAKE-T1",
         side="yes",
@@ -596,7 +598,7 @@ def test_momentum_scalp_exit_source_matches_entry():
 
 
 def test_scalp_position_default_entry_source():
-    """Default entry_source is 'mispricing_scalp' when not specified."""
+    # Default entry_source is 'mispricing_scalp' when not specified.
     pos = _ScalpPosition(
         ticker="FAKE-T2",
         side="no",
@@ -617,7 +619,7 @@ from argus_kalshi.farm_runner import _session_mult
 
 
 def _utc_ts(hour: int) -> float:
-    """Return a wall-clock timestamp for today at the given UTC hour."""
+    # Return a wall-clock timestamp for today at the given UTC hour.
     now = _dt.datetime.now(_dt.timezone.utc).replace(hour=hour, minute=0, second=0, microsecond=0)
     return float(calendar.timegm(now.timetuple()))
 

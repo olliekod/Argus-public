@@ -1,12 +1,11 @@
-"""
-Argus Strategy Modules
-======================
+# Created by Oliver Meihls
 
-Phase 3 deterministic strategy framework.
-
-- BaseStrategy: Abstract base class for all strategies
-- SignalRouter: Collects, scores, and ranks signals
-"""
+# Argus Strategy Modules
+#
+# Phase 3 deterministic strategy framework.
+#
+# - BaseStrategy: Abstract base class for all strategies
+# - SignalRouter: Collects, scores, and ranks signals
 
 from .base import BaseStrategy
 from .dow_regime_timing import DowRegimeTimingGateStrategy

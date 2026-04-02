@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
-"""
-Argus Comprehensive Verification
-================================
+# Created by Oliver Meihls
 
-Single entry point to verify the full data and research pipeline using the
-**data-source policy** (config/config.yaml data_sources). No hard-coded
-Alpaca options: bars come from bars_primary (e.g. Alpaca); options snapshots
-from options_snapshots_primary (Tastytrade) and options_snapshots_secondary (Public when enabled).
-
-Modes:
-  --quick   Core imports + DB existence (no data checks).
-  --data    + Bars coverage, outcomes coverage, options snapshots (primary + secondary).
-  --replay  + Replay pack build + VRP smoke experiment.
-  --full    + Research loop dry-run.
-
-Use --validate to exit with code 1 if any run step fails (for CI or scripts).
-
-Usage:
-  python scripts/verify_argus.py --quick
-  python scripts/verify_argus.py --data --symbol SPY --days 5
-  python scripts/verify_argus.py --full --validate
-  python scripts/verify_argus.py --replay --symbol SPY --start 2026-02-11 --end 2026-02-11
-"""
+# Argus Comprehensive Verification
+#
+# Single entry point to verify the full data and research pipeline using the
+# **data-source policy** (config/config.yaml data_sources). No hard-coded
+# Alpaca options: bars come from bars_primary (e.g. Alpaca); options snapshots
+# from options_snapshots_primary (Tastytrade) and options_snapshots_secondary (Public when enabled).
+#
+# Modes:
+# --quick   Core imports + DB existence (no data checks).
+# --data    + Bars coverage, outcomes coverage, options snapshots (primary + secondary).
+# --replay  + Replay pack build + VRP smoke experiment.
+# --full    + Research loop dry-run.
+#
+# Use --validate to exit with code 1 if any run step fails (for CI or scripts).
+#
+# Usage:
+# python scripts/verify_argus.py --quick
+# python scripts/verify_argus.py --data --symbol SPY --days 5
+# python scripts/verify_argus.py --full --validate
+# python scripts/verify_argus.py --replay --symbol SPY --start 2026-02-11 --end 2026-02-11
 
 from __future__ import annotations
 
@@ -68,7 +67,7 @@ def _info(msg: str) -> None:
 # ─── Step 1: Core imports & config ─────────────────────────────────────
 
 def step_core_imports() -> Dict[str, Any]:
-    """Verify core modules and load config + data-source policy."""
+    # Verify core modules and load config + data-source policy.
     result: Dict[str, Any] = {"passed": True, "details": {}}
     try:
         from src.core.config import load_config, load_secrets
@@ -93,7 +92,7 @@ def step_core_imports() -> Dict[str, Any]:
 # ─── Step 2: Database ───────────────────────────────────────────────────
 
 def step_database(db_path: str) -> Dict[str, Any]:
-    """Check DB exists and has expected tables."""
+    # Check DB exists and has expected tables.
     result: Dict[str, Any] = {"passed": False, "path": db_path}
     path = Path(db_path)
     if not path.exists():
@@ -130,7 +129,7 @@ async def step_bars_coverage(
     start_ms: int,
     end_ms: int,
 ) -> Dict[str, Any]:
-    """Bars from bars_primary."""
+    # Bars from bars_primary.
     from src.core.database import Database
     result: Dict[str, Any] = {"passed": False, "provider": policy.bars_primary}
     db = Database(db_path)
@@ -159,7 +158,7 @@ async def step_outcomes_coverage(
     start_ms: int,
     end_ms: int,
 ) -> Dict[str, Any]:
-    """Outcomes from outcomes_from (bars_primary)."""
+    # Outcomes from outcomes_from (bars_primary).
     from src.core.database import Database
     result: Dict[str, Any] = {"passed": False, "provider": policy.bars_provider}
     db = Database(db_path)
@@ -191,7 +190,7 @@ async def step_options_snapshots(
     start_ms: int,
     end_ms: int,
 ) -> Dict[str, Any]:
-    """Options snapshot coverage: primary and (when enabled) secondary."""
+    # Options snapshot coverage: primary and (when enabled) secondary.
     from src.core.database import Database
     providers = policy.snapshot_providers(include_secondary=True)
     # If public_options.enabled is false, do not require public
@@ -237,7 +236,7 @@ async def step_replay_pack(
     end_date: str,
     pack_path: str,
 ) -> Dict[str, Any]:
-    """Build replay pack using policy (bars_primary + options_snapshots_primary)."""
+    # Build replay pack using policy (bars_primary + options_snapshots_primary).
     from src.tools.replay_pack import create_replay_pack
     result: Dict[str, Any] = {"passed": False}
     try:
@@ -266,7 +265,7 @@ async def step_replay_pack(
 # ─── Step 7: VRP smoke experiment ──────────────────────────────────────
 
 def step_vrp_smoke(pack_path: str, output_dir: str) -> Dict[str, Any]:
-    """Run VRPCreditSpreadStrategy once on the pack."""
+    # Run VRPCreditSpreadStrategy once on the pack.
     from src.analysis.experiment_runner import ExperimentConfig, ExperimentRunner
     from src.strategies.vrp_credit_spread import VRPCreditSpreadStrategy
     result: Dict[str, Any] = {"passed": True}
@@ -295,7 +294,7 @@ def step_vrp_smoke(pack_path: str, output_dir: str) -> Dict[str, Any]:
 # ─── Step 8: Research loop dry-run ─────────────────────────────────────
 
 def step_research_loop_dry_run(config_path: str) -> Dict[str, Any]:
-    """Validate research loop config (dry-run)."""
+    # Validate research loop config (dry-run).
     result: Dict[str, Any] = {"passed": False}
     try:
         from src.analysis.research_loop_config import load_research_loop_config
@@ -319,7 +318,7 @@ async def run_verification(
     end_date: Optional[str] = None,
     research_config: str = "config/research_loop.yaml",
 ) -> Dict[str, Any]:
-    """Run verification steps according to mode. Returns results dict."""
+    # Run verification steps according to mode. Returns results dict.
     today = datetime.now(timezone.utc).date()
     if start_date and end_date:
         start_d = start_date
@@ -358,6 +357,7 @@ async def run_verification(
         policy = get_data_source_policy(load_config())
     except Exception:
         pass
+
     assert policy is not None
 
     # Step 2: Database

@@ -1,4 +1,6 @@
-"""Agent-level deterministic governance components."""
+# Created by Oliver Meihls
+
+# Agent-level deterministic governance components.
 
 from .argus_orchestrator import ArgusOrchestrator, CaseFile, CaseStage, ConversationBuffer
 from .delphi import DelphiToolRegistry, RiskLevel, ToolResult, tool

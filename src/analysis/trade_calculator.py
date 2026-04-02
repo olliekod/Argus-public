@@ -1,7 +1,7 @@
-"""
-Generates precise ETF put spread trade recommendations.
-Includes dynamic position sizing based on Probability of Profit.
-"""
+# Created by Oliver Meihls
+
+# Generates precise ETF put spread trade recommendations.
+# Includes dynamic position sizing based on Probability of Profit.
 
 import logging
 import time
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class TradeRecommendation:
-    """Complete trade recommendation."""
+    # Complete trade recommendation.
     # Underlying info
     symbol: str
     underlying_price: float
@@ -71,16 +71,14 @@ class TradeRecommendation:
 
 
 class TradeCalculator:
-    """
-    Generates complete trade recommendations for ETF put spreads.
-    
-    Uses dynamic position sizing based on Probability of Profit:
-    - 80%+ PoP: 10% of account
-    - 70-80% PoP: 7% of account
-    - 60-70% PoP: 5% of account
-    - 50-60% PoP: 3% of account
-    - <50% PoP: NO TRADE
-    """
+    # Generates complete trade recommendations for ETF put spreads.
+    #
+    # Uses dynamic position sizing based on Probability of Profit:
+    # - 80%+ PoP: 10% of account
+    # - 70-80% PoP: 7% of account
+    # - 60-70% PoP: 5% of account
+    # - 50-60% PoP: 3% of account
+    # - <50% PoP: NO TRADE
     
     # Position sizing parameters
     MIN_POSITION_SIZE = 0.03   # 3% minimum
@@ -115,14 +113,12 @@ class TradeCalculator:
         symbol: str = "IBIT",
         iv_consensus: Optional[Any] = None
     ):
-        """
-        Initialize trade calculator.
-        
-        Args:
-            account_size: Account size in dollars (default $3,000)
-            symbol: Symbol to trade (IBIT, BITO, etc.)
-            iv_consensus: Shared IVConsensusEngine for real-time IV/Greeks
-        """
+        # Initialize trade calculator.
+        #
+        # Args:
+        # account_size: Account size in dollars (default $3,000)
+        # symbol: Symbol to trade (IBIT, BITO, etc.)
+        # iv_consensus: Shared IVConsensusEngine for real-time IV/Greeks
         self.account_size = account_size
         self.symbol = symbol.upper()
         self.options_client = IBITOptionsClient(symbol=symbol)
@@ -133,15 +129,13 @@ class TradeCalculator:
         logger.info(f"{symbol} Trade Calculator initialized (account: ${account_size:,.0f}, consensus: {iv_consensus is not None})")
     
     def get_position_size_pct(self, pop: float) -> float:
-        """
-        Get position size percentage based on Probability of Profit.
-        
-        Args:
-            pop: Probability of Profit (0-100)
-            
-        Returns:
-            Position size as decimal (e.g., 0.07 for 7%)
-        """
+        # Get position size percentage based on Probability of Profit.
+        #
+        # Args:
+        # pop: Probability of Profit (0-100)
+        #
+        # Returns:
+        # Position size as decimal (e.g., 0.07 for 7%)
         for threshold, size in self.SIZING_TIERS:
             if pop >= threshold:
                 return size
@@ -154,16 +148,14 @@ class TradeCalculator:
         max_risk_per_contract: float, 
         position_size_pct: float
     ) -> int:
-        """
-        Calculate number of contracts based on position sizing.
-        
-        Args:
-            max_risk_per_contract: Max loss per contract in dollars
-            position_size_pct: Portfolio % to allocate
-            
-        Returns:
-            Number of contracts (minimum 1 if trade is valid)
-        """
+        # Calculate number of contracts based on position sizing.
+        #
+        # Args:
+        # max_risk_per_contract: Max loss per contract in dollars
+        # position_size_pct: Portfolio % to allocate
+        #
+        # Returns:
+        # Number of contracts (minimum 1 if trade is valid)
         if position_size_pct <= 0:
             return 0
         
@@ -188,17 +180,15 @@ class TradeCalculator:
         force: bool = False,
         proxy_greeks: Optional[Dict[str, float]] = None,
     ) -> Optional[TradeRecommendation]:
-        """
-        Generate a complete trade recommendation.
-        
-        Args:
-            btc_change_24h: Sentiment/Regime proxy change (e.g. BTC for crypto)
-            symbol_change_24h: Target ETF 24h price change
-            force: If True, generate even if IV Rank is low
-            
-        Returns:
-            TradeRecommendation or None if conditions not met
-        """
+        # Generate a complete trade recommendation.
+        #
+        # Args:
+        # btc_change_24h: Sentiment/Regime proxy change (e.g. BTC for crypto)
+        # symbol_change_24h: Target ETF 24h price change
+        # force: If True, generate even if IV Rank is low
+        #
+        # Returns:
+        # TradeRecommendation or None if conditions not met
         warnings = []
         
         # Get market status
@@ -369,17 +359,15 @@ class TradeCalculator:
         )
     
     def format_telegram_alert(self, rec: TradeRecommendation) -> str:
-        """
-        Format trade recommendation for Telegram.
-        
-        EXTREMELY ACTIONABLE - tells user EXACTLY what to do.
-        
-        Args:
-            rec: TradeRecommendation object
-            
-        Returns:
-            Formatted message string with step-by-step instructions
-        """
+        # Format trade recommendation for Telegram.
+        #
+        # EXTREMELY ACTIONABLE - tells user EXACTLY what to do.
+        #
+        # Args:
+        # rec: TradeRecommendation object
+        #
+        # Returns:
+        # Formatted message string with step-by-step instructions
         # Determine if market is likely open (rough check)
         from datetime import datetime
         now = datetime.now()
@@ -468,7 +456,7 @@ class TradeCalculator:
         return "\n".join(lines)
     
     def _get_gpu_status(self) -> str:
-        """Get GPU engine status string."""
+        # Get GPU engine status string.
         try:
             from src.analysis.gpu_engine import get_gpu_engine
             engine = get_gpu_engine()
@@ -481,7 +469,7 @@ class TradeCalculator:
             return "GPU Engine: Offline"
             
     def format_console_output(self, rec: TradeRecommendation) -> str:
-        """Format for console/logging output."""
+        # Format for console/logging output.
         return f"""
 {'='*60}
 {rec.symbol} PUT SPREAD RECOMMENDATION
@@ -530,7 +518,7 @@ EXIT PLAN
 
 # Test function
 def test_calculator():
-    """Test the trade calculator."""
+    # Test the trade calculator.
     print("=" * 60)
     print("TRADE CALCULATOR TEST")
     print("=" * 60)

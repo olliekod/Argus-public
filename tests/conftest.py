@@ -1,10 +1,10 @@
-"""
-Shared test fixtures and environment stubs.
+# Created by Oliver Meihls
 
-Stubs out packages that cannot be built in some CI environments
-(``multitasking``, ``curl_cffi``, ``telegram``, etc.) so that
-transitive importers can import cleanly.
-"""
+# Shared test fixtures and environment stubs.
+#
+# Stubs out packages that cannot be built in some CI environments
+# (``multitasking``, ``curl_cffi``, ``telegram``, etc.) so that
+# transitive importers can import cleanly.
 
 import sys
 import types

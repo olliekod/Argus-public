@@ -1,12 +1,11 @@
-"""
-Run Experiment CLI
-==================
+# Created by Oliver Meihls
 
-Entry point for running standardized strategy experiments.
-
-Usage:
-  python scripts/run_experiment.py --strategy VRPCreditSpreadStrategy --pack data/spy_pack.json --params '{"min_vrp": 0.06}'
-"""
+# Run Experiment CLI
+#
+# Entry point for running standardized strategy experiments.
+#
+# Usage:
+# python scripts/run_experiment.py --strategy VRPCreditSpreadStrategy --pack data/spy_pack.json --params '{"min_vrp": 0.06}'
 
 import argparse
 import json
@@ -28,7 +27,7 @@ from src.analysis.regime_stress import run_regime_subset_stress
 from src.analysis.replay_harness import ReplayStrategy
 
 def load_strategy_class(name: str) -> Type[ReplayStrategy]:
-    """Dynamically load strategy class from src.strategies."""
+    # Dynamically load strategy class from src.strategies.
     # Common locations
     modules = [
         "src.strategies.vrp_credit_spread",

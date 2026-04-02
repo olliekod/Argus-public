@@ -1,9 +1,9 @@
-"""
-Tests for the Deterministic Replay Harness.
+# Created by Oliver Meihls
 
-Validates the lookahead barrier, strategy interface, portfolio tracking,
-session awareness, and end-to-end replay flow.
-"""
+# Tests for the Deterministic Replay Harness.
+#
+# Validates the lookahead barrier, strategy interface, portfolio tracking,
+# session awareness, and end-to-end replay flow.
 
 from __future__ import annotations
 
@@ -25,12 +25,10 @@ from src.analysis.replay_harness import (
 from src.core.outcome_engine import BarData, OutcomeResult
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Test strategy implementations
-# ═══════════════════════════════════════════════════════════════════════════
 
 class NullStrategy(ReplayStrategy):
-    """Does nothing — used to test the harness itself."""
+    # Does nothing — used to test the harness itself.
 
     @property
     def strategy_id(self) -> str:
@@ -44,7 +42,7 @@ class NullStrategy(ReplayStrategy):
 
 
 class BuyOnSecondBarStrategy(ReplayStrategy):
-    """Buys 1 contract on the 2nd bar, sells on the 4th."""
+    # Buys 1 contract on the 2nd bar, sells on the 4th.
 
     def __init__(self):
         self._bar_count = 0
@@ -81,10 +79,9 @@ class BuyOnSecondBarStrategy(ReplayStrategy):
 
 
 class OutcomeLeakDetector(ReplayStrategy):
-    """Records which outcomes are visible at each bar.
-
-    Used to verify the lookahead barrier.
-    """
+    # Records which outcomes are visible at each bar.
+    #
+    # Used to verify the lookahead barrier.
 
     def __init__(self):
         self._observations: List[Dict[str, Any]] = []
@@ -108,9 +105,7 @@ class OutcomeLeakDetector(ReplayStrategy):
         return {"observations": self._observations}
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Fixtures
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _make_bars(
     n: int = 10,
@@ -119,7 +114,7 @@ def _make_bars(
     open_price: float = 100.0,
     drift: float = 0.5,
 ) -> List[BarData]:
-    """Generate synthetic bars in ascending order."""
+    # Generate synthetic bars in ascending order.
     bars = []
     price = open_price
     for i in range(n):
@@ -141,7 +136,7 @@ def _make_outcomes(
     horizon_seconds: int = 300,
     bar_duration_seconds: int = 60,
 ) -> List[Dict[str, Any]]:
-    """Generate synthetic outcomes for each bar."""
+    # Generate synthetic outcomes for each bar.
     outcomes = []
     bar_dur_ms = bar_duration_seconds * 1000
     horizon_ms = horizon_seconds * 1000
@@ -179,13 +174,11 @@ def _make_outcomes(
     return outcomes
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Lookahead barrier tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestLookaheadBarrier:
     def test_outcomes_not_visible_before_window_ends(self):
-        """The core invariant: no outcome is visible before its window_end_ms."""
+        # The core invariant: no outcome is visible before its window_end_ms.
         bars = _make_bars(n=10, interval_ms=60_000)
         outcomes = _make_outcomes(bars, horizon_seconds=300)
         strategy = OutcomeLeakDetector()
@@ -211,8 +204,8 @@ class TestLookaheadBarrier:
                 )
 
     def test_no_outcomes_visible_for_first_bars(self):
-        """With a 5-minute horizon and 1-minute bars, the first 5 bars
-        should not have any outcomes visible (window hasn't closed yet)."""
+        # With a 5-minute horizon and 1-minute bars, the first 5 bars
+        # should not have any outcomes visible (window hasn't closed yet).
         bars = _make_bars(n=10, interval_ms=60_000)
         outcomes = _make_outcomes(bars, horizon_seconds=300)
         strategy = OutcomeLeakDetector()
@@ -232,7 +225,7 @@ class TestLookaheadBarrier:
             assert obs[i]["outcome_count"] == 0, f"Bar {i} should see 0 outcomes"
 
     def test_outcomes_accumulate_over_time(self):
-        """Later bars should see more outcomes (all prior whose windows have closed)."""
+        # Later bars should see more outcomes (all prior whose windows have closed).
         bars = _make_bars(n=15, interval_ms=60_000)
         outcomes = _make_outcomes(bars, horizon_seconds=300)
         strategy = OutcomeLeakDetector()
@@ -251,7 +244,7 @@ class TestLookaheadBarrier:
             assert counts[i] >= counts[i - 1], "Outcome count should not decrease"
 
     def test_empty_outcomes_safe(self):
-        """Replay works fine with no outcomes at all."""
+        # Replay works fine with no outcomes at all.
         bars = _make_bars(n=5)
         strategy = NullStrategy()
         harness = ReplayHarness(
@@ -265,9 +258,7 @@ class TestLookaheadBarrier:
         assert result.outcomes_used == 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Portfolio tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestVirtualPortfolio:
     def test_open_long_deducts_cash(self):
@@ -362,9 +353,7 @@ class TestVirtualPortfolio:
         assert portfolio.total_commission == 2.60
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # End-to-end replay tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestReplayEndToEnd:
     def test_null_strategy_runs(self):
@@ -425,7 +414,7 @@ class TestReplayEndToEnd:
         assert "execution" in summary
 
     def test_bars_processed_in_order(self):
-        """Verify bars are seen in ascending timestamp order."""
+        # Verify bars are seen in ascending timestamp order.
         bars = _make_bars(n=5, interval_ms=60_000)
         # Shuffle to test sorting
         shuffled = [bars[3], bars[0], bars[4], bars[1], bars[2]]
@@ -451,9 +440,7 @@ class TestReplayEndToEnd:
         assert seen_ts == sorted(seen_ts), "Bars must be processed in chronological order"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # TradeIntent tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestTradeIntent:
     def test_intent_creation(self):

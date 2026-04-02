@@ -1,15 +1,14 @@
-"""
-Alpaca Options Connector
-========================
+# Created by Oliver Meihls
 
-Fetches options chain data from Alpaca Markets API.
-Primary provider for IBIT/BITO options data.
-
-Uses Alpaca's Options Data API which provides:
-- Real-time and delayed quotes
-- Greeks (when available)
-- Contract metadata
-"""
+# Alpaca Options Connector
+#
+# Fetches options chain data from Alpaca Markets API.
+# Primary provider for IBIT/BITO options data.
+#
+# Uses Alpaca's Options Data API which provides:
+# - Real-time and delayed quotes
+# - Greeks (when available)
+# - Contract metadata
 
 from __future__ import annotations
 
@@ -36,33 +35,32 @@ logger = logging.getLogger(__name__)
 
 
 def _now_ms() -> int:
-    """Current time as int milliseconds."""
+    # Current time as int milliseconds.
     return int(time.time() * 1000)
 
 
 def _poll_time_ms() -> int:
-    """Poll time normalized to minute boundary (for timestamp_ms uniqueness).
-    Use this for timestamp_ms so Alpaca and Tastytrade share the same
-    granularity and ON CONFLICT(provider, symbol, timestamp_ms) behaves
-    predictably. Keep recv_ts_ms as _now_ms() for accurate receipt time."""
+    # Poll time normalized to minute boundary (for timestamp_ms uniqueness).
+    # Use this for timestamp_ms so Alpaca and Tastytrade share the same
+    # granularity and ON CONFLICT(provider, symbol, timestamp_ms) behaves
+    # predictably. Keep recv_ts_ms as _now_ms() for accurate receipt time.
     return (_now_ms() // 60_000) * 60_000
 
 
 def _date_to_ms(date_str: str) -> int:
-    """Convert date string (YYYY-MM-DD) to UTC midnight milliseconds."""
+    # Convert date string (YYYY-MM-DD) to UTC midnight milliseconds.
     dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     return int(dt.timestamp() * 1000)
 
 
 def _compute_contract_id(option_symbol: str) -> str:
-    """Compute deterministic contract ID from OCC option symbol."""
+    # Compute deterministic contract ID from OCC option symbol.
     return hashlib.sha256(option_symbol.encode()).hexdigest()[:16]
 
 
 def _expiration_from_occ_symbol(occ_symbol: str) -> Optional[str]:
-    """Derive YYYY-MM-DD expiration from OCC option symbol.
-    Format: ROOT + YYMMDD + C|P + STRIKE(8). Example: SPY250221C00450000 -> 2025-02-21.
-    """
+    # Derive YYYY-MM-DD expiration from OCC option symbol.
+    # Format: ROOT + YYMMDD + C|P + STRIKE(8). Example: SPY250221C00450000 -> 2025-02-21.
     if not occ_symbol or len(occ_symbol) < 15:
         return None
     for i in range(len(occ_symbol) - 9, 5, -1):
@@ -79,7 +77,7 @@ def _expiration_from_occ_symbol(occ_symbol: str) -> Optional[str]:
 
 @dataclass
 class AlpacaOptionsConfig:
-    """Configuration for Alpaca options connector."""
+    # Configuration for Alpaca options connector.
     api_key: str = ""
     api_secret: str = ""
     base_url: str = "https://data.alpaca.markets"
@@ -91,10 +89,9 @@ class AlpacaOptionsConfig:
 
 
 class AlpacaOptionsConnector:
-    """Alpaca options data connector.
-    
-    Provides deterministic options chain snapshots for tape recording.
-    """
+    # Alpaca options data connector.
+    #
+    # Provides deterministic options chain snapshots for tape recording.
     
     PROVIDER = "alpaca"
     
@@ -111,7 +108,7 @@ class AlpacaOptionsConnector:
         self._last_latency_ms = 0.0
         
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create aiohttp session."""
+        # Get or create aiohttp session.
         if aiohttp is None:
             raise ImportError("aiohttp required: pip install aiohttp")
         if self._session is None or self._session.closed:
@@ -124,12 +121,12 @@ class AlpacaOptionsConnector:
         return self._session
     
     def _next_sequence_id(self) -> int:
-        """Get next monotonic sequence ID."""
+        # Get next monotonic sequence ID.
         self._sequence_id += 1
         return self._sequence_id
     
     def _get_cached(self, key: str) -> Optional[Any]:
-        """Get cached value if not expired."""
+        # Get cached value if not expired.
         if key in self._cache:
             expire_ms, data = self._cache[key]
             if _now_ms() < expire_ms:
@@ -138,12 +135,12 @@ class AlpacaOptionsConnector:
         return None
     
     def _set_cache(self, key: str, data: Any) -> None:
-        """Set cache with TTL."""
+        # Set cache with TTL.
         expire_ms = _now_ms() + (self._config.cache_ttl_seconds * 1000)
         self._cache[key] = (expire_ms, data)
     
     async def _request(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Make authenticated request to Alpaca API."""
+        # Make authenticated request to Alpaca API.
         session = await self._get_session()
         url = f"{self._config.base_url}{endpoint}"
         
@@ -168,11 +165,10 @@ class AlpacaOptionsConnector:
             return {}
     
     async def get_expirations(self, symbol: str) -> List[str]:
-        """Get available expiration dates for a symbol.
-        
-        Returns:
-            List of expiration dates as YYYY-MM-DD strings, sorted ascending.
-        """
+        # Get available expiration dates for a symbol.
+        #
+        # Returns:
+        # List of expiration dates as YYYY-MM-DD strings, sorted ascending.
         cache_key = f"exp:{symbol}"
         cached = self._get_cached(cache_key)
         if cached:
@@ -223,15 +219,14 @@ class AlpacaOptionsConnector:
         symbol: str,
         expiration: str,
     ) -> Dict[str, Any]:
-        """Get raw options chain data from Alpaca.
-        
-        Args:
-            symbol: Underlying symbol (IBIT, BITO)
-            expiration: Expiration date (YYYY-MM-DD)
-            
-        Returns:
-            Raw API response with snapshots.
-        """
+        # Get raw options chain data from Alpaca.
+        #
+        # Args:
+        # symbol: Underlying symbol (IBIT, BITO)
+        # expiration: Expiration date (YYYY-MM-DD)
+        #
+        # Returns:
+        # Raw API response with snapshots.
         # Alpaca snapshot endpoint
         data = await self._request(
             f"/v1beta1/options/snapshots/{symbol}",
@@ -244,11 +239,10 @@ class AlpacaOptionsConnector:
         return data
     
     async def get_underlying_quote(self, symbol: str) -> Tuple[float, float, float]:
-        """Get underlying stock quote.
-        
-        Returns:
-            Tuple of (price, bid, ask)
-        """
+        # Get underlying stock quote.
+        #
+        # Returns:
+        # Tuple of (price, bid, ask)
         # Use stocks snapshot endpoint
         data = await self._request(
             f"/v2/stocks/{symbol}/snapshot",
@@ -268,15 +262,14 @@ class AlpacaOptionsConnector:
         symbol: str,
         expiration: str,
     ) -> Optional[OptionChainSnapshotEvent]:
-        """Build deterministic chain snapshot for an expiration.
-        
-        Args:
-            symbol: Underlying symbol
-            expiration: Expiration date (YYYY-MM-DD)
-            
-        Returns:
-            OptionChainSnapshotEvent or None if chain unavailable.
-        """
+        # Build deterministic chain snapshot for an expiration.
+        #
+        # Args:
+        # symbol: Underlying symbol
+        # expiration: Expiration date (YYYY-MM-DD)
+        #
+        # Returns:
+        # OptionChainSnapshotEvent or None if chain unavailable.
         recv_ts_ms = _now_ms()  # Actual receipt time (for replay gating)
         timestamp_ms = _poll_time_ms()  # Minute-aligned for DB uniqueness
         expiration_ms = _date_to_ms(expiration)
@@ -414,14 +407,13 @@ class AlpacaOptionsConnector:
         )
     
     def _parse_occ_symbol(self, occ_symbol: str) -> Tuple[float, str]:
-        """Parse OCC option symbol to extract strike and type.
-        
-        Format: SYMBOL + YYMMDD + C/P + STRIKE(8 digits, 3 decimals)
-        Example: IBIT250221P00045000 → strike=45.0, type=PUT
-        
-        Returns:
-            Tuple of (strike, option_type)
-        """
+        # Parse OCC option symbol to extract strike and type.
+        #
+        # Format: SYMBOL + YYMMDD + C/P + STRIKE(8 digits, 3 decimals)
+        # Example: IBIT250221P00045000 → strike=45.0, type=PUT
+        #
+        # Returns:
+        # Tuple of (strike, option_type)
         # Find the C or P character
         cp_idx = None
         for i in range(len(occ_symbol) - 8, 0, -1):
@@ -446,11 +438,10 @@ class AlpacaOptionsConnector:
         min_dte: int = 7,
         max_dte: int = 21,
     ) -> List[Tuple[str, int]]:
-        """Get expirations within DTE range.
-        
-        Returns:
-            List of (expiration_date, dte) tuples.
-        """
+        # Get expirations within DTE range.
+        #
+        # Returns:
+        # List of (expiration_date, dte) tuples.
         expirations = await self.get_expirations(symbol)
         today = datetime.now(timezone.utc).date()
         
@@ -464,7 +455,7 @@ class AlpacaOptionsConnector:
         return results
     
     def get_health_status(self) -> Dict[str, Any]:
-        """Get connector health metrics."""
+        # Get connector health metrics.
         return {
             "provider": self.PROVIDER,
             "request_count": self._request_count,
@@ -477,7 +468,7 @@ class AlpacaOptionsConnector:
         }
     
     async def close(self) -> None:
-        """Close the connector and release resources."""
+        # Close the connector and release resources.
         if self._session and not self._session.closed:
             await self._session.close()
             self._session = None

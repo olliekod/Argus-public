@@ -1,15 +1,14 @@
-"""
-GPU Engine
-==========
+# Created by Oliver Meihls
 
-CUDA-accelerated engine for Monte Carlo simulations and vectorized Greeks.
-Uses PyTorch for GPU computation with automatic CPU fallback.
-
-Features:
-- Monte Carlo Probability of Profit (1M+ simulations)
-- Batch Greeks calculation (100K+ options at once)
-- IV Surface fitting
-"""
+# GPU Engine
+#
+# CUDA-accelerated engine for Monte Carlo simulations and vectorized Greeks.
+# Uses PyTorch for GPU computation with automatic CPU fallback.
+#
+# Features:
+# - Monte Carlo Probability of Profit (1M+ simulations)
+# - Batch Greeks calculation (100K+ options at once)
+# - IV Surface fitting
 
 import logging
 import math
@@ -36,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class GPUStats:
-    """GPU computation statistics."""
+    # GPU computation statistics.
     device: str
     total_simulations: int
     computation_time_ms: float
@@ -44,14 +43,12 @@ class GPUStats:
 
 
 class GPUEngine:
-    """
-    CUDA-accelerated computation engine.
-    
-    Provides high-performance Monte Carlo simulations and Greeks
-    calculations using PyTorch tensors on GPU.
-    
-    Falls back to CPU if CUDA is not available.
-    """
+    # CUDA-accelerated computation engine.
+    #
+    # Provides high-performance Monte Carlo simulations and Greeks
+    # calculations using PyTorch tensors on GPU.
+    #
+    # Falls back to CPU if CUDA is not available.
     
     # Default simulation count
     DEFAULT_SIMULATIONS = 1_000_000
@@ -65,12 +62,10 @@ class GPUEngine:
     HESTON_RHO = -0.7       # Price-Volatility correlation
     
     def __init__(self, force_cpu: bool = False):
-        """
-        Initialize GPU engine.
-        
-        Args:
-            force_cpu: If True, use CPU even if GPU is available
-        """
+        # Initialize GPU engine.
+        #
+        # Args:
+        # force_cpu: If True, use CPU even if GPU is available
         self.force_cpu = force_cpu
         self._device = None
         self._stats = GPUStats(
@@ -84,7 +79,7 @@ class GPUEngine:
         self._init_device()
         
     def _init_device(self):
-        """Initialize compute device."""
+        # Initialize compute device.
         if not TORCH_AVAILABLE:
             logger.warning("PyTorch not installed. GPU acceleration disabled.")
             self._device = None
@@ -106,12 +101,12 @@ class GPUEngine:
     
     @property
     def is_gpu_available(self) -> bool:
-        """Check if GPU is being used."""
+        # Check if GPU is being used.
         return self._device is not None and self._device.type == 'cuda'
     
     @property
     def device_name(self) -> str:
-        """Get current device name."""
+        # Get current device name.
         if self._device is None:
             return "None (no PyTorch)"
         if self._device.type == 'cuda':
@@ -120,7 +115,7 @@ class GPUEngine:
     
     @property
     def stats(self) -> GPUStats:
-        """Get computation statistics."""
+        # Get computation statistics.
         return self._stats
     
     def monte_carlo_pop(
@@ -133,30 +128,28 @@ class GPUEngine:
         sigma: float,
         simulations: int = None,
     ) -> float:
-        """
-        Calculate Probability of Profit using Monte Carlo simulation.
-
-        P2 fix: Uses Heston stochastic volatility model instead of GBM
-        to account for vol-of-vol, mean reversion, and price-vol correlation.
-        This produces more realistic tail risk estimates for crypto underlyings.
-
-        For a put credit spread:
-        - Max profit: credit received (if price stays above short strike)
-        - Max loss: spread width - credit (if price drops below long strike)
-        - Breakeven: short strike - credit
-
-        Args:
-            S: Current underlying price
-            short_strike: Strike sold (higher)
-            long_strike: Strike bought (lower)
-            credit: Net credit received per share
-            T: Time to expiration in years
-            sigma: Implied volatility (decimal, e.g., 0.40 for 40%)
-            simulations: Number of simulations (default 1M)
-
-        Returns:
-            Probability of profit as percentage (0-100)
-        """
+        # Calculate Probability of Profit using Monte Carlo simulation.
+        #
+        # P2 fix: Uses Heston stochastic volatility model instead of GBM
+        # to account for vol-of-vol, mean reversion, and price-vol correlation.
+        # This produces more realistic tail risk estimates for crypto underlyings.
+        #
+        # For a put credit spread:
+        # - Max profit: credit received (if price stays above short strike)
+        # - Max loss: spread width - credit (if price drops below long strike)
+        # - Breakeven: short strike - credit
+        #
+        # Args:
+        # S: Current underlying price
+        # short_strike: Strike sold (higher)
+        # long_strike: Strike bought (lower)
+        # credit: Net credit received per share
+        # T: Time to expiration in years
+        # sigma: Implied volatility (decimal, e.g., 0.40 for 40%)
+        # simulations: Number of simulations (default 1M)
+        #
+        # Returns:
+        # Probability of profit as percentage (0-100)
         if not TORCH_AVAILABLE or self._device is None:
             return self._analytical_pop(S, short_strike, credit, T, sigma)
 
@@ -182,7 +175,7 @@ class GPUEngine:
         T: float,
         sigma: float,
     ) -> float:
-        """Analytical PoP fallback when GPU unavailable."""
+        # Analytical PoP fallback when GPU unavailable.
         if not SCIPY_AVAILABLE:
             # Last resort: delta approximation
             return 70.0  # Conservative default
@@ -206,27 +199,25 @@ class GPUEngine:
         simulations: int = None,
         steps: int = 30,     # Time steps for stochastic simulation
     ) -> Dict[str, float]:
-        """
-        Calculate Probability of Profit and Touch using Heston Stochastic Volatility.
-        
-        The Heston model accounts for:
-        1. Volatility mean-reversion (Kappa, Theta)
-        2. Volatility of Volatility (Sigma_v)
-        3. Price-Volatility correlation (Rho)
-        
-        Args:
-            S: Current price
-            short_strike: Put credit spread short strike
-            long_strike: Put credit spread long strike
-            credit: Net credit received
-            T: Time to expiration (years)
-            v0: Initial variance (IV^2)
-            simulations: Number of paths (default 1M)
-            steps: Number of time steps (daily is usually 252*T)
-            
-        Returns:
-            Dict with 'pop' and 'prob_of_touch_stop'
-        """
+        # Calculate Probability of Profit and Touch using Heston Stochastic Volatility.
+        #
+        # The Heston model accounts for:
+        # 1. Volatility mean-reversion (Kappa, Theta)
+        # 2. Volatility of Volatility (Sigma_v)
+        # 3. Price-Volatility correlation (Rho)
+        #
+        # Args:
+        # S: Current price
+        # short_strike: Put credit spread short strike
+        # long_strike: Put credit spread long strike
+        # credit: Net credit received
+        # T: Time to expiration (years)
+        # v0: Initial variance (IV^2)
+        # simulations: Number of paths (default 1M)
+        # steps: Number of time steps (daily is usually 252*T)
+        #
+        # Returns:
+        # Dict with 'pop' and 'prob_of_touch_stop'
         if not TORCH_AVAILABLE or self._device is None:
             return {'pop': self._analytical_pop(S, short_strike, credit, T, math.sqrt(v0)), 'prob_of_touch_stop': 0.0}
             
@@ -291,21 +282,19 @@ class GPUEngine:
         sigmas: List[float],
         option_type: str = 'put',
     ) -> Dict[str, List[float]]:
-        """
-        Calculate Greeks for multiple options in parallel.
-        
-        Vectorized Black-Scholes Greeks calculation on GPU.
-        
-        Args:
-            S: Current underlying price
-            strikes: List of strike prices
-            T: Time to expiration in years
-            sigmas: List of implied volatilities for each strike
-            option_type: 'put' or 'call'
-            
-        Returns:
-            Dict with 'delta', 'gamma', 'theta', 'vega' lists
-        """
+        # Calculate Greeks for multiple options in parallel.
+        #
+        # Vectorized Black-Scholes Greeks calculation on GPU.
+        #
+        # Args:
+        # S: Current underlying price
+        # strikes: List of strike prices
+        # T: Time to expiration in years
+        # sigmas: List of implied volatilities for each strike
+        # option_type: 'put' or 'call'
+        #
+        # Returns:
+        # Dict with 'delta', 'gamma', 'theta', 'vega' lists
         if not TORCH_AVAILABLE or self._device is None:
             return self._cpu_batch_greeks(S, strikes, T, sigmas, option_type)
         
@@ -376,7 +365,7 @@ class GPUEngine:
         sigmas: List[float],
         option_type: str,
     ) -> Dict[str, List[float]]:
-        """CPU fallback for batch Greeks."""
+        # CPU fallback for batch Greeks.
         if not SCIPY_AVAILABLE:
             # Return empty if scipy not available
             n = len(strikes)
@@ -432,19 +421,17 @@ class GPUEngine:
         simulations: int = None,
         confidence: float = 0.68,
     ) -> Tuple[float, float]:
-        """
-        Calculate expected price range using Monte Carlo.
-        
-        Args:
-            S: Current price
-            T: Time to expiration in years
-            sigma: Implied volatility
-            simulations: Number of simulations
-            confidence: Confidence level (default 0.68 = 1 std dev)
-            
-        Returns:
-            Tuple of (low_price, high_price)
-        """
+        # Calculate expected price range using Monte Carlo.
+        #
+        # Args:
+        # S: Current price
+        # T: Time to expiration in years
+        # sigma: Implied volatility
+        # simulations: Number of simulations
+        # confidence: Confidence level (default 0.68 = 1 std dev)
+        #
+        # Returns:
+        # Tuple of (low_price, high_price)
         if not TORCH_AVAILABLE or self._device is None:
             # Analytical fallback
             move = S * sigma * math.sqrt(T)
@@ -472,18 +459,16 @@ class GPUEngine:
         trader_params: torch.Tensor, # (N, 8) tensor of parameters
         market_data: torch.Tensor,   # (10,) tensor of current conditions
     ) -> torch.Tensor:               # (N,) boolean mask
-        """
-        Evaluate entry conditions for all traders in one batch on GPU.
-        
-        trader_params columns:
-        0: iv_min | 1: iv_max | 2: warmth_min | 3: pop_min 
-        4: dte_min | 5: dte_max | 6: gap_max | 7: strategy_id
-        
-        market_data values:
-        0: current_iv | 1: warmth | 2: dte | 3: pop | 4: gap_risk 
-        5: bullish_bool | 6: bearish_bool | 7: neutral_bool
-        8: session_morning_bool | 9: session_midday_bool | 10: session_afternoon_bool
-        """
+        # Evaluate entry conditions for all traders in one batch on GPU.
+        #
+        # trader_params columns:
+        # 0: iv_min | 1: iv_max | 2: warmth_min | 3: pop_min
+        # 4: dte_min | 5: dte_max | 6: gap_max | 7: strategy_id
+        #
+        # market_data values:
+        # 0: current_iv | 1: warmth | 2: dte | 3: pop | 4: gap_risk
+        # 5: bullish_bool | 6: bearish_bool | 7: neutral_bool
+        # 8: session_morning_bool | 9: session_midday_bool | 10: session_afternoon_bool
         if not TORCH_AVAILABLE or self._device is None:
             return torch.zeros(trader_params.shape[0], dtype=torch.bool)
             
@@ -528,10 +513,8 @@ class GPUEngine:
         num_paths: int = 1000,
         steps: int = 30,
     ) -> Dict[str, Any]:
-        """
-        Simulate the entire 400,000 trader farm against multiple price paths.
-        Checks how many traders 'survive' or hit stops in correlated scenarios.
-        """
+        # Simulate the entire 400,000 trader farm against multiple price paths.
+        # Checks how many traders 'survive' or hit stops in correlated scenarios.
         if not TORCH_AVAILABLE or self._device is None:
             return {}
             
@@ -586,7 +569,7 @@ class GPUEngine:
         }
 
     def format_status(self) -> str:
-        """Format GPU status for display."""
+        # Format GPU status for display.
         lines = [
             f"🖥️ <b>GPU Engine Status:</b>",
             f"  Device: {self.device_name}",
@@ -612,7 +595,7 @@ _engine: Optional[GPUEngine] = None
 
 
 def get_gpu_engine(force_cpu: bool = False) -> GPUEngine:
-    """Get or create the GPU engine singleton."""
+    # Get or create the GPU engine singleton.
     global _engine
     if _engine is None:
         _engine = GPUEngine(force_cpu=force_cpu)

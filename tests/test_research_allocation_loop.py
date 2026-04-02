@@ -1,12 +1,12 @@
-"""
-Tests for the research → allocation loop integration.
+# Created by Oliver Meihls
 
-Verifies:
-- run_allocation() produces allocations.json when config is set
-- run_allocation() is skipped when allocation config or output path is null
-- Forecasts are built correctly from evaluator rankings
-- Allocations include required fields (strategy_id, instrument, weight, etc.)
-"""
+# Tests for the research → allocation loop integration.
+#
+# Verifies:
+# - run_allocation() produces allocations.json when config is set
+# - run_allocation() is skipped when allocation config or output path is null
+# - Forecasts are built correctly from evaluator rankings
+# - Allocations include required fields (strategy_id, instrument, weight, etc.)
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ from scripts.strategy_research_loop import run_allocation, run_cycle
 
 
 def _make_rankings() -> List[Dict[str, Any]]:
-    """Create sample evaluator rankings for testing."""
+    # Create sample evaluator rankings for testing.
     return [
         {
             "rank": 1,
@@ -130,7 +130,7 @@ def _make_config(
     min_dsr=0.0,
     min_composite_score=0.0,
 ):
-    """Build a minimal ResearchLoopConfig for testing allocation."""
+    # Build a minimal ResearchLoopConfig for testing allocation.
     return ResearchLoopConfig(
         pack=PackConfig(
             mode="single",
@@ -174,20 +174,20 @@ def _make_config(
 
 class TestRunAllocation:
     def test_skipped_when_no_allocation_config(self):
-        """Allocation step is skipped when allocation config is None."""
+        # Allocation step is skipped when allocation config is None.
         config = _make_config(alloc_output_path="/tmp/allocs.json", allocation=None)
         result = run_allocation(config, _make_rankings())
         assert result is None
 
     def test_skipped_when_no_output_path(self):
-        """Allocation step is skipped when output path is None."""
+        # Allocation step is skipped when output path is None.
         alloc = AllocationOpts(kelly_fraction=0.25, per_play_cap=0.07)
         config = _make_config(alloc_output_path=None, allocation=alloc)
         result = run_allocation(config, _make_rankings())
         assert result is None
 
     def test_produces_allocations_json(self, tmp_path):
-        """Full allocation run produces a valid JSON file."""
+        # Full allocation run produces a valid JSON file.
         output = str(tmp_path / "allocations.json")
         alloc = AllocationOpts(kelly_fraction=0.25, per_play_cap=0.07, vol_target_annual=0.10)
         config = _make_config(
@@ -210,7 +210,7 @@ class TestRunAllocation:
         assert isinstance(data["allocations"], list)
 
     def test_behavior_unchanged_without_max_loss_config(self, tmp_path):
-        """Without max_loss_per_contract, allocations still run and contracts are null."""
+        # Without max_loss_per_contract, allocations still run and contracts are null.
         output = str(tmp_path / "allocations.json")
         alloc = AllocationOpts(kelly_fraction=0.25, per_play_cap=0.07)
         config = _make_config(alloc_output_path=output, allocation=alloc)
@@ -223,7 +223,7 @@ class TestRunAllocation:
         assert len(data["allocations"]) > 0
 
     def test_allocation_fields(self, tmp_path):
-        """Each allocation entry has required fields."""
+        # Each allocation entry has required fields.
         output = str(tmp_path / "allocations.json")
         alloc = AllocationOpts(kelly_fraction=0.25, per_play_cap=0.07)
         config = _make_config(alloc_output_path=output, allocation=alloc)
@@ -237,7 +237,7 @@ class TestRunAllocation:
             assert required_fields.issubset(entry.keys()), f"Missing fields in {entry}"
 
     def test_killed_strategies_excluded(self, tmp_path):
-        """Killed strategies should not appear in allocations."""
+        # Killed strategies should not appear in allocations.
         output = str(tmp_path / "allocations.json")
         alloc = AllocationOpts(kelly_fraction=0.25, per_play_cap=0.07)
         config = _make_config(alloc_output_path=output, allocation=alloc)
@@ -250,7 +250,7 @@ class TestRunAllocation:
         assert "KILLED_strat" not in strategy_ids
 
     def test_min_dsr_filter(self, tmp_path):
-        """Strategies below min_dsr are filtered out."""
+        # Strategies below min_dsr are filtered out.
         output = str(tmp_path / "allocations.json")
         alloc = AllocationOpts(kelly_fraction=0.25, per_play_cap=0.07)
         config = _make_config(
@@ -269,7 +269,7 @@ class TestRunAllocation:
         assert "VRP_v1" in strategy_ids
 
     def test_min_composite_score_filter(self, tmp_path):
-        """Strategies below min_composite_score are filtered out."""
+        # Strategies below min_composite_score are filtered out.
         output = str(tmp_path / "allocations.json")
         alloc = AllocationOpts(kelly_fraction=0.25, per_play_cap=0.07)
         config = _make_config(
@@ -288,7 +288,7 @@ class TestRunAllocation:
         assert "VRP_v1" in strategy_ids
 
     def test_no_candidates_returns_none(self, tmp_path):
-        """If all candidates are filtered, returns None."""
+        # If all candidates are filtered, returns None.
         output = str(tmp_path / "allocations.json")
         alloc = AllocationOpts(kelly_fraction=0.25, per_play_cap=0.07)
         config = _make_config(
@@ -301,7 +301,7 @@ class TestRunAllocation:
         assert result is None
 
     def test_max_loss_per_contract_from_allocation_config_reduces_contracts(self, tmp_path):
-        """Higher configured max loss should reduce contracts for a strategy."""
+        # Higher configured max loss should reduce contracts for a strategy.
         output = str(tmp_path / "allocations.json")
         alloc = AllocationOpts(
             kelly_fraction=0.25,
@@ -318,7 +318,7 @@ class TestRunAllocation:
         assert contracts["VRP_v1"] < contracts["VRP_v2"]
 
     def test_max_loss_per_contract_strategy_params_override_config(self, tmp_path):
-        """strategy_params max_loss_per_contract should override allocation defaults."""
+        # strategy_params max_loss_per_contract should override allocation defaults.
         output = str(tmp_path / "allocations.json")
         rankings = _make_rankings()
         rankings[0]["strategy_params"]["max_loss_per_contract"] = 1200.0
@@ -338,7 +338,7 @@ class TestRunAllocation:
         assert contracts["VRP_v1"] < contracts["VRP_v2"]
 
     def test_instrument_from_params(self, tmp_path):
-        """Instrument should be derived from strategy_params."""
+        # Instrument should be derived from strategy_params.
         output = str(tmp_path / "allocations.json")
         alloc = AllocationOpts(kelly_fraction=0.25, per_play_cap=0.07)
         config = _make_config(alloc_output_path=output, allocation=alloc)
@@ -353,7 +353,7 @@ class TestRunAllocation:
 
 
 def test_run_cycle_writes_allocations_json_end_to_end(tmp_path, monkeypatch):
-    """run_cycle reaches Step 5 and writes allocations.json with expected schema."""
+    # run_cycle reaches Step 5 and writes allocations.json with expected schema.
     rankings_path = tmp_path / "rankings.json"
     allocations_path = tmp_path / "logs" / "allocations.json"
 

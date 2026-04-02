@@ -1,18 +1,17 @@
-"""
-DXLink Protocol Frame Parser
-=============================
+# Created by Oliver Meihls
 
-Isolated, pure-function parser for DXLink WebSocket JSON frames.
-No network or state-machine logic lives here – only deserialization
-of incoming frames into typed Python dataclasses.
-
-DXLink protocol reference (v0.1):
-  Frame types: SETUP, AUTH_STATE, CHANNEL_OPENED, CHANNEL_CLOSED,
-               FEED_CONFIG, FEED_DATA, KEEPALIVE, ERROR
-
-FEED_DATA carries compact arrays keyed by ``eventType`` with a header
-row followed by one or more data rows.
-"""
+# DXLink Protocol Frame Parser
+#
+# Isolated, pure-function parser for DXLink WebSocket JSON frames.
+# No network or state-machine logic lives here – only deserialization
+# of incoming frames into typed Python dataclasses.
+#
+# DXLink protocol reference (v0.1):
+# Frame types: SETUP, AUTH_STATE, CHANNEL_OPENED, CHANNEL_CLOSED,
+# FEED_CONFIG, FEED_DATA, KEEPALIVE, ERROR
+#
+# FEED_DATA carries compact arrays keyed by ``eventType`` with a header
+# row followed by one or more data rows.
 
 from __future__ import annotations
 
@@ -26,9 +25,7 @@ from typing import Any, Dict, List, Optional, Sequence
 logger = logging.getLogger("argus.dxlink.parser")
 
 
-# ---------------------------------------------------------------------------
 # Enums
-# ---------------------------------------------------------------------------
 
 class DXLinkMessageType(str, Enum):
     SETUP = "SETUP"
@@ -46,13 +43,11 @@ class AuthState(str, Enum):
     UNAUTHORIZED = "UNAUTHORIZED"
 
 
-# ---------------------------------------------------------------------------
 # Data classes for parsed events
-# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class DXLinkFrame:
-    """Minimal envelope for any DXLink frame."""
+    # Minimal envelope for any DXLink frame.
     msg_type: str
     channel: int
     raw: Dict[str, Any]
@@ -60,7 +55,7 @@ class DXLinkFrame:
 
 @dataclass(frozen=True)
 class QuoteEvent:
-    """Parsed DXLink Quote event."""
+    # Parsed DXLink Quote event.
     event_symbol: str
     bid_price: Optional[float] = None
     ask_price: Optional[float] = None
@@ -74,7 +69,7 @@ class QuoteEvent:
 
 @dataclass(frozen=True)
 class GreeksEvent:
-    """Parsed DXLink Greeks event."""
+    # Parsed DXLink Greeks event.
     event_symbol: str
     price: Optional[float] = None
     volatility: Optional[float] = None
@@ -87,12 +82,10 @@ class GreeksEvent:
     receipt_time: Optional[int] = None
 
 
-# ---------------------------------------------------------------------------
 # Parser helpers
-# ---------------------------------------------------------------------------
 
 def parse_raw_json(text: str) -> Dict[str, Any]:
-    """Deserialize a raw WebSocket text frame into a dict."""
+    # Deserialize a raw WebSocket text frame into a dict.
     try:
         return json.loads(text)
     except (json.JSONDecodeError, TypeError) as exc:
@@ -101,7 +94,7 @@ def parse_raw_json(text: str) -> Dict[str, Any]:
 
 
 def classify_frame(raw: Dict[str, Any]) -> DXLinkFrame:
-    """Wrap a raw dict into a :class:`DXLinkFrame`."""
+    # Wrap a raw dict into a :class:`DXLinkFrame`.
     return DXLinkFrame(
         msg_type=raw.get("type", "UNKNOWN"),
         channel=raw.get("channel", 0),
@@ -136,12 +129,10 @@ def is_error(frame: DXLinkFrame) -> bool:
     return frame.msg_type == DXLinkMessageType.ERROR
 
 
-# ---------------------------------------------------------------------------
 # FEED_DATA parsing
-# ---------------------------------------------------------------------------
 
 def _zip_header_data(header: Sequence[str], data_row: Sequence[Any]) -> Dict[str, Any]:
-    """Combine a header list and a data row into a dict."""
+    # Combine a header list and a data row into a dict.
     result: Dict[str, Any] = {}
     for i, key in enumerate(header):
         if i < len(data_row):
@@ -215,14 +206,13 @@ def _safe_int(v: Any) -> Optional[int]:
 
 
 def parse_feed_data(frame: DXLinkFrame, receipt_time: Optional[int] = None) -> List[QuoteEvent | GreeksEvent]:
-    """Extract typed events from a FEED_DATA frame.
-
-    Supports both:
-    1. **Compact Array** (Standard DXLink):
-       `["Quote", ["eventSymbol", ...], ["SPY", ...]]`
-    2. **Verbose Dictionary** (Tastytrade specific):
-       `[{"eventType": "Quote", "eventSymbol": "SPY", ...}]`
-    """
+    # Extract typed events from a FEED_DATA frame.
+    #
+    # Supports both:
+    # 1. **Compact Array** (Standard DXLink):
+    # `["Quote", ["eventSymbol", ...], ["SPY", ...]]`
+    # 2. **Verbose Dictionary** (Tastytrade specific):
+    # `[{"eventType": "Quote", "eventSymbol": "SPY", ...}]`
     raw_data = frame.raw.get("data", [])
     if not isinstance(raw_data, list):
         return []
@@ -269,9 +259,7 @@ def parse_feed_data(frame: DXLinkFrame, receipt_time: Optional[int] = None) -> L
     return events
 
 
-# ---------------------------------------------------------------------------
 # Outbound frame builders (convenience)
-# ---------------------------------------------------------------------------
 
 def build_setup_frame(
     *,

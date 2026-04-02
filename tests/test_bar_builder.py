@@ -1,10 +1,10 @@
-"""
-Tests for BarBuilder volume-delta and late-tick logic.
+# Created by Oliver Meihls
 
-Run with:  python -m pytest tests/test_bar_builder.py -v
-
-These tests exercise the core bus/events/bar_builder modules only.
-"""
+# Tests for BarBuilder volume-delta and late-tick logic.
+#
+# Run with:  python -m pytest tests/test_bar_builder.py -v
+#
+# These tests exercise the core bus/events/bar_builder modules only.
 
 import time
 
@@ -19,7 +19,7 @@ from src.core.events import (
 
 
 def _quote(symbol: str, price: float, volume_24h: float, ts: float) -> QuoteEvent:
-    """Helper to build a QuoteEvent with explicit timestamp."""
+    # Helper to build a QuoteEvent with explicit timestamp.
     return QuoteEvent(
         symbol=symbol,
         bid=price - 0.01,
@@ -36,7 +36,7 @@ def _quote(symbol: str, price: float, volume_24h: float, ts: float) -> QuoteEven
 
 
 def _drain(bus, timeout=0.5):
-    """Wait until all bus queues are empty or timeout elapses."""
+    # Wait until all bus queues are empty or timeout elapses.
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         depths = bus.get_queue_depths()
@@ -45,13 +45,11 @@ def _drain(bus, timeout=0.5):
         time.sleep(0.01)
 
 
-# ═══════════════════════════════════════════════════════════
 #  Bug #1 — Volume delta
-# ═══════════════════════════════════════════════════════════
 
 
 class TestVolumeDelta:
-    """Verify that cumulative volume_24h is correctly converted to delta."""
+    # Verify that cumulative volume_24h is correctly converted to delta.
 
     def test_first_tick_has_zero_volume(self):
         bus = EventBus()
@@ -74,11 +72,10 @@ class TestVolumeDelta:
         assert delta == 0.0, "Negative delta (reset) must be treated as zero"
 
     def test_bar_volume_accumulates_deltas_not_cumulative(self):
-        """End-to-end: 4 ticks in one minute.
-
-        cum_vol sequence: 1000, 1020, 1045, 1100
-        deltas:              0,   20,   25,   55  → bar.volume = 100
-        """
+        # End-to-end: 4 ticks in one minute.
+        #
+        # cum_vol sequence: 1000, 1020, 1045, 1100
+        # deltas:              0,   20,   25,   55  → bar.volume = 100
         bus = EventBus()
         emitted = []
         bus.subscribe(TOPIC_MARKET_BARS, lambda bar: emitted.append(bar))
@@ -113,13 +110,11 @@ class TestVolumeDelta:
             bus.stop()
 
 
-# ═══════════════════════════════════════════════════════════
 #  Bug #2 — Late-tick bar corruption
-# ═══════════════════════════════════════════════════════════
 
 
 class TestLateTick:
-    """Verify that ticks older than the active bar are discarded."""
+    # Verify that ticks older than the active bar are discarded.
 
     def test_late_tick_is_discarded(self):
         bus = EventBus()
@@ -353,9 +348,7 @@ class TestContinuityWithoutSyntheticBars:
         assert extras["last_bar_ts_by_symbol_epoch"]["ETH"] == minute0
 
 
-# ═══════════════════════════════════════════════════════════
 #  Minute-floor utility
-# ═══════════════════════════════════════════════════════════
 
 
 class TestMinuteFloor:

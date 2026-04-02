@@ -1,4 +1,6 @@
-"""Delphi tool plane with schema validation, RBAC, and Zeus governance hooks."""
+# Created by Oliver Meihls
+
+# Delphi tool plane with schema validation, RBAC, and Zeus governance hooks.
 
 from __future__ import annotations
 
@@ -14,7 +16,7 @@ from src.agent.zeus import ZeusPolicyEngine
 
 
 class RiskLevel(str, Enum):
-    """Risk category attached to a tool definition."""
+    # Risk category attached to a tool definition.
 
     READ_ONLY = "READ_ONLY"
     LOW = "LOW"
@@ -23,7 +25,7 @@ class RiskLevel(str, Enum):
 
 @dataclass(frozen=True)
 class ToolDefinition:
-    """Resolved metadata for a registered tool function."""
+    # Resolved metadata for a registered tool function.
 
     name: str
     description: str
@@ -35,7 +37,7 @@ class ToolDefinition:
 
 @dataclass
 class ToolResult:
-    """Structured response for all Delphi tool calls."""
+    # Structured response for all Delphi tool calls.
 
     success: bool
     tool_name: str
@@ -45,7 +47,7 @@ class ToolResult:
 
 @dataclass(frozen=True)
 class PendingToolDefinition:
-    """Decorator-attached metadata used by discovery-based registration."""
+    # Decorator-attached metadata used by discovery-based registration.
 
     name: str
     description: str
@@ -62,7 +64,7 @@ def tool(
     parameters_schema: Optional[Dict[str, Any]] = None,
     estimated_cost: float = 0.0,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    """Mark a function as a Delphi tool for later discovery/registration."""
+    # Mark a function as a Delphi tool for later discovery/registration.
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         setattr(
@@ -82,7 +84,7 @@ def tool(
 
 
 class DelphiToolRegistry:
-    """Allowlisted tool registry and execution gateway for Pantheon agents."""
+    # Allowlisted tool registry and execution gateway for Pantheon agents.
 
     def __init__(
         self,
@@ -104,7 +106,7 @@ class DelphiToolRegistry:
         parameters_schema: Optional[Dict[str, Any]] = None,
         estimated_cost: float = 0.0,
     ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-        """Decorator that registers a function as an executable Delphi tool."""
+        # Decorator that registers a function as an executable Delphi tool.
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             self._register_tool(
@@ -122,7 +124,7 @@ class DelphiToolRegistry:
         return decorator
 
     def discover_tools(self, package_name: str = "src") -> None:
-        """Import package modules and register any @tool-annotated callables."""
+        # Import package modules and register any @tool-annotated callables.
 
         package = importlib.import_module(package_name)
         paths = getattr(package, "__path__", None)
@@ -147,7 +149,7 @@ class DelphiToolRegistry:
                 )
 
     async def call_tool(self, tool_name: str, args: dict, actor: str) -> ToolResult:
-        """Validate, authorize, execute, and audit a tool call."""
+        # Validate, authorize, execute, and audit a tool call.
 
         metadata: Dict[str, Any] = {
             "event": "tool_attempt",

@@ -1,12 +1,11 @@
-"""
-Argus Regime Types
-==================
+# Created by Oliver Meihls
 
-Deterministic regime event schemas for Phase 2.
-
-All timestamps are int milliseconds (UTC epoch).
-All regimes are computed from BarEvents only (no wall-clock).
-"""
+# Argus Regime Types
+#
+# Deterministic regime event schemas for Phase 2.
+#
+# All timestamps are int milliseconds (UTC epoch).
+# All regimes are computed from BarEvents only (no wall-clock).
 
 from __future__ import annotations
 
@@ -18,16 +17,12 @@ from typing import Any, Dict
 
 from src.core.liquid_etf_universe import LIQUID_ETF_UNIVERSE
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Schema Version
-# ═══════════════════════════════════════════════════════════════════════════
 
 REGIME_SCHEMA_VERSION = 2
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Data Quality Flags (bitmask)
-# ═══════════════════════════════════════════════════════════════════════════
 
 DQ_NONE = 0
 DQ_REPAIRED_INPUT = 1 << 0   # input bar was repaired
@@ -35,12 +30,10 @@ DQ_GAP_WINDOW = 1 << 1       # gap detected in bar sequence
 DQ_STALE_INPUT = 1 << 2      # indicator not fully warm
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Regime Enums
-# ═══════════════════════════════════════════════════════════════════════════
 
 class VolRegime(IntEnum):
-    """Volatility regime classification."""
+    # Volatility regime classification.
     UNKNOWN = 0
     VOL_LOW = 1
     VOL_NORMAL = 2
@@ -49,7 +42,7 @@ class VolRegime(IntEnum):
 
 
 class TrendRegime(IntEnum):
-    """Trend regime classification."""
+    # Trend regime classification.
     UNKNOWN = 0
     RANGE = 1
     TREND_UP = 2
@@ -57,7 +50,7 @@ class TrendRegime(IntEnum):
 
 
 class SessionRegime(IntEnum):
-    """Session regime for market hours."""
+    # Session regime for market hours.
     UNKNOWN = 0
     # Equities
     PRE = 1
@@ -72,7 +65,7 @@ class SessionRegime(IntEnum):
 
 
 class LiquidityRegime(IntEnum):
-    """Liquidity regime based on spread and volume."""
+    # Liquidity regime based on spread and volume.
     UNKNOWN = 0
     LIQ_HIGH = 1     # tight spreads, high volume
     LIQ_NORMAL = 2   # normal conditions
@@ -81,16 +74,14 @@ class LiquidityRegime(IntEnum):
 
 
 class RiskRegime(IntEnum):
-    """Global risk regime (stub for future)."""
+    # Global risk regime (stub for future).
     UNKNOWN = 0
     RISK_ON = 1
     RISK_OFF = 2
     NEUTRAL = 3
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # String Constants (for serialization)
-# ═══════════════════════════════════════════════════════════════════════════
 
 VOL_REGIME_NAMES = {
     VolRegime.UNKNOWN: "UNKNOWN",
@@ -135,9 +126,7 @@ RISK_REGIME_NAMES = {
 }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Default Thresholds
-# ═══════════════════════════════════════════════════════════════════════════
 
 DEFAULT_REGIME_THRESHOLDS = {
     # Volatility regime thresholds (vol_z)
@@ -189,30 +178,24 @@ DEFAULT_REGIME_THRESHOLDS = {
 
 
 def compute_config_hash(thresholds: Dict[str, Any]) -> str:
-    """
-    Compute deterministic hash of regime configuration.
-    
-    Returns first 12 chars of SHA256 hex digest.
-    """
+    # Compute deterministic hash of regime configuration.
+    #
+    # Returns first 12 chars of SHA256 hex digest.
     # Sort keys for determinism
     canonical = json.dumps(thresholds, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:12]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Event Dataclasses
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass(frozen=True, slots=True)
 class SymbolRegimeEvent:
-    """
-    Per-symbol regime classification.
-
-    Emitted on every bar for the symbol. Contains volatility,
-    trend, and liquidity regimes computed from incremental indicators.
-
-    Published to: regimes.symbol
-    """
+    # Per-symbol regime classification.
+    #
+    # Emitted on every bar for the symbol. Contains volatility,
+    # trend, and liquidity regimes computed from incremental indicators.
+    #
+    # Published to: regimes.symbol
     symbol: str
     timeframe: int              # bar_duration in seconds
     timestamp_ms: int           # bar timestamp (UTC epoch ms)
@@ -249,14 +232,12 @@ class SymbolRegimeEvent:
 
 @dataclass(frozen=True, slots=True)
 class MarketRegimeEvent:
-    """
-    Per-market regime classification.
-    
-    Covers session timing and global risk state.
-    Session is derived purely from bar timestamp (no wall-clock).
-    
-    Published to: regimes.market
-    """
+    # Per-market regime classification.
+    #
+    # Covers session timing and global risk state.
+    # Session is derived purely from bar timestamp (no wall-clock).
+    #
+    # Published to: regimes.market
     market: str                 # CRYPTO | EQUITIES
     timeframe: int              # bar_duration triggering update
     timestamp_ms: int           # bar timestamp (UTC epoch ms)
@@ -279,24 +260,20 @@ class MarketRegimeEvent:
     v: int = REGIME_SCHEMA_VERSION
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Serialization Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _round_float(val: float, decimals: int = 8) -> float:
-    """Round float to fixed decimals for stable serialization."""
+    # Round float to fixed decimals for stable serialization.
     return round(val, decimals)
 
 
 def _to_int_ms(ts: Any) -> int:
-    """
-    Convert timestamp to int milliseconds.
-    
-    Handles backwards compatibility:
-    - int: return as-is (assumed ms)
-    - float < 2e10: treat as seconds, convert to ms
-    - float >= 2e10: treat as ms, convert to int
-    """
+    # Convert timestamp to int milliseconds.
+    #
+    # Handles backwards compatibility:
+    # - int: return as-is (assumed ms)
+    # - float < 2e10: treat as seconds, convert to ms
+    # - float >= 2e10: treat as ms, convert to int
     if isinstance(ts, int):
         return ts
     if isinstance(ts, float):
@@ -307,11 +284,9 @@ def _to_int_ms(ts: Any) -> int:
 
 
 def canonical_metrics_json(metrics: Dict[str, Any]) -> str:
-    """
-    Serialize metrics dict to canonical JSON string.
-    
-    Deterministic: sorted keys, compact separators, rounded floats.
-    """
+    # Serialize metrics dict to canonical JSON string.
+    #
+    # Deterministic: sorted keys, compact separators, rounded floats.
     # Round all float values
     rounded = {}
     for k, v in metrics.items():
@@ -326,7 +301,7 @@ def canonical_metrics_json(metrics: Dict[str, Any]) -> str:
 
 
 def symbol_regime_to_dict(event: SymbolRegimeEvent) -> Dict[str, Any]:
-    """Serialize SymbolRegimeEvent to dict for tape/persistence."""
+    # Serialize SymbolRegimeEvent to dict for tape/persistence.
     return {
         "event_type": "symbol_regime",
         "symbol": event.symbol,
@@ -354,12 +329,11 @@ def symbol_regime_to_dict(event: SymbolRegimeEvent) -> Dict[str, Any]:
 
 
 def dict_to_symbol_regime(d: Dict[str, Any]) -> SymbolRegimeEvent:
-    """Deserialize dict to SymbolRegimeEvent.
-
-    Backwards compatible: accepts float timestamps and converts to int ms.
-    New fields (liquidity_regime, spread_pct, volume_pctile) default
-    gracefully for data persisted before they existed.
-    """
+    # Deserialize dict to SymbolRegimeEvent.
+    #
+    # Backwards compatible: accepts float timestamps and converts to int ms.
+    # New fields (liquidity_regime, spread_pct, volume_pctile) default
+    # gracefully for data persisted before they existed.
     return SymbolRegimeEvent(
         symbol=d["symbol"],
         timeframe=int(d["timeframe"]),
@@ -386,7 +360,7 @@ def dict_to_symbol_regime(d: Dict[str, Any]) -> SymbolRegimeEvent:
 
 
 def market_regime_to_dict(event: MarketRegimeEvent) -> Dict[str, Any]:
-    """Serialize MarketRegimeEvent to dict for tape/persistence."""
+    # Serialize MarketRegimeEvent to dict for tape/persistence.
     return {
         "event_type": "market_regime",
         "market": event.market,
@@ -403,10 +377,9 @@ def market_regime_to_dict(event: MarketRegimeEvent) -> Dict[str, Any]:
 
 
 def dict_to_market_regime(d: Dict[str, Any]) -> MarketRegimeEvent:
-    """Deserialize dict to MarketRegimeEvent.
-
-    Backwards compatible: accepts float timestamps and converts to int ms.
-    """
+    # Deserialize dict to MarketRegimeEvent.
+    #
+    # Backwards compatible: accepts float timestamps and converts to int ms.
     return MarketRegimeEvent(
         market=d["market"],
         timeframe=int(d["timeframe"]),
@@ -421,9 +394,7 @@ def dict_to_market_regime(d: Dict[str, Any]) -> MarketRegimeEvent:
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Market Classification
-# ═══════════════════════════════════════════════════════════════════════════
 
 # Global ETF proxies for overnight strategy risk-flow feature (daily bars only)
 _GLOBAL_ETF_PROXIES = {"EWJ", "FXI", "EWT", "EWY", "INDA", "EWG", "EWU", "FEZ", "EWL", "EEM"}
@@ -435,7 +406,7 @@ EQUITIES_SYMBOLS = set(LIQUID_ETF_UNIVERSE) | {"IBIT", "BITO", "NVDA"} | _GLOBAL
 
 
 def get_market_for_symbol(symbol: str) -> str:
-    """Determine market scope for a symbol."""
+    # Determine market scope for a symbol.
     # Check if symbol starts with any equities prefix
     for eq_sym in EQUITIES_SYMBOLS:
         if symbol.upper().startswith(eq_sym):

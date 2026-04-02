@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import json
 from datetime import datetime, timezone
 

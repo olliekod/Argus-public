@@ -1,9 +1,9 @@
-"""
-Tests for GreeksEngine hardening.
+# Created by Oliver Meihls
 
-Validates illiquid rejection, solver convergence tracking,
-quality scores, and fallback logic.
-"""
+# Tests for GreeksEngine hardening.
+#
+# Validates illiquid rejection, solver convergence tracking,
+# quality scores, and fallback logic.
 
 from __future__ import annotations
 
@@ -16,9 +16,7 @@ def engine() -> GreeksEngine:
     return GreeksEngine(risk_free_rate=0.045)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Illiquid Rejection
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestIlliquidRejection:
     def test_zero_bid_rejected(self, engine):
@@ -38,7 +36,7 @@ class TestIlliquidRejection:
         assert g.source == "failed_illiquid"
 
     def test_wide_spread_rejected(self, engine):
-        """Spread > 50% of mid should be flagged illiquid."""
+        # Spread > 50% of mid should be flagged illiquid.
         g = engine.greeks_from_quote(
             S=100.0, K=95.0, T=30 / 365, option_type="put",
             bid=0.50, ask=2.00,  # 120% spread
@@ -54,9 +52,7 @@ class TestIlliquidRejection:
         assert g.delta != 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Solver Convergence Tracking
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSolverConvergence:
     def test_derived_iv_marks_converged(self, engine):
@@ -93,9 +89,7 @@ class TestSolverConvergence:
         assert g.source == "unknown"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Quote Quality Score
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestQuoteQualityScore:
     def test_zero_bid_score_zero(self):
@@ -133,9 +127,7 @@ class TestQuoteQualityScore:
         assert g.quote_quality_score > 0.0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Solver Metrics
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSolverMetrics:
     def test_metrics_after_solves(self):
@@ -172,13 +164,11 @@ class TestSolverMetrics:
         assert metrics["solve_failures"] == 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Fallback Logic
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestFallbackLogic:
     def test_provider_iv_preferred(self, engine):
-        """When provider IV is given, it should be used even if bid/ask available."""
+        # When provider IV is given, it should be used even if bid/ask available.
         g = engine.greeks_from_quote(
             S=100.0, K=95.0, T=30 / 365, option_type="put",
             provider_iv=0.30, bid=2.00, ask=2.20,

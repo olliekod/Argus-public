@@ -1,13 +1,13 @@
-"""
-Context drift guard: compare current-window performance of promoted (core)
-context keys against their policy baseline, flag drift, and optionally
-auto-demote drifted keys.
+# Created by Oliver Meihls
 
-Usage:
-    python scripts/kalshi_context_drift_guard.py
-    python scripts/kalshi_context_drift_guard.py --policy config/kalshi_context_policy.json --log logs/paper_trades.jsonl
-    python scripts/kalshi_context_drift_guard.py --auto-demote --hours 2 --drift-threshold -0.25
-"""
+# Context drift guard: compare current-window performance of promoted (core)
+# context keys against their policy baseline, flag drift, and optionally
+# auto-demote drifted keys.
+#
+# Usage:
+# python scripts/kalshi_context_drift_guard.py
+# python scripts/kalshi_context_drift_guard.py --policy config/kalshi_context_policy.json --log logs/paper_trades.jsonl
+# python scripts/kalshi_context_drift_guard.py --auto-demote --hours 2 --drift-threshold -0.25
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def _ctx_get(rec: Dict[str, Any], key: str, default: str = "na") -> str:
 
 
 def _context_key(rec: Dict[str, Any]) -> str:
-    """Build context key matching kalshi_apply_promotion format."""
+    # Build context key matching kalshi_apply_promotion format.
     family = str(rec.get("family") or "UNK")
     side_code = _ctx_get(rec, "sd", "na")
     side = "yes" if side_code == "y" else ("no" if side_code == "n" else side_code)
@@ -48,7 +48,7 @@ def _load_window_settlements(
     log_path: Path,
     hours: float,
 ) -> List[Dict[str, Any]]:
-    """Load settlement records from the last N hours of the log."""
+    # Load settlement records from the last N hours of the log.
     max_ts: Optional[float] = None
     with log_path.open("r", encoding="utf-8", errors="ignore") as fh:
         for raw in fh:
@@ -85,7 +85,7 @@ def _load_window_settlements(
 def _aggregate_by_key(
     rows: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, Any]]:
-    """Aggregate settlements by context key."""
+    # Aggregate settlements by context key.
     agg: Dict[str, Dict[str, Any]] = defaultdict(
         lambda: {"count": 0, "total_pnl": 0.0, "wins": 0}
     )
@@ -105,11 +105,10 @@ def _detect_drift(
     current_agg: Dict[str, Dict[str, Any]],
     drift_threshold: float,
 ) -> List[Dict[str, Any]]:
-    """Compare core keys in policy against current window performance.
-
-    Returns list of drift alert dicts for keys whose current avg_pnl
-    falls below drift_threshold.
-    """
+    # Compare core keys in policy against current window performance.
+    #
+    # Returns list of drift alert dicts for keys whose current avg_pnl
+    # falls below drift_threshold.
     alerts: List[Dict[str, Any]] = []
     for key, info in policy_keys.items():
         if info.get("lane") != "core":
@@ -149,10 +148,9 @@ def _apply_auto_demote(
     alerts: List[Dict[str, Any]],
     policy_path: Path,
 ) -> int:
-    """Demote drifted core keys to explore in the policy file.
-
-    Returns number of keys demoted.
-    """
+    # Demote drifted core keys to explore in the policy file.
+    #
+    # Returns number of keys demoted.
     demoted = 0
     keys = policy.get("keys", {})
     for alert in alerts:
@@ -187,7 +185,7 @@ def _write_drift_report(
     drift_threshold: float,
     auto_demote: bool,
 ) -> Path:
-    """Write drift report JSON to output_dir. Returns the report path."""
+    # Write drift report JSON to output_dir. Returns the report path.
     os.makedirs(output_dir, exist_ok=True)
     now = datetime.now(timezone.utc)
     filename = f"drift_report_{now.strftime('%Y%m%d_%H%M%S')}.json"

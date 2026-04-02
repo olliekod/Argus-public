@@ -1,12 +1,11 @@
-"""
-Resource Monitor — Process / Disk / Log Health
-===============================================
+# Created by Oliver Meihls
 
-Tracks process RSS, CPU, file descriptors, disk space, WAL size,
-and log error/warn counts for soak-run leak/thrash detection.
-
-Uses ``psutil`` if available; degrades gracefully without it.
-"""
+# Resource Monitor — Process / Disk / Log Health
+#
+# Tracks process RSS, CPU, file descriptors, disk space, WAL size,
+# and log error/warn counts for soak-run leak/thrash detection.
+#
+# Uses ``psutil`` if available; degrades gracefully without it.
 
 from __future__ import annotations
 
@@ -29,15 +28,13 @@ except ImportError:
 
 
 class ResourceMonitor:
-    """Lightweight resource tracker for soak runs.
-
-    Parameters
-    ----------
-    db_path : str
-        Path to the SQLite database file (for WAL size check).
-    log_ring : deque or None
-        The orchestrator's recent-log ring buffer (for error counting).
-    """
+    # Lightweight resource tracker for soak runs.
+    #
+    # Parameters
+    # db_path : str
+    # Path to the SQLite database file (for WAL size check).
+    # log_ring : deque or None
+    # The orchestrator's recent-log ring buffer (for error counting).
 
     def __init__(
         self,
@@ -69,7 +66,7 @@ class ResourceMonitor:
     # ── Snapshots ─────────────────────────────────────────
 
     def get_process_snapshot(self) -> Dict[str, Any]:
-        """Return process-level metrics (RSS, CPU, FDs)."""
+        # Return process-level metrics (RSS, CPU, FDs).
         result: Dict[str, Any] = {"psutil_available": _HAS_PSUTIL}
         if not self._process:
             return result
@@ -98,7 +95,7 @@ class ResourceMonitor:
         return result
 
     def get_storage_snapshot(self) -> Dict[str, Any]:
-        """Return disk / WAL health metrics."""
+        # Return disk / WAL health metrics.
         result: Dict[str, Any] = {}
 
         # Disk free space on the partition hosting the DB
@@ -144,7 +141,7 @@ class ResourceMonitor:
         return result
 
     def get_log_entropy(self) -> Dict[str, Any]:
-        """Return error/warn counts + top unique error messages."""
+        # Return error/warn counts + top unique error messages.
         now = time.time()
         one_hour_ago = now - 3600
 
@@ -180,7 +177,7 @@ class ResourceMonitor:
         }
 
     def get_full_snapshot(self) -> Dict[str, Any]:
-        """Combined resource snapshot."""
+        # Combined resource snapshot.
         return {
             "process": self.get_process_snapshot(),
             "storage": self.get_storage_snapshot(),
@@ -201,7 +198,7 @@ class ResourceMonitor:
 
 
 class _CountingHandler(logging.Handler):
-    """Lightweight handler that increments ResourceMonitor counters."""
+    # Lightweight handler that increments ResourceMonitor counters.
 
     def __init__(self, monitor: ResourceMonitor) -> None:
         super().__init__(level=logging.WARNING)

@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from datetime import datetime, timezone
 
 from scripts.tastytrade_health_audit import _select_sampled_contracts, select_spot

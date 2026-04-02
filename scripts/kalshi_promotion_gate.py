@@ -1,16 +1,16 @@
-"""
-Promotion gate for selecting stable live-candidate contexts.
+# Created by Oliver Meihls
 
-Gate conditions:
-- positive expectancy (avg pnl > 0)
-- minimum samples
-- positive expectancy in each of last N settlement cycles
-- concentration risk below threshold within candidate slice
-
-Candidate key:
-  family|side|edge_bucket|price_bucket
-from settlement decision_context.
-"""
+# Promotion gate for selecting stable live-candidate contexts.
+#
+# Gate conditions:
+# - positive expectancy (avg pnl > 0)
+# - minimum samples
+# - positive expectancy in each of last N settlement cycles
+# - concentration risk below threshold within candidate slice
+#
+# Candidate key:
+# family|side|edge_bucket|price_bucket
+# from settlement decision_context.
 
 from __future__ import annotations
 

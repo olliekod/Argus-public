@@ -1,14 +1,13 @@
-"""
-Sentiment Collector
-===================
+# Created by Oliver Meihls
 
-Aggregates sentiment data from multiple sources:
-1. Crypto Fear & Greed Index (alternative.me - FREE)
-2. Bitcoin/Crypto social trends
-3. Options sentiment (put/call ratio)
-
-Used to enhance trading signals.
-"""
+# Sentiment Collector
+#
+# Aggregates sentiment data from multiple sources:
+# 1. Crypto Fear & Greed Index (alternative.me - FREE)
+# 2. Bitcoin/Crypto social trends
+# 3. Options sentiment (put/call ratio)
+#
+# Used to enhance trading signals.
 
 import logging
 from datetime import datetime, timedelta
@@ -26,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SentimentSnapshot:
-    """Current sentiment state."""
+    # Current sentiment state.
     timestamp: str
     
     # Fear & Greed (0-100)
@@ -43,20 +42,18 @@ class SentimentSnapshot:
 
 
 class SentimentCollector:
-    """
-    Collects and interprets market sentiment.
-    
-    Primary source: Crypto Fear & Greed Index
-    - 0-25: Extreme Fear (potential buying opportunity)
-    - 25-45: Fear
-    - 45-55: Neutral
-    - 55-75: Greed
-    - 75-100: Extreme Greed (potential selling/caution)
-    
-    For PUT SPREAD selling:
-    - Extreme Fear = GOOD (high IV, oversold)
-    - Extreme Greed = CAUTION (complacent, low IV)
-    """
+    # Collects and interprets market sentiment.
+    #
+    # Primary source: Crypto Fear & Greed Index
+    # - 0-25: Extreme Fear (potential buying opportunity)
+    # - 25-45: Fear
+    # - 45-55: Neutral
+    # - 55-75: Greed
+    # - 75-100: Extreme Greed (potential selling/caution)
+    #
+    # For PUT SPREAD selling:
+    # - Extreme Fear = GOOD (high IV, oversold)
+    # - Extreme Greed = CAUTION (complacent, low IV)
     
     # Fear & Greed API (free, no auth required)
     FEAR_GREED_URL = "https://api.alternative.me/fng/"
@@ -68,7 +65,7 @@ class SentimentCollector:
     EXTREME_GREED = 75
     
     def __init__(self):
-        """Initialize sentiment collector."""
+        # Initialize sentiment collector.
         self._cache: Optional[SentimentSnapshot] = None
         self._cache_time: Optional[datetime] = None
         self._cache_ttl = timedelta(minutes=30)  # Cache for 30 min
@@ -76,15 +73,13 @@ class SentimentCollector:
         logger.info("Sentiment Collector initialized")
     
     async def get_fear_greed(self, limit: int = 2) -> Dict:
-        """
-        Fetch Fear & Greed Index from alternative.me.
-        
-        Args:
-            limit: Number of days to fetch (1 = today, 2 = today + yesterday)
-            
-        Returns:
-            Raw API response
-        """
+        # Fetch Fear & Greed Index from alternative.me.
+        #
+        # Args:
+        # limit: Number of days to fetch (1 = today, 2 = today + yesterday)
+        #
+        # Returns:
+        # Raw API response
         url = f"{self.FEAR_GREED_URL}?limit={limit}"
         
         try:
@@ -100,17 +95,15 @@ class SentimentCollector:
             return None
     
     async def get_sentiment(self, force_refresh: bool = False) -> Optional[SentimentSnapshot]:
-        """
-        Get current sentiment snapshot.
-        
-        Uses caching to avoid hammering API.
-        
-        Args:
-            force_refresh: Bypass cache
-            
-        Returns:
-            SentimentSnapshot or None
-        """
+        # Get current sentiment snapshot.
+        #
+        # Uses caching to avoid hammering API.
+        #
+        # Args:
+        # force_refresh: Bypass cache
+        #
+        # Returns:
+        # SentimentSnapshot or None
         # Check cache
         if not force_refresh and self._cache and self._cache_time:
             if datetime.now() - self._cache_time < self._cache_ttl:
@@ -169,20 +162,18 @@ class SentimentCollector:
         return snapshot
     
     def _interpret_for_puts(self, value: int, trend: str) -> tuple:
-        """
-        Interpret Fear & Greed for PUT SPREAD selling strategy.
-        
-        For selling puts/put spreads:
-        - Extreme Fear = BULLISH (good entry, high IV)
-        - Fear + Rising = BULLISH (recovery starting)
-        - Neutral = NEUTRAL
-        - Greed = BEARISH (cautious)
-        - Extreme Greed = BEARISH (stay out, low premium)
-        
-        Returns:
-            (signal, strength) where signal is 'bullish'/'bearish'/'neutral'
-            and strength is 1-5
-        """
+        # Interpret Fear & Greed for PUT SPREAD selling strategy.
+        #
+        # For selling puts/put spreads:
+        # - Extreme Fear = BULLISH (good entry, high IV)
+        # - Fear + Rising = BULLISH (recovery starting)
+        # - Neutral = NEUTRAL
+        # - Greed = BEARISH (cautious)
+        # - Extreme Greed = BEARISH (stay out, low premium)
+        #
+        # Returns:
+        # (signal, strength) where signal is 'bullish'/'bearish'/'neutral'
+        # and strength is 1-5
         if value <= self.EXTREME_FEAR:
             # Extreme fear = great for selling puts
             if trend == 'rising':
@@ -210,7 +201,7 @@ class SentimentCollector:
             return 'bearish', 4
     
     def format_telegram(self, snapshot: SentimentSnapshot) -> str:
-        """Format sentiment for Telegram notification."""
+        # Format sentiment for Telegram notification.
         # Signal emoji
         if snapshot.signal == 'bullish':
             emoji = '[+]' if snapshot.signal_strength >= 4 else '[.]'
@@ -240,7 +231,7 @@ Strength: {'*' * snapshot.signal_strength}{'.' * (5 - snapshot.signal_strength)}
 
 
 async def test_sentiment():
-    """Test sentiment collector."""
+    # Test sentiment collector.
     collector = SentimentCollector()
     
     print("Fetching sentiment...")

@@ -1,11 +1,10 @@
-"""
-Research Loop Configuration
-============================
+# Created by Oliver Meihls
 
-Loads, validates, and resolves the YAML config for the Strategy Research Loop.
-
-The config schema is documented in ``config/research_loop.example.yaml``.
-"""
+# Research Loop Configuration
+#
+# Loads, validates, and resolves the YAML config for the Strategy Research Loop.
+#
+# The config schema is documented in ``config/research_loop.example.yaml``.
 
 from __future__ import annotations
 
@@ -21,8 +20,10 @@ logger = logging.getLogger("argus.research_loop_config")
 
 
 class ConfigValidationError(Exception):
-    """Raised when the research loop config is invalid."""
+    # Raised when the research loop config is invalid.
 
+
+    pass
 
 @dataclass
 class PackConfig:
@@ -65,7 +66,7 @@ class ExperimentOpts:
 
 @dataclass
 class DeployGatesOpts:
-    """Configuration for Phase 4C deploy gates."""
+    # Configuration for Phase 4C deploy gates.
     dsr_min: float = 0.95
     dsr_trials_mode: str = "count"  # "count" or "clustered"
     slippage_sweep: bool = True
@@ -76,7 +77,7 @@ class DeployGatesOpts:
 
 @dataclass
 class AllocationOpts:
-    """Configuration for Phase 5 allocation engine."""
+    # Configuration for Phase 5 allocation engine.
     kelly_fraction: float = 0.25
     per_play_cap: float = 0.07
     vol_target_annual: Optional[float] = 0.10
@@ -86,7 +87,7 @@ class AllocationOpts:
 
 @dataclass
 class RiskEngineDrawdownOpts:
-    """Drawdown containment config within risk engine."""
+    # Drawdown containment config within risk engine.
     threshold_pct: float = 0.10
     throttle_mode: str = "linear"
     throttle_scale: float = 0.5
@@ -97,7 +98,7 @@ class RiskEngineDrawdownOpts:
 
 @dataclass
 class RiskEngineCorrelationOpts:
-    """Correlation exposure config within risk engine."""
+    # Correlation exposure config within risk engine.
     rolling_days: int = 60
     min_obs: int = 45
     estimator: str = "pearson"
@@ -111,7 +112,7 @@ class RiskEngineCorrelationOpts:
 
 @dataclass
 class RiskEngineGreekLimitsOpts:
-    """Greek limits config within risk engine."""
+    # Greek limits config within risk engine.
     per_underlying: Dict[str, Dict[str, float]] = field(default_factory=dict)
     portfolio_max_delta_shares: float = float("inf")
     portfolio_max_vega: float = float("inf")
@@ -121,7 +122,7 @@ class RiskEngineGreekLimitsOpts:
 
 @dataclass
 class RiskEngineTailRiskOpts:
-    """Tail-risk scenario config within risk engine."""
+    # Tail-risk scenario config within risk engine.
     enabled_for_options: bool = True
     max_prob_touch: float = 0.35
     stress_iv_bump: float = 0.20
@@ -136,10 +137,9 @@ class RiskEngineTailRiskOpts:
 
 @dataclass
 class RiskEngineOpts:
-    """Configuration for Phase 5 Portfolio Risk Engine.
-
-    Nested under ``evaluation.allocation.risk_engine`` in YAML.
-    """
+    # Configuration for Phase 5 Portfolio Risk Engine.
+    #
+    # Nested under ``evaluation.allocation.risk_engine`` in YAML.
     enabled: bool = False
     aggregate_exposure_cap: float = 1.0
     drawdown: RiskEngineDrawdownOpts = field(default_factory=RiskEngineDrawdownOpts)
@@ -184,7 +184,7 @@ class ResearchLoopConfig:
 
 
 def _resolve_path(raw: Optional[str], project_root: Path) -> Optional[str]:
-    """Resolve a path relative to project root, or return None."""
+    # Resolve a path relative to project root, or return None.
     if raw is None:
         return None
     p = Path(raw)
@@ -197,27 +197,24 @@ def load_research_loop_config(
     config_path: str,
     project_root: Optional[Path] = None,
 ) -> ResearchLoopConfig:
-    """Load and validate a research loop YAML config.
-
-    Parameters
-    ----------
-    config_path : str
-        Path to the YAML config file.
-    project_root : Path, optional
-        Project root for resolving relative paths.  Defaults to
-        two levels up from this file (``src/analysis/`` -> repo root).
-
-    Returns
-    -------
-    ResearchLoopConfig
-
-    Raises
-    ------
-    ConfigValidationError
-        If the config is missing required fields or has invalid values.
-    FileNotFoundError
-        If the config file does not exist.
-    """
+    # Load and validate a research loop YAML config.
+    #
+    # Parameters
+    # config_path : str
+    # Path to the YAML config file.
+    # project_root : Path, optional
+    # Project root for resolving relative paths.  Defaults to
+    # two levels up from this file (``src/analysis/`` -> repo root).
+    #
+    # Returns
+    # ResearchLoopConfig
+    #
+    # Raises
+    # ------
+    # ConfigValidationError
+    # If the config is missing required fields or has invalid values.
+    # FileNotFoundError
+    # If the config file does not exist.
     if project_root is None:
         project_root = Path(__file__).resolve().parent.parent.parent
 

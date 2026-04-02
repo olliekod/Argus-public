@@ -1,9 +1,9 @@
-"""
-Unit tests for DXLink frame parser.
+# Created by Oliver Meihls
 
-Uses recorded JSON fixtures from tests/fixtures/dxlink/ to verify
-frame-to-event normalization without network access.
-"""
+# Unit tests for DXLink frame parser.
+#
+# Uses recorded JSON fixtures from tests/fixtures/dxlink/ to verify
+# frame-to-event normalization without network access.
 
 from __future__ import annotations
 
@@ -41,9 +41,7 @@ def _load(name: str) -> dict:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
 
-# ---------------------------------------------------------------------------
 # classify_frame
-# ---------------------------------------------------------------------------
 
 class TestClassifyFrame:
     def test_auth_state_unauthorized(self):
@@ -79,9 +77,7 @@ class TestClassifyFrame:
         assert is_error(frame)
 
 
-# ---------------------------------------------------------------------------
 # parse_feed_data – Quote events
-# ---------------------------------------------------------------------------
 
 class TestParseFeedDataQuotes:
     def test_two_quotes(self):
@@ -110,9 +106,7 @@ class TestParseFeedDataQuotes:
         assert parse_feed_data(frame) == []
 
 
-# ---------------------------------------------------------------------------
 # parse_feed_data – Greeks events
-# ---------------------------------------------------------------------------
 
 class TestParseFeedDataGreeks:
     def test_greeks(self):
@@ -132,9 +126,7 @@ class TestParseFeedDataGreeks:
         assert g.vega == 0.15
 
 
-# ---------------------------------------------------------------------------
 # parse_feed_data – Mixed events
-# ---------------------------------------------------------------------------
 
 class TestParseFeedDataMixed:
     def test_mixed_quote_and_greeks(self):
@@ -146,9 +138,7 @@ class TestParseFeedDataMixed:
         assert isinstance(events[1], GreeksEvent)
 
 
-# ---------------------------------------------------------------------------
 # parse_raw_json edge cases
-# ---------------------------------------------------------------------------
 
 class TestParseRawJson:
     def test_valid(self):
@@ -164,9 +154,7 @@ class TestParseRawJson:
         assert result == {}
 
 
-# ---------------------------------------------------------------------------
 # NaN / None handling in numeric fields
-# ---------------------------------------------------------------------------
 
 class TestNanHandling:
     def test_nan_bid_price(self):
@@ -202,9 +190,7 @@ class TestNanHandling:
         assert events[0].ask_price is None
 
 
-# ---------------------------------------------------------------------------
 # Feed config – Greeks rejected
-# ---------------------------------------------------------------------------
 
 class TestFeedConfigGreeksRejected:
     def test_quote_only_config(self):
@@ -215,9 +201,7 @@ class TestFeedConfigGreeksRejected:
         assert "Greeks" not in accepted
 
 
-# ---------------------------------------------------------------------------
 # Outbound frame builders
-# ---------------------------------------------------------------------------
 
 class TestFrameBuilders:
     def test_setup_frame(self):

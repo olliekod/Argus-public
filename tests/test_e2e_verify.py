@@ -1,15 +1,15 @@
-"""
-Tests for e2e_verify.py enhancements (C7).
+# Created by Oliver Meihls
 
-Verifies:
-- summary.md is written with UTF-8 encoding and no special arrow chars
-- IV readiness report includes provider/derived/overall percentages
-- Zero-trade reason strings are correct
-- diagnose_zero_trades works for various pack states
-- Cold-start mode (no greeks) degrades gracefully
-
-No live network calls.
-"""
+# Tests for e2e_verify.py enhancements (C7).
+#
+# Verifies:
+# - summary.md is written with UTF-8 encoding and no special arrow chars
+# - IV readiness report includes provider/derived/overall percentages
+# - Zero-trade reason strings are correct
+# - diagnose_zero_trades works for various pack states
+# - Cold-start mode (no greeks) degrades gracefully
+#
+# No live network calls.
 
 from __future__ import annotations
 
@@ -27,17 +27,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 
 class TestSummaryMdEncoding:
-    """Verify summary.md uses UTF-8 and no problematic chars."""
+    # Verify summary.md uses UTF-8 and no problematic chars.
 
     def test_no_arrow_chars_in_source(self):
-        """The source file should not contain the unicode arrow character."""
+        # The source file should not contain the unicode arrow character.
         script_path = Path(__file__).resolve().parent.parent / "scripts" / "e2e_verify.py"
         content = script_path.read_text(encoding="utf-8")
         # The unicode right arrow (U+2192) should have been replaced with ->
         assert "\u2192" not in content, "e2e_verify.py should not contain unicode arrow (U+2192)"
 
     def test_summary_md_encoding(self, tmp_path):
-        """summary.md should be writable and readable as UTF-8."""
+        # summary.md should be writable and readable as UTF-8.
         summary_path = tmp_path / "summary.md"
         content = (
             "# Argus E2E Verification -- 2024-01-15\n\n"
@@ -58,7 +58,7 @@ class TestSummaryMdEncoding:
         assert "\u2192" not in read_back  # No unicode arrow
 
     def test_summary_md_ascii_safe(self, tmp_path):
-        """summary.md content should be encodable as ASCII (except for standard UTF-8)."""
+        # summary.md content should be encodable as ASCII (except for standard UTF-8).
         summary_path = tmp_path / "summary.md"
         content = (
             "# E2E Verification\n\n"
@@ -75,10 +75,10 @@ class TestSummaryMdEncoding:
 
 
 class TestDiagnoseZeroTrades:
-    """Test the zero-trade diagnostics function."""
+    # Test the zero-trade diagnostics function.
 
     def test_no_bars(self, tmp_path):
-        """Pack with no bars should report 'no bars in replay pack'."""
+        # Pack with no bars should report 'no bars in replay pack'.
         from scripts.e2e_verify import diagnose_zero_trades
 
         pack_path = tmp_path / "pack.json"
@@ -92,7 +92,7 @@ class TestDiagnoseZeroTrades:
         assert "no bars in replay pack" in reasons
 
     def test_no_snapshots(self, tmp_path):
-        """Pack with no snapshots should report 'no snapshots in range'."""
+        # Pack with no snapshots should report 'no snapshots in range'.
         from scripts.e2e_verify import diagnose_zero_trades
 
         pack_path = tmp_path / "pack.json"
@@ -106,7 +106,7 @@ class TestDiagnoseZeroTrades:
         assert "no snapshots in range" in reasons
 
     def test_no_recv_ts(self, tmp_path):
-        """Snapshots with recv_ts_ms=0 should report gating issue."""
+        # Snapshots with recv_ts_ms=0 should report gating issue.
         from scripts.e2e_verify import diagnose_zero_trades
 
         pack_path = tmp_path / "pack.json"
@@ -123,7 +123,7 @@ class TestDiagnoseZeroTrades:
         assert any("recv_ts_ms" in r for r in reasons)
 
     def test_no_iv(self, tmp_path):
-        """Snapshots with no atm_iv should report IV issue."""
+        # Snapshots with no atm_iv should report IV issue.
         from scripts.e2e_verify import diagnose_zero_trades
 
         pack_path = tmp_path / "pack.json"
@@ -140,7 +140,7 @@ class TestDiagnoseZeroTrades:
         assert any("atm_iv" in r for r in reasons)
 
     def test_all_good(self, tmp_path):
-        """Pack with bars + snapshots + IV should report 'unknown'."""
+        # Pack with bars + snapshots + IV should report 'unknown'.
         from scripts.e2e_verify import diagnose_zero_trades
 
         pack_path = tmp_path / "pack.json"
@@ -156,7 +156,7 @@ class TestDiagnoseZeroTrades:
         assert any("unknown" in r for r in reasons)
 
     def test_invalid_pack(self, tmp_path):
-        """Unreadable pack should report graceful error."""
+        # Unreadable pack should report graceful error.
         from scripts.e2e_verify import diagnose_zero_trades
 
         pack_path = tmp_path / "bad.json"
@@ -167,10 +167,10 @@ class TestDiagnoseZeroTrades:
 
 
 class TestIVReadinessReport:
-    """Verify the enhanced IV readiness fields in check_options_snapshots."""
+    # Verify the enhanced IV readiness fields in check_options_snapshots.
 
     def test_report_fields_present(self):
-        """Snapshot result should include all enhanced IV readiness fields."""
+        # Snapshot result should include all enhanced IV readiness fields.
         # Build a mock result matching the expected format
         result = {
             "provider": "tastytrade",
@@ -193,11 +193,11 @@ class TestIVReadinessReport:
 
 
 class TestColdStartMode:
-    """Simulate no greeks in cache — should degrade gracefully."""
+    # Simulate no greeks in cache — should degrade gracefully.
 
     def test_cold_start_zero_iv(self, tmp_path):
-        """With no greeks cached, all snapshots should have atm_iv=None
-        and the IV readiness should report 0%."""
+        # With no greeks cached, all snapshots should have atm_iv=None
+        # and the IV readiness should report 0%.
         from scripts.e2e_verify import diagnose_zero_trades
 
         # Simulate a pack where snapshots exist but have no IV
@@ -219,7 +219,7 @@ class TestColdStartMode:
             f"Cold start should identify IV issue, got: {reasons}"
 
     def test_cold_start_graceful_degradation(self):
-        """IV readiness of 0% should not cause any exceptions."""
+        # IV readiness of 0% should not cause any exceptions.
         # A result with 0 IV should be valid
         result = {
             "snapshot_count": 50,

@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import pytest
 
 from src.connectors.public_client import PublicAPIClient, PublicAPIConfig, PublicAPIError

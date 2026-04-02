@@ -1,4 +1,6 @@
-"""Async resource coordination primitives for Argus agents."""
+# Created by Oliver Meihls
+
+# Async resource coordination primitives for Argus agents.
 
 from __future__ import annotations
 
@@ -8,11 +10,10 @@ from typing import AsyncIterator
 
 
 class AgentResourceManager:
-    """Coordinates bounded access to LLM backends.
-
-    The debate protocol can trigger multiple parallel completions. Limiting
-    concurrent calls avoids over-saturating local inference services.
-    """
+    # Coordinates bounded access to LLM backends.
+    #
+    # The debate protocol can trigger multiple parallel completions. Limiting
+    # concurrent calls avoids over-saturating local inference services.
 
     def __init__(self, max_concurrent_llm_calls: int = 2) -> None:
         if max_concurrent_llm_calls < 1:
@@ -23,7 +24,7 @@ class AgentResourceManager:
 
     @asynccontextmanager
     async def llm_slot(self) -> AsyncIterator[None]:
-        """Acquire one bounded completion slot for an LLM call."""
+        # Acquire one bounded completion slot for an LLM call.
         await self._llm_semaphore.acquire()
         try:
             yield

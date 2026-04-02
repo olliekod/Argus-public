@@ -1,18 +1,17 @@
-"""
-Replay Harness — Deterministic Bar-Closure Proof
-=================================================
+# Created by Oliver Meihls
 
-Feeds a fixed sequence of QuoteEvents through the BarBuilder **twice**
-and asserts that both runs produce bit-identical BarEvents.
-
-This proves:
-* Bar provenance fields (n_ticks, first/last_source_ts, close_reason)
-  are deterministic under replay.
-* Late ticks are handled identically on both passes.
-* Invariant enforcement is reproducible.
-
-Run with:  python -m pytest tests/replay_harness.py -v
-"""
+# Replay Harness — Deterministic Bar-Closure Proof
+#
+# Feeds a fixed sequence of QuoteEvents through the BarBuilder **twice**
+# and asserts that both runs produce bit-identical BarEvents.
+#
+# This proves:
+# * Bar provenance fields (n_ticks, first/last_source_ts, close_reason)
+# are deterministic under replay.
+# * Late ticks are handled identically on both passes.
+# * Invariant enforcement is reproducible.
+#
+# Run with:  python -m pytest tests/replay_harness.py -v
 
 from __future__ import annotations
 
@@ -38,7 +37,7 @@ def _quote(
     source: str = "test",
     source_ts: float = 0.0,
 ) -> QuoteEvent:
-    """Build a QuoteEvent with explicit timestamps (no wall-clock)."""
+    # Build a QuoteEvent with explicit timestamps (no wall-clock).
     return QuoteEvent(
         symbol=symbol,
         bid=price - 0.01,
@@ -72,7 +71,7 @@ M2 = M0 + 120                    # minute 2 boundary
 
 
 def _build_tape() -> List[QuoteEvent]:
-    """Return a fixed, ordered tape of quotes spanning 3 minutes."""
+    # Return a fixed, ordered tape of quotes spanning 3 minutes.
     return [
         # ── Minute 0: 4 ticks ──
         _quote("BTC", 100.0, 1000.0, M0 + 1,  source_ts=M0 + 0.5),
@@ -97,7 +96,7 @@ def _build_tape() -> List[QuoteEvent]:
     ]
 
 def _build_minute_tick_tape() -> List[Union[QuoteEvent, MinuteTickEvent]]:
-    """Tape that closes bars via MinuteTickEvent and includes a late tick."""
+    # Tape that closes bars via MinuteTickEvent and includes a late tick.
     return [
         _quote("BTC", 100.0, 1000.0, M0 + 5, source_ts=M0 + 4.8),
         _quote("BTC", 101.0, 1010.0, M0 + 20, source_ts=M0 + 19.9),
@@ -109,7 +108,7 @@ def _build_minute_tick_tape() -> List[Union[QuoteEvent, MinuteTickEvent]]:
 
 
 def _run_tape(tape: Sequence[Union[QuoteEvent, MinuteTickEvent]]) -> List[BarEvent]:
-    """Play *tape* through a fresh BarBuilder and return emitted bars."""
+    # Play *tape* through a fresh BarBuilder and return emitted bars.
     bus = EventBus()
     emitted: List[BarEvent] = []
     bus.subscribe(TOPIC_MARKET_BARS, lambda bar: emitted.append(bar))
@@ -133,7 +132,7 @@ def _run_tape(tape: Sequence[Union[QuoteEvent, MinuteTickEvent]]) -> List[BarEve
 
 
 def _bar_key(bar: BarEvent) -> tuple:
-    """Extract the deterministic identity of a bar (excluding wall-clock fields)."""
+    # Extract the deterministic identity of a bar (excluding wall-clock fields).
     return (
         bar.symbol,
         bar.open,
@@ -155,13 +154,11 @@ def _bar_key(bar: BarEvent) -> tuple:
     )
 
 
-# ═══════════════════════════════════════════════════════════
 #  Tests
-# ═══════════════════════════════════════════════════════════
 
 
 class TestReplayDeterminism:
-    """Two identical replays must produce identical bars."""
+    # Two identical replays must produce identical bars.
 
     def test_replay_produces_identical_bars(self):
         tape = _build_tape()
@@ -178,9 +175,9 @@ class TestReplayDeterminism:
             )
 
     def test_replay_bar_count(self):
-        """Expect: BTC minute-0, BTC minute-1 (both closed by new-tick),
-        ETH minute-0 (closed by BTC minute-1 tick or flush),
-        plus shutdown-flush bars for in-progress accumulators."""
+        # Expect: BTC minute-0, BTC minute-1 (both closed by new-tick),
+        # ETH minute-0 (closed by BTC minute-1 tick or flush),
+        # plus shutdown-flush bars for in-progress accumulators.
         tape = _build_tape()
         bars = _run_tape(tape)
         symbols = [b.symbol for b in bars]
@@ -197,7 +194,7 @@ class TestReplayDeterminism:
 
 
 class TestProvenanceFields:
-    """Verify provenance fields are populated correctly."""
+    # Verify provenance fields are populated correctly.
 
     def test_n_ticks_matches_tick_count(self):
         tape = _build_tape()
@@ -223,7 +220,7 @@ class TestProvenanceFields:
         assert int(CloseReason.NEW_TICK) in close_reasons or int(CloseReason.SHUTDOWN_FLUSH) in close_reasons
 
     def test_source_ts_equals_first_source_ts(self):
-        """Bar-level source_ts should match first_source_ts."""
+        # Bar-level source_ts should match first_source_ts.
         tape = _build_tape()
         bars = _run_tape(tape)
         for bar in bars:
@@ -244,7 +241,7 @@ class TestMinuteTickClosure:
 
 
 class TestInvariantEnforcement:
-    """Bars with violated invariants should be repaired, not crashed."""
+    # Bars with violated invariants should be repaired, not crashed.
 
     def test_high_ge_open_close(self):
         tape = _build_tape()
@@ -268,7 +265,7 @@ class TestInvariantEnforcement:
 
 
 class TestLateTick:
-    """Late ticks must be counted but never mutate emitted bars."""
+    # Late ticks must be counted but never mutate emitted bars.
 
     def test_late_tick_does_not_corrupt(self):
         tape = _build_tape()
@@ -282,7 +279,7 @@ class TestLateTick:
 
 
 class TestSchemaVersion:
-    """All emitted bars must carry the schema version."""
+    # All emitted bars must carry the schema version.
 
     def test_v_field_present(self):
         tape = _build_tape()

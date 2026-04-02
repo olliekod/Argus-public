@@ -1,9 +1,8 @@
-"""
-Signal Schema and Router Tests
-==============================
+# Created by Oliver Meihls
 
-Tests for Phase 3 signal infrastructure.
-"""
+# Signal Schema and Router Tests
+#
+# Tests for Phase 3 signal infrastructure.
 
 import json
 import pytest
@@ -27,15 +26,13 @@ from src.core.signals import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # SignalEvent Schema Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSignalEventSchema:
-    """Test SignalEvent serialization and determinism."""
+    # Test SignalEvent serialization and determinism.
 
     def test_signal_round_trip(self):
-        """SignalEvent → dict → SignalEvent preserves all fields."""
+        # SignalEvent → dict → SignalEvent preserves all fields.
         signal = SignalEvent(
             timestamp_ms=1700000000000,
             strategy_id="FVG_BREAKOUT_V1",
@@ -68,7 +65,7 @@ class TestSignalEventSchema:
         assert restored.idempotency_key == signal.idempotency_key
 
     def test_signal_json_determinism(self):
-        """Same signal produces identical JSON."""
+        # Same signal produces identical JSON.
         signal = SignalEvent(
             timestamp_ms=1700000000000,
             strategy_id="TEST_V1",
@@ -90,7 +87,7 @@ class TestSignalEventSchema:
         assert json1 == json2
 
     def test_signal_snapshot_normalization(self):
-        """Snapshot values are JSON-safe and deterministically ordered."""
+        # Snapshot values are JSON-safe and deterministically ordered.
         signal = SignalEvent(
             timestamp_ms=1700000000000,
             strategy_id="TEST_V1",
@@ -116,7 +113,7 @@ class TestSignalEventSchema:
         assert d["features_snapshot"]["gate_score"] == 0.12345679
 
     def test_idempotency_key_determinism(self):
-        """Same inputs produce same idempotency key."""
+        # Same inputs produce same idempotency key.
         key1 = compute_signal_id("STRAT", "config", "BTC", 1700000000000)
         key2 = compute_signal_id("STRAT", "config", "BTC", 1700000000000)
         assert key1 == key2
@@ -126,15 +123,13 @@ class TestSignalEventSchema:
         assert key1 != key3
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # RankedSignalEvent Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRankedSignalEvent:
-    """Test RankedSignalEvent serialization."""
+    # Test RankedSignalEvent serialization.
 
     def test_ranked_signal_round_trip(self):
-        """RankedSignalEvent → dict → RankedSignalEvent preserves fields."""
+        # RankedSignalEvent → dict → RankedSignalEvent preserves fields.
         signal = SignalEvent(
             timestamp_ms=1700000000000,
             strategy_id="TEST",
@@ -164,22 +159,20 @@ class TestRankedSignalEvent:
         assert restored.signal.symbol == signal.symbol
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # SignalRouter Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSignalRouter:
-    """Test SignalRouter scoring and ranking."""
+    # Test SignalRouter scoring and ranking.
 
     def _create_mock_bus(self):
-        """Create mock bus that captures published events."""
+        # Create mock bus that captures published events.
         bus = MagicMock()
         bus.published = []
         bus.publish.side_effect = lambda t, e: bus.published.append((t, e))
         return bus
 
     def test_router_scores_signals(self):
-        """Router scores and ranks incoming signals."""
+        # Router scores and ranks incoming signals.
         from src.strategies.router import SignalRouter
         
         bus = self._create_mock_bus()
@@ -212,7 +205,7 @@ class TestSignalRouter:
         assert not ranked.suppressed
 
     def test_router_suppresses_low_quality(self):
-        """Router suppresses signals below threshold."""
+        # Router suppresses signals below threshold.
         from src.strategies.router import SignalRouter
         
         bus = self._create_mock_bus()
@@ -241,7 +234,7 @@ class TestSignalRouter:
         assert ranked_events[0].suppressed  # Should be suppressed
 
     def test_router_determinism(self):
-        """Same signals produce identical rankings."""
+        # Same signals produce identical rankings.
         from src.strategies.router import SignalRouter
         
         signal = SignalEvent(

@@ -1,4 +1,6 @@
-"""Connectors module - exchange API clients."""
+# Created by Oliver Meihls
+
+# Connectors module - exchange API clients.
 from .bybit_ws import BybitWebSocket
 from .coinbase_client import CoinbaseClient
 from .okx_client import OKXClient

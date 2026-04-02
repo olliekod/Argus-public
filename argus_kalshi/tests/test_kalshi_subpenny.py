@@ -1,8 +1,8 @@
-"""
-Tests for Kalshi subpenny pricing (March 2026 migration).
+# Created by Oliver Meihls
 
-Ensures we parse _dollars fields when present and fall back to legacy cents.
-"""
+# Tests for Kalshi subpenny pricing (March 2026 migration).
+#
+# Ensures we parse _dollars fields when present and fall back to legacy cents.
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from argus_kalshi.kalshi_subpenny import (
 
 
 def test_parse_price_cents_prefers_dollars() -> None:
-    """When both keys exist, _dollars wins."""
+    # When both keys exist, _dollars wins.
     assert parse_price_cents(
         {"yes_bid": 55, "yes_bid_dollars": "0.1234"},
         "yes_bid",
@@ -32,7 +32,7 @@ def test_parse_price_cents_prefers_dollars() -> None:
 
 
 def test_parse_price_cents_fallback_to_cents() -> None:
-    """When only legacy key exists, use it."""
+    # When only legacy key exists, use it.
     assert parse_price_cents(
         {"yes_bid": 55},
         "yes_bid",
@@ -47,7 +47,7 @@ def test_parse_price_cents_fallback_to_cents() -> None:
 
 
 def test_parse_price_cents_dollars_only() -> None:
-    """After March 5 2026 only _dollars may be present."""
+    # After March 5 2026 only _dollars may be present.
     assert parse_price_cents(
         {"yes_bid_dollars": "0.5500"},
         "yes_bid",
@@ -62,25 +62,25 @@ def test_parse_price_cents_dollars_only() -> None:
 
 
 def test_parse_price_cents_default() -> None:
-    """Missing keys return default."""
+    # Missing keys return default.
     assert parse_price_cents({}, "yes_bid", "yes_bid_dollars", default=0) == 0
     assert parse_price_cents({}, "price", "price_dollars", default=50) == 50
 
 
 def test_parse_level_price_int() -> None:
-    """Legacy snapshot level: int cents."""
+    # Legacy snapshot level: int cents.
     assert parse_level_price(55) == 55
     assert parse_level_price(0) == 0
 
 
 def test_parse_level_price_str_dollars() -> None:
-    """Level as fixed-point dollars string."""
+    # Level as fixed-point dollars string.
     assert parse_level_price("0.5500") == 55
     assert parse_level_price("0.12") == 12
 
 
 def test_parse_level_price_dict() -> None:
-    """Level as dict with price or price_dollars."""
+    # Level as dict with price or price_dollars.
     assert parse_level_price({"price": 60}) == 60
     assert parse_level_price({"price_dollars": "0.6000"}) == 60
     # When both present, price_dollars wins; 0.4150 * 100 -> 42
@@ -88,11 +88,9 @@ def test_parse_level_price_dict() -> None:
 
 
 def test_orderbook_snapshot_dollars_only_produces_correct_cents() -> None:
-    """
-    After March 5 2026 Kalshi may send only _dollars. OrderBook.apply_snapshot
-    with levels that use only price_dollars (no legacy cents) must produce
-    correct best bid cents and thus correct OrderbookState downstream.
-    """
+    # After March 5 2026 Kalshi may send only _dollars. OrderBook.apply_snapshot
+    # with levels that use only price_dollars (no legacy cents) must produce
+    # correct best bid cents and thus correct OrderbookState downstream.
     from argus_kalshi.orderbook import OrderBook
 
     book = OrderBook(market_ticker="TEST")
@@ -110,50 +108,48 @@ def test_orderbook_snapshot_dollars_only_produces_correct_cents() -> None:
     assert book.implied_no_ask_cents == 100 - 45
 
 
-# ---------------------------------------------------------------------------
 #  Fixed-point count (March 2026)
-# ---------------------------------------------------------------------------
 
 
 def test_parse_count_centicx_prefers_fp() -> None:
-    """When both keys exist, count_fp wins."""
+    # When both keys exist, count_fp wins.
     assert parse_count_centicx({"count": 10, "count_fp": "1.55"}, "count", "count_fp") == 155
     assert parse_count_centicx({"count": 5, "count_fp": "10.00"}, "count", "count_fp") == 1000
 
 
 def test_parse_count_centicx_fallback() -> None:
-    """Legacy count (int) -> centicx."""
+    # Legacy count (int) -> centicx.
     assert parse_count_centicx({"count": 10}, "count", "count_fp") == 1000
     assert parse_count_centicx({"count": 1}, "count", "count_fp", default=0) == 100
 
 
 def test_parse_count_centicx_legacy_fp_string() -> None:
-    """Legacy key with fp string (e.g. delta "5.00")."""
+    # Legacy key with fp string (e.g. delta "5.00").
     assert parse_count_centicx({"delta": "5.00"}, "delta", "delta_fp") == 500
     assert parse_count_centicx({"delta": "-3.00"}, "delta", "delta_fp") == -300
 
 
 def test_parse_qty_centicx() -> None:
-    """Orderbook level qty: str (fp) or int (legacy)."""
+    # Orderbook level qty: str (fp) or int (legacy).
     assert parse_qty_centicx("5.00") == 500
     assert parse_qty_centicx(5) == 500
 
 
 def test_parse_qty_centicx_dict() -> None:
-    """Orderbook level qty as dict with quantity_fp/quantity."""
+    # Orderbook level qty as dict with quantity_fp/quantity.
     assert parse_qty_centicx({"quantity_fp": "5.00", "quantity": 5}) == 500
     assert parse_qty_centicx({"quantity": 3}) == 300
 
 
 def test_parse_snapshot_level_list() -> None:
-    """Legacy list format [price, qty]."""
+    # Legacy list format [price, qty].
     assert parse_snapshot_level([55, "10.00"]) == (55, 1000)
     assert parse_snapshot_level([50, 5]) == (50, 500)
     assert parse_snapshot_level(["0.55", "5.00"]) == (55, 500)
 
 
 def test_parse_snapshot_level_dict() -> None:
-    """Subpenny object format per level."""
+    # Subpenny object format per level.
     assert parse_snapshot_level(
         {"price_dollars": "0.55", "quantity_fp": "10.00"}
     ) == (55, 1000)

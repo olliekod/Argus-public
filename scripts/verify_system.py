@@ -1,15 +1,14 @@
-"""
-Argus System Verification
-=========================
+# Created by Oliver Meihls
 
-Comprehensive test to verify all components work correctly.
-Uses data-source policy: bars from bars_primary (e.g. Alpaca); options from
-options_snapshots_primary (Tastytrade) and optionally secondary (Public).
-Does not assume Alpaca provides options data.
-
-Run: python scripts/verify_system.py
-      python scripts/verify_system.py --deep
-"""
+# Argus System Verification
+#
+# Comprehensive test to verify all components work correctly.
+# Uses data-source policy: bars from bars_primary (e.g. Alpaca); options from
+# options_snapshots_primary (Tastytrade) and optionally secondary (Public).
+# Does not assume Alpaca provides options data.
+#
+# Run: python scripts/verify_system.py
+# python scripts/verify_system.py --deep
 
 import sys
 import asyncio
@@ -56,7 +55,7 @@ def _contains_universe(config_symbols):
     return missing
 
 async def verify_system(deep: bool = False):
-    """Run all verification checks."""
+    # Run all verification checks.
     print("=" * 60)
     print("ARGUS SYSTEM VERIFICATION")
     print("=" * 60)
@@ -379,6 +378,7 @@ async def verify_system(deep: bool = False):
                 info("No paper trades yet")
         except:
             pass
+
     else:
         warn("Database doesn't exist yet (will be created on first run)")
         results["warnings"] += 1

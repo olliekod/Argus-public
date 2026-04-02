@@ -1,17 +1,16 @@
-"""
-Signal Warmth Monitor
-=====================
+# Created by Oliver Meihls
 
-Shows how "warm" conditions are - forewarning before optimal trading conditions.
-
-Temperature levels:
-- COLD (0-25%):  Far from trade conditions
-- COOL (25-50%): Getting interesting  
-- WARM (50-75%): Close to trigger
-- HOT (75-100%): Trade conditions met!
-
-Runs continuously and sends Telegram alerts when temperature changes.
-"""
+# Signal Warmth Monitor
+#
+# Shows how "warm" conditions are - forewarning before optimal trading conditions.
+#
+# Temperature levels:
+# - COLD (0-25%):  Far from trade conditions
+# - COOL (25-50%): Getting interesting
+# - WARM (50-75%): Close to trigger
+# - HOT (75-100%): Trade conditions met!
+#
+# Runs continuously and sends Telegram alerts when temperature changes.
 
 import asyncio
 import logging
@@ -26,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class WarmthStatus:
-    """Current warmth state."""
+    # Current warmth state.
     temperature: int  # 0-100
     level: str        # COLD, COOL, WARM, HOT
     gates_passed: int
@@ -40,14 +39,12 @@ class WarmthStatus:
 
 
 class WarmthMonitor:
-    """
-    Monitors conditions and reports "temperature" toward trade signals.
-    
-    Sends Telegram alerts when:
-    - Temperature moves up a level (COLD→COOL, COOL→WARM, etc.)
-    - HOT condition reached (trade signal!)
-    - Temperature drops significantly
-    """
+    # Monitors conditions and reports "temperature" toward trade signals.
+    #
+    # Sends Telegram alerts when:
+    # - Temperature moves up a level (COLD→COOL, COOL→WARM, etc.)
+    # - HOT condition reached (trade signal!)
+    # - Temperature drops significantly
     
     LEVELS = {
         (0, 25): 'COLD',
@@ -57,7 +54,7 @@ class WarmthMonitor:
     }
     
     def __init__(self, telegram_bot=None, config_path: str = "config/strategy_params.json"):
-        """Initialize warmth monitor."""
+        # Initialize warmth monitor.
         self.bot = telegram_bot
         self.config_path = Path(config_path)
         self._params = self._load_params()
@@ -65,7 +62,7 @@ class WarmthMonitor:
         self._last_alert_time: Optional[datetime] = None
         
     def _load_params(self) -> Dict:
-        """Load strategy parameters."""
+        # Load strategy parameters.
         if self.config_path.exists():
             with open(self.config_path, 'r') as f:
                 config = json.load(f)
@@ -84,18 +81,16 @@ class WarmthMonitor:
         has_event_blackout: bool,
         fear_greed: int = 50,
     ) -> WarmthStatus:
-        """
-        Calculate current temperature.
-        
-        Each gate contributes to overall warmth:
-        - Market hours: 25 points (binary)
-        - IV rank: 0-25 points (scaled)
-        - Price dip: 0-25 points (scaled)
-        - No blackout: 15 points (binary)
-        - Fear (not greed): 0-10 points (scaled)
-        
-        Total: 100 points max
-        """
+        # Calculate current temperature.
+        #
+        # Each gate contributes to overall warmth:
+        # - Market hours: 25 points (binary)
+        # - IV rank: 0-25 points (scaled)
+        # - Price dip: 0-25 points (scaled)
+        # - No blackout: 15 points (binary)
+        # - Fear (not greed): 0-10 points (scaled)
+        #
+        # Total: 100 points max
         points = 0
         details = {}
         gates_passed = 0
@@ -188,16 +183,14 @@ class WarmthMonitor:
         )
     
     async def check_and_alert(self, status: WarmthStatus) -> bool:
-        """
-        Check if we should send an alert.
-        
-        Alerts when:
-        1. Level increases (COLD→COOL, etc.)
-        2. HOT reached (trade signal!)
-        3. Level drops by 2+ levels
-        
-        Returns True if alert was sent.
-        """
+        # Check if we should send an alert.
+        #
+        # Alerts when:
+        # 1. Level increases (COLD→COOL, etc.)
+        # 2. HOT reached (trade signal!)
+        # 3. Level drops by 2+ levels
+        #
+        # Returns True if alert was sent.
         should_alert = False
         alert_type = None
         
@@ -242,7 +235,7 @@ class WarmthMonitor:
         return should_alert
     
     async def _send_alert(self, status: WarmthStatus, alert_type: str) -> None:
-        """Send Telegram alert via tiered system."""
+        # Send Telegram alert via tiered system.
         if not self.bot:
             return
 
@@ -277,7 +270,7 @@ class WarmthMonitor:
             await self.bot.send_message(msg.strip())
     
     def format_status(self, status: WarmthStatus) -> str:
-        """Format warmth status for display."""
+        # Format warmth status for display.
         # Temperature bar
         filled = status.temperature // 10
         bar = '#' * filled + '.' * (10 - filled)
@@ -313,7 +306,7 @@ class WarmthMonitor:
         return "\n".join(lines)
     
     def format_telegram(self, status: WarmthStatus) -> str:
-        """Format for Telegram notification."""
+        # Format for Telegram notification.
         level_emoji = {
             'COLD': '[___]',
             'COOL': '[__~]', 
@@ -342,7 +335,7 @@ Gates: {status.gates_passed}/{status.total_gates}
 
 
 async def test_warmth():
-    """Test warmth monitor."""
+    # Test warmth monitor.
     monitor = WarmthMonitor()
     
     # Test scenarios

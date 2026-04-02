@@ -1,21 +1,20 @@
-"""
-Greeks Cache
-============
+# Created by Oliver Meihls
 
-Thread-safe in-memory cache for DXLink Greeks events.
-
-Stores the latest implied volatility and Greeks per option symbol,
-enabling snapshot IV enrichment without persisting tick-level data.
-
-The cache is keyed by option symbol (e.g. ``.SPY250321P590``) and
-stores the most recent ``(volatility, recv_ts_ms)`` tuple for each.
-
-Usage::
-
-    cache = GreeksCache()
-    cache.update(".SPY250321P590", volatility=0.22, recv_ts_ms=1700000000000)
-    iv = cache.get_atm_iv("SPY", underlying_price=595.0, as_of_ms=1700000060000)
-"""
+# Greeks Cache
+#
+# Thread-safe in-memory cache for DXLink Greeks events.
+#
+# Stores the latest implied volatility and Greeks per option symbol,
+# enabling snapshot IV enrichment without persisting tick-level data.
+#
+# The cache is keyed by option symbol (e.g. ``.SPY250321P590``) and
+# stores the most recent ``(volatility, recv_ts_ms)`` tuple for each.
+#
+# Usage::
+#
+# cache = GreeksCache()
+# cache.update(".SPY250321P590", volatility=0.22, recv_ts_ms=1700000000000)
+# iv = cache.get_atm_iv("SPY", underlying_price=595.0, as_of_ms=1700000060000)
 
 from __future__ import annotations
 
@@ -32,7 +31,7 @@ logger = logging.getLogger("argus.greeks_cache")
 
 @dataclass(frozen=True, slots=True)
 class CachedGreek:
-    """Single cached Greeks observation."""
+    # Single cached Greeks observation.
     event_symbol: str       # e.g. ".SPY250321P590"
     volatility: float       # Implied volatility (annualized decimal)
     recv_ts_ms: int         # Local receipt time (epoch ms)
@@ -43,17 +42,16 @@ class CachedGreek:
 
 
 def _parse_option_symbol(event_symbol: str) -> Optional[Tuple[str, str, float, str]]:
-    """Parse a DXLink-style option symbol into (underlying, option_type, strike, expiry).
-
-    Supports formats like:
-    - ``.SPY250321P590``   → ("SPY", "PUT", 590.0, "250321")
-    - ``.SPY250321C595``   → ("SPY", "CALL", 595.0, "250321")
-    - ``.IBIT250321P55``   → ("IBIT", "PUT", 55.0, "250321")
-
-    The fourth element is the raw YYMMDD expiration string.
-
-    Returns None if the symbol cannot be parsed.
-    """
+    # Parse a DXLink-style option symbol into (underlying, option_type, strike, expiry).
+    #
+    # Supports formats like:
+    # - ``.SPY250321P590``   → ("SPY", "PUT", 590.0, "250321")
+    # - ``.SPY250321C595``   → ("SPY", "CALL", 595.0, "250321")
+    # - ``.IBIT250321P55``   → ("IBIT", "PUT", 55.0, "250321")
+    #
+    # The fourth element is the raw YYMMDD expiration string.
+    #
+    # Returns None if the symbol cannot be parsed.
     # Pattern: .UNDERLYING YYMMDD [CP] STRIKE
     m = re.match(
         r"^\.?([A-Z]+)(\d{6})([CP])(\d+(?:\.\d+)?)$",
@@ -69,7 +67,7 @@ def _parse_option_symbol(event_symbol: str) -> Optional[Tuple[str, str, float, s
 
 
 def _yymmdd_to_epoch_ms(yymmdd: str) -> int:
-    """Convert a YYMMDD string to midnight-UTC epoch milliseconds."""
+    # Convert a YYMMDD string to midnight-UTC epoch milliseconds.
     from datetime import datetime, timezone
     dt = datetime.strptime(yymmdd, "%y%m%d").replace(tzinfo=timezone.utc)
     return int(dt.timestamp() * 1000)
@@ -80,21 +78,18 @@ _ONE_DAY_MS = 86_400_000
 
 
 class GreeksCache:
-    """Thread-safe in-memory cache of the latest DXLink Greeks per option symbol.
-
-    Performance characteristics:
-    - O(1) update per Greeks event
-    - O(N) ATM IV lookup where N = number of cached symbols for the underlying
-    - No DB writes; memory only
-    - Configurable max age for stale eviction
-    """
+    # Thread-safe in-memory cache of the latest DXLink Greeks per option symbol.
+    #
+    # Performance characteristics:
+    # - O(1) update per Greeks event
+    # - O(N) ATM IV lookup where N = number of cached symbols for the underlying
+    # - No DB writes; memory only
+    # - Configurable max age for stale eviction
 
     def __init__(self, max_age_ms: int = 600_000) -> None:
-        """
-        Args:
-            max_age_ms: Maximum age (in ms) before a cached entry is
-                considered stale and ignored during lookups. Default 10 min.
-        """
+        # Args:
+        # max_age_ms: Maximum age (in ms) before a cached entry is
+        # considered stale and ignored during lookups. Default 10 min.
         self._lock = threading.Lock()
         self._cache: Dict[str, CachedGreek] = {}
         self._max_age_ms = max_age_ms
@@ -111,17 +106,16 @@ class GreeksCache:
         theta: Optional[float] = None,
         vega: Optional[float] = None,
     ) -> None:
-        """Store or update a Greeks observation for an option symbol.
-
-        Only updates if the new observation is more recent than the
-        existing one (based on ``recv_ts_ms``).
-
-        Args:
-            event_symbol: DXLink option symbol (e.g. ``.SPY250321P590``).
-            volatility: Implied volatility (annualized decimal). Ignored if None/NaN.
-            recv_ts_ms: Local receipt time. Defaults to now if not provided.
-            delta, gamma, theta, vega: Optional Greeks values.
-        """
+        # Store or update a Greeks observation for an option symbol.
+        #
+        # Only updates if the new observation is more recent than the
+        # existing one (based on ``recv_ts_ms``).
+        #
+        # Args:
+        # event_symbol: DXLink option symbol (e.g. ``.SPY250321P590``).
+        # volatility: Implied volatility (annualized decimal). Ignored if None/NaN.
+        # recv_ts_ms: Local receipt time. Defaults to now if not provided.
+        # delta, gamma, theta, vega: Optional Greeks values.
         if volatility is None or (isinstance(volatility, float) and math.isnan(volatility)):
             return
         if volatility <= 0 or volatility > 10.0:
@@ -156,29 +150,28 @@ class GreeksCache:
         option_type: str = "PUT",
         expiration_ms: Optional[int] = None,
     ) -> Optional[float]:
-        """Find ATM implied volatility from cached Greeks.
-
-        Searches all cached entries for the given underlying, filters to
-        those with ``recv_ts_ms <= as_of_ms``, and returns the IV of the
-        strike nearest to ``underlying_price``.
-
-        When ``expiration_ms`` is supplied, only Greeks whose YYMMDD
-        expiration matches the same calendar day (UTC) are considered.
-        This prevents cross-expiration IV contamination when the cache
-        holds multiple expirations for the same underlying.
-
-        Args:
-            underlying: Underlying symbol (e.g. ``"SPY"``).
-            underlying_price: Current underlying price for ATM determination.
-            as_of_ms: Only consider Greeks received at or before this time.
-            option_type: ``"PUT"`` or ``"CALL"``. Defaults to ``"PUT"``.
-            expiration_ms: If provided, restrict to options expiring on this
-                date (midnight-UTC epoch ms).
-
-        Returns:
-            ATM implied volatility (annualized decimal), or None if no
-            suitable cached entry exists.
-        """
+        # Find ATM implied volatility from cached Greeks.
+        #
+        # Searches all cached entries for the given underlying, filters to
+        # those with ``recv_ts_ms <= as_of_ms``, and returns the IV of the
+        # strike nearest to ``underlying_price``.
+        #
+        # When ``expiration_ms`` is supplied, only Greeks whose YYMMDD
+        # expiration matches the same calendar day (UTC) are considered.
+        # This prevents cross-expiration IV contamination when the cache
+        # holds multiple expirations for the same underlying.
+        #
+        # Args:
+        # underlying: Underlying symbol (e.g. ``"SPY"``).
+        # underlying_price: Current underlying price for ATM determination.
+        # as_of_ms: Only consider Greeks received at or before this time.
+        # option_type: ``"PUT"`` or ``"CALL"``. Defaults to ``"PUT"``.
+        # expiration_ms: If provided, restrict to options expiring on this
+        # date (midnight-UTC epoch ms).
+        #
+        # Returns:
+        # ATM implied volatility (annualized decimal), or None if no
+        # suitable cached entry exists.
         if underlying_price <= 0:
             return None
 
@@ -230,19 +223,18 @@ class GreeksCache:
         *,
         expiration_ms: Optional[int] = None,
     ) -> Optional[CachedGreek]:
-        """Get the cached Greeks entry for a specific strike.
-
-        Args:
-            underlying: Underlying symbol.
-            strike: Strike price.
-            option_type: ``"PUT"`` or ``"CALL"``.
-            as_of_ms: Time gate.
-            expiration_ms: If provided, restrict to options expiring on
-                this date (midnight-UTC epoch ms).
-
-        Returns:
-            CachedGreek or None.
-        """
+        # Get the cached Greeks entry for a specific strike.
+        #
+        # Args:
+        # underlying: Underlying symbol.
+        # strike: Strike price.
+        # option_type: ``"PUT"`` or ``"CALL"``.
+        # as_of_ms: Time gate.
+        # expiration_ms: If provided, restrict to options expiring on
+        # this date (midnight-UTC epoch ms).
+        #
+        # Returns:
+        # CachedGreek or None.
         target_type = option_type.upper()
         target_day: Optional[int] = None
         if expiration_ms is not None:
@@ -279,26 +271,25 @@ class GreeksCache:
 
     @property
     def size(self) -> int:
-        """Number of cached entries."""
+        # Number of cached entries.
         with self._lock:
             return len(self._cache)
 
     @property
     def last_update_ms(self) -> int:
-        """Epoch ms of the most recent cache update (0 if never updated)."""
+        # Epoch ms of the most recent cache update (0 if never updated).
         with self._lock:
             return self._last_update_ms
 
     def clear(self) -> None:
-        """Remove all cached entries."""
+        # Remove all cached entries.
         with self._lock:
             self._cache.clear()
 
     def evict_stale(self, now_ms: Optional[int] = None) -> int:
-        """Remove entries older than ``max_age_ms``.
-
-        Returns the number of entries evicted.
-        """
+        # Remove entries older than ``max_age_ms``.
+        #
+        # Returns the number of entries evicted.
         if now_ms is None:
             now_ms = int(time.time() * 1000)
 
@@ -321,27 +312,26 @@ def enrich_snapshot_iv(
     snapshot: "OptionChainSnapshotEvent",
     greeks_cache: Any,
 ) -> "OptionChainSnapshotEvent":
-    """Enrich an option chain snapshot with ATM IV from the Greeks cache.
-
-    If the snapshot already has a valid ``atm_iv``, it is returned unchanged.
-    Otherwise, attempts to find ATM IV from the cache using:
-    1. Provider IV from cached Greeks (nearest put to underlying price).
-    2. Falls back to None if no cached Greeks are available.
-
-    The lookup is gated by ``recv_ts_ms``: only Greeks received at or
-    before the snapshot's receipt time are considered.
-
-    This function does NOT mutate the input; it returns a new snapshot
-    (``OptionChainSnapshotEvent`` is frozen).
-
-    Args:
-        snapshot: The option chain snapshot to enrich.
-        greeks_cache: In-memory Greeks cache populated by DXLink events.
-
-    Returns:
-        A new OptionChainSnapshotEvent with ``atm_iv`` populated, or the
-        original snapshot if enrichment was not needed or not possible.
-    """
+    # Enrich an option chain snapshot with ATM IV from the Greeks cache.
+    #
+    # If the snapshot already has a valid ``atm_iv``, it is returned unchanged.
+    # Otherwise, attempts to find ATM IV from the cache using:
+    # 1. Provider IV from cached Greeks (nearest put to underlying price).
+    # 2. Falls back to None if no cached Greeks are available.
+    #
+    # The lookup is gated by ``recv_ts_ms``: only Greeks received at or
+    # before the snapshot's receipt time are considered.
+    #
+    # This function does NOT mutate the input; it returns a new snapshot
+    # (``OptionChainSnapshotEvent`` is frozen).
+    #
+    # Args:
+    # snapshot: The option chain snapshot to enrich.
+    # greeks_cache: In-memory Greeks cache populated by DXLink events.
+    #
+    # Returns:
+    # A new OptionChainSnapshotEvent with ``atm_iv`` populated, or the
+    # original snapshot if enrichment was not needed or not possible.
     from .option_events import OptionChainSnapshotEvent
 
     # Preferred path: IVConsensusEngine-compatible object

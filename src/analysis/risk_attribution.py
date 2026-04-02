@@ -1,14 +1,12 @@
-"""
-Risk Attribution
-=================
+# Created by Oliver Meihls
 
-Produces a structured RiskAttribution report from clamped allocations and
-clamp reasons.  Output is a JSON-serializable artifact.
-
-References
-----------
-- MASTER_PLAN.md §9 — Phase 5: Portfolio Risk Engine.
-"""
+# Risk Attribution
+#
+# Produces a structured RiskAttribution report from clamped allocations and
+# clamp reasons.  Output is a JSON-serializable artifact.
+#
+# References
+# - MASTER_PLAN.md §9 — Phase 5: Portfolio Risk Engine.
 
 from __future__ import annotations
 
@@ -24,21 +22,19 @@ logger = logging.getLogger("argus.risk_attribution")
 
 @dataclass
 class StrategyAttribution:
-    """Risk attribution for a single strategy.
-
-    Attributes
-    ----------
-    strategy_id : str
-    instrument : str
-    notional_usd : float
-    max_loss_usd : float
-    delta_contribution : float
-    vega_contribution : float
-    gamma_contribution : float
-    pct_of_total_risk_budget : float
-    contracts : int
-    weight : float
-    """
+    # Risk attribution for a single strategy.
+    #
+    # Attributes
+    # strategy_id : str
+    # instrument : str
+    # notional_usd : float
+    # max_loss_usd : float
+    # delta_contribution : float
+    # vega_contribution : float
+    # gamma_contribution : float
+    # pct_of_total_risk_budget : float
+    # contracts : int
+    # weight : float
     strategy_id: str = ""
     instrument: str = ""
     notional_usd: float = 0.0
@@ -53,7 +49,7 @@ class StrategyAttribution:
 
 @dataclass
 class ClampSummary:
-    """Aggregated clamp summary."""
+    # Aggregated clamp summary.
     total_clamps: int = 0
     by_constraint_id: Dict[str, int] = field(default_factory=dict)
     biggest_reductions: List[Dict[str, Any]] = field(default_factory=list)
@@ -64,7 +60,7 @@ class ClampSummary:
 
 @dataclass
 class PortfolioRiskSummary:
-    """Portfolio-level risk summary."""
+    # Portfolio-level risk summary.
     total_delta: float = 0.0
     total_vega: float = 0.0
     total_gamma: float = 0.0
@@ -78,17 +74,15 @@ class PortfolioRiskSummary:
 
 @dataclass
 class RiskAttribution:
-    """Full risk attribution report.
-
-    Attributes
-    ----------
-    per_strategy : list of StrategyAttribution
-    portfolio_summary : PortfolioRiskSummary
-    clamp_summary : ClampSummary
-    config_hash : str
-        Hash of the risk engine config for reproducibility.
-    as_of_ts_ms : int
-    """
+    # Full risk attribution report.
+    #
+    # Attributes
+    # per_strategy : list of StrategyAttribution
+    # portfolio_summary : PortfolioRiskSummary
+    # clamp_summary : ClampSummary
+    # config_hash : str
+    # Hash of the risk engine config for reproducibility.
+    # as_of_ts_ms : int
     per_strategy: List[StrategyAttribution] = field(default_factory=list)
     portfolio_summary: PortfolioRiskSummary = field(
         default_factory=PortfolioRiskSummary
@@ -98,7 +92,7 @@ class RiskAttribution:
     as_of_ts_ms: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to JSON-serializable dict with sorted keys."""
+        # Convert to JSON-serializable dict with sorted keys.
         return _to_sorted_dict(asdict(self))
 
 
@@ -112,29 +106,26 @@ def build_risk_attribution(
     config_hash: str = "",
     as_of_ts_ms: int = 0,
 ) -> RiskAttribution:
-    """Build a RiskAttribution from clamped allocations and reasons.
-
-    Parameters
-    ----------
-    clamped_allocations : list
-        List of Allocation objects (from allocation_engine).
-    clamp_reasons : list
-        List of ClampReason objects.
-    equity_usd : float
-        Portfolio equity.
-    drawdown_throttle_factor : float
-        Applied drawdown throttle.
-    cluster_exposures : dict, optional
-        ``{cluster_label: exposure_usd}``.
-    config_hash : str
-        Hash of risk engine config.
-    as_of_ts_ms : int
-        Timestamp.
-
-    Returns
-    -------
-    RiskAttribution
-    """
+    # Build a RiskAttribution from clamped allocations and reasons.
+    #
+    # Parameters
+    # clamped_allocations : list
+    # List of Allocation objects (from allocation_engine).
+    # clamp_reasons : list
+    # List of ClampReason objects.
+    # equity_usd : float
+    # Portfolio equity.
+    # drawdown_throttle_factor : float
+    # Applied drawdown throttle.
+    # cluster_exposures : dict, optional
+    # ``{cluster_label: exposure_usd}``.
+    # config_hash : str
+    # Hash of risk engine config.
+    # as_of_ts_ms : int
+    # Timestamp.
+    #
+    # Returns
+    # RiskAttribution
     # Per-strategy attribution
     per_strategy: List[StrategyAttribution] = []
     total_max_loss = 0.0
@@ -212,18 +203,15 @@ def persist_risk_attribution(
     attribution: RiskAttribution,
     output_path: str,
 ) -> str:
-    """Write risk attribution to JSON file.
-
-    Parameters
-    ----------
-    attribution : RiskAttribution
-    output_path : str
-
-    Returns
-    -------
-    str
-        The resolved output path.
-    """
+    # Write risk attribution to JSON file.
+    #
+    # Parameters
+    # attribution : RiskAttribution
+    # output_path : str
+    #
+    # Returns
+    # str
+    # The resolved output path.
     p = Path(output_path)
     p.parent.mkdir(parents=True, exist_ok=True)
     with open(p, "w") as f:
@@ -233,7 +221,7 @@ def persist_risk_attribution(
 
 
 def _build_clamp_summary(clamp_reasons: List[Any]) -> ClampSummary:
-    """Aggregate clamp reasons into a summary."""
+    # Aggregate clamp reasons into a summary.
     by_constraint: Dict[str, int] = defaultdict(int)
     kills = 0
     warns = 0
@@ -281,7 +269,7 @@ def _build_clamp_summary(clamp_reasons: List[Any]) -> ClampSummary:
 
 
 def _to_sorted_dict(obj: Any) -> Any:
-    """Recursively sort dict keys for deterministic JSON output."""
+    # Recursively sort dict keys for deterministic JSON output.
     if isinstance(obj, dict):
         return {k: _to_sorted_dict(v) for k, v in sorted(obj.items())}
     if isinstance(obj, list):

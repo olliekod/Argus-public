@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 import concurrent.futures
@@ -536,15 +538,13 @@ def build_param_grid(
     return list(unique.values())
 
 
-# ---------------------------------------------------------------------------
 # ProcessPoolExecutor worker state (module-level globals set by initializer)
-# ---------------------------------------------------------------------------
 _WORKER_TAPE: List[TapeRecord] = []
 _WORKER_SETTLEMENT: Optional[SettlementIndex] = None
 
 
 def _serialize_settlement(idx: SettlementIndex) -> Dict[str, Any]:
-    """Minimal JSON-serializable form of SettlementIndex for pickling to workers."""
+    # Minimal JSON-serializable form of SettlementIndex for pickling to workers.
     binary: Dict[str, Optional[bool]] = dict(idx._binary_outcomes)
     records: Dict[str, List[int]] = {}
     for (ticker, side), rows in idx._records.items():
@@ -578,7 +578,7 @@ def _deserialize_settlement(data: Dict[str, Any]) -> SettlementIndex:
 
 
 def _process_worker_init(tape_paths: List[str], settlement_data: Dict[str, Any], include_rejections: bool) -> None:
-    """Runs once per worker process to load the tape into a module-level global."""
+    # Runs once per worker process to load the tape into a module-level global.
     global _WORKER_TAPE, _WORKER_SETTLEMENT
     _WORKER_TAPE = load_tapes(tape_paths, include_rejections=include_rejections)
     _WORKER_SETTLEMENT = _deserialize_settlement(settlement_data)

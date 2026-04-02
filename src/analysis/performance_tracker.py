@@ -1,9 +1,8 @@
-"""
-Performance Tracker
-===================
+# Created by Oliver Meihls
 
-Analyzes paper trading performance with detailed metrics.
-"""
+# Performance Tracker
+#
+# Analyzes paper trading performance with detailed metrics.
 
 import logging
 from datetime import datetime, timedelta
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PerformanceBucket:
-    """Performance metrics for a specific IV Rank bucket."""
+    # Performance metrics for a specific IV Rank bucket.
     iv_rank_range: str
     trade_count: int
     win_rate: float
@@ -25,15 +24,13 @@ class PerformanceBucket:
 
 
 class PerformanceTracker:
-    """
-    Analyzes paper trading performance.
-    
-    Metrics:
-    - Win rate, total P&L
-    - Performance by IV Rank bucket
-    - Drawdown analysis
-    - Time-based patterns
-    """
+    # Analyzes paper trading performance.
+    #
+    # Metrics:
+    # - Win rate, total P&L
+    # - Performance by IV Rank bucket
+    # - Drawdown analysis
+    # - Time-based patterns
     
     # IV Rank buckets for analysis
     IV_BUCKETS = [
@@ -44,22 +41,18 @@ class PerformanceTracker:
     ]
     
     def __init__(self, db):
-        """
-        Initialize performance tracker.
-        
-        Args:
-            db: Database instance
-        """
+        # Initialize performance tracker.
+        #
+        # Args:
+        # db: Database instance
         self.db = db
         logger.info("Performance Tracker initialized")
     
     async def get_summary(self) -> Dict[str, Any]:
-        """
-        Get comprehensive performance summary.
-        
-        Returns:
-            Dict with all performance metrics
-        """
+        # Get comprehensive performance summary.
+        #
+        # Returns:
+        # Dict with all performance metrics
         # Basic stats
         cursor = await self.db._connection.execute("""
             SELECT
@@ -110,7 +103,7 @@ class PerformanceTracker:
         return summary
     
     def _empty_summary(self) -> Dict[str, Any]:
-        """Return empty summary when no trades."""
+        # Return empty summary when no trades.
         return {
             'total_trades': 0,
             'closed_trades': 0,
@@ -129,7 +122,7 @@ class PerformanceTracker:
         }
     
     async def _analyze_by_iv_rank(self) -> List[PerformanceBucket]:
-        """Analyze performance by IV Rank bucket."""
+        # Analyze performance by IV Rank bucket.
         buckets = []
         
         for low, high, label in self.IV_BUCKETS:
@@ -157,7 +150,7 @@ class PerformanceTracker:
         return buckets
     
     async def _calculate_max_drawdown(self) -> float:
-        """Calculate maximum drawdown from cumulative P&L."""
+        # Calculate maximum drawdown from cumulative P&L.
         cursor = await self.db._connection.execute("""
             SELECT pnl_dollars, exit_timestamp
             FROM paper_trades
@@ -187,7 +180,7 @@ class PerformanceTracker:
         return max_drawdown
     
     async def _analyze_by_exit_reason(self) -> Dict[str, Dict]:
-        """Analyze performance by exit reason."""
+        # Analyze performance by exit reason.
         cursor = await self.db._connection.execute("""
             SELECT
                 exit_reason,
@@ -211,12 +204,10 @@ class PerformanceTracker:
         return result
     
     async def get_equity_curve(self) -> List[Dict]:
-        """
-        Get equity curve data for plotting.
-        
-        Returns:
-            List of {timestamp, cumulative_pnl} dicts
-        """
+        # Get equity curve data for plotting.
+        #
+        # Returns:
+        # List of {timestamp, cumulative_pnl} dicts
         cursor = await self.db._connection.execute("""
             SELECT exit_timestamp, pnl_dollars
             FROM paper_trades
@@ -238,7 +229,7 @@ class PerformanceTracker:
         return curve
     
     def format_report(self, summary: Dict) -> str:
-        """Format performance summary as readable report."""
+        # Format performance summary as readable report.
         lines = [
             "=" * 50,
             "📊 PAPER TRADING PERFORMANCE REPORT",
@@ -299,7 +290,7 @@ class PerformanceTracker:
         return "\n".join(lines)
     
     def format_telegram_summary(self, summary: Dict) -> str:
-        """Format summary for Telegram."""
+        # Format summary for Telegram.
         return f"""
 PAPER TRADING SUMMARY
 
@@ -311,12 +302,12 @@ Max Drawdown: ${summary['max_drawdown']:.2f}
 """
     
     async def load_trades(self) -> None:
-        """Load trades from database (for initialization)."""
+        # Load trades from database (for initialization).
         # Trades are loaded on-demand in other methods
         pass
     
     async def get_summary_stats(self) -> Dict:
-        """Get summary stats compatible with paper_performance.py."""
+        # Get summary stats compatible with paper_performance.py.
         summary = await self.get_summary()
         
         # Add additional fields expected by script
@@ -338,7 +329,7 @@ Max Drawdown: ${summary['max_drawdown']:.2f}
         }
     
     async def get_open_trades(self) -> List[Dict]:
-        """Get all open trades."""
+        # Get all open trades.
         cursor = await self.db._connection.execute("""
             SELECT *
             FROM paper_trades
@@ -353,7 +344,7 @@ Max Drawdown: ${summary['max_drawdown']:.2f}
         return [dict(zip(columns, row)) for row in rows]
     
     async def get_closed_trades(self, limit: int = 10) -> List[Dict]:
-        """Get recent closed trades."""
+        # Get recent closed trades.
         cursor = await self.db._connection.execute("""
             SELECT *
             FROM paper_trades
@@ -368,7 +359,7 @@ Max Drawdown: ${summary['max_drawdown']:.2f}
         return [dict(zip(columns, row)) for row in rows]
     
     async def get_analysis_by_iv_bucket(self) -> Dict:
-        """Get performance analysis by IV bucket."""
+        # Get performance analysis by IV bucket.
         buckets = await self._analyze_by_iv_rank()
         
         return {
@@ -382,7 +373,7 @@ Max Drawdown: ${summary['max_drawdown']:.2f}
         }
     
     async def get_first_trade_date(self) -> Optional[str]:
-        """Get timestamp of first trade."""
+        # Get timestamp of first trade.
         cursor = await self.db._connection.execute("""
             SELECT MIN(entry_timestamp)
             FROM paper_trades

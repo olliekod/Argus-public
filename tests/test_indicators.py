@@ -1,13 +1,13 @@
-"""
-Tests for Argus Indicators Module.
+# Created by Oliver Meihls
 
-Verifies:
-1. Batch and incremental outputs match exactly
-2. Warmup behavior is consistent
-3. Determinism (same input → same output)
-
-Run with: python -m pytest tests/test_indicators.py -v
-"""
+# Tests for Argus Indicators Module.
+#
+# Verifies:
+# 1. Batch and incremental outputs match exactly
+# 2. Warmup behavior is consistent
+# 3. Determinism (same input → same output)
+#
+# Run with: python -m pytest tests/test_indicators.py -v
 
 import math
 import pytest
@@ -36,9 +36,7 @@ from src.core.indicators import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Deterministic Fixture Data
-# ═══════════════════════════════════════════════════════════════════════════
 
 # Price series with known pattern for reproducible tests
 FIXTURE_PRICES = [
@@ -59,12 +57,10 @@ FIXTURE_BARS = [
 ]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helper Functions
-# ═══════════════════════════════════════════════════════════════════════════
 
 def assert_close(a: Optional[float], b: Optional[float], tol: float = 1e-10) -> None:
-    """Assert two values are close or both None."""
+    # Assert two values are close or both None.
     if a is None and b is None:
         return
     if a is None or b is None:
@@ -79,7 +75,7 @@ def assert_parity(
     name: str,
     tol: float = 1e-10,
 ) -> None:
-    """Assert batch and incremental results match at every position."""
+    # Assert batch and incremental results match at every position.
     assert len(batch_results) == len(incremental_results), (
         f"{name}: length mismatch {len(batch_results)} vs {len(incremental_results)}"
     )
@@ -92,13 +88,11 @@ def assert_parity(
             pytest.fail(f"{name}[{i}]: mismatch batch={b}, inc={inc}, diff={abs(b - inc)}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # EMA Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestEMA:
     def test_batch_incremental_parity(self):
-        """Batch and incremental EMA must match exactly."""
+        # Batch and incremental EMA must match exactly.
         period = 10
         batch = ema_batch(FIXTURE_PRICES, period)
         
@@ -108,7 +102,7 @@ class TestEMA:
         assert_parity(batch, incremental, "EMA")
     
     def test_warmup(self):
-        """First (period-1) values should be None."""
+        # First (period-1) values should be None.
         period = 5
         batch = ema_batch(FIXTURE_PRICES, period)
         
@@ -117,7 +111,7 @@ class TestEMA:
         assert batch[period - 1] is not None, f"EMA[{period-1}] should have value"
     
     def test_determinism(self):
-        """Same input produces same output."""
+        # Same input produces same output.
         r1 = ema_batch(FIXTURE_PRICES, 10)
         r2 = ema_batch(FIXTURE_PRICES, 10)
         assert r1 == r2
@@ -131,7 +125,7 @@ class TestEMA:
 
 class TestRSI:
     def test_batch_incremental_parity(self):
-        """Batch and incremental RSI must match exactly."""
+        # Batch and incremental RSI must match exactly.
         period = 14
         batch = rsi_batch(FIXTURE_PRICES, period)
         
@@ -141,7 +135,7 @@ class TestRSI:
         assert_parity(batch, incremental, "RSI")
     
     def test_warmup(self):
-        """First `period` values should be None."""
+        # First `period` values should be None.
         period = 14
         batch = rsi_batch(FIXTURE_PRICES, period)
         
@@ -150,7 +144,7 @@ class TestRSI:
         assert batch[period] is not None, f"RSI[{period}] should have value"
     
     def test_bounds(self):
-        """RSI should be between 0 and 100."""
+        # RSI should be between 0 and 100.
         batch = rsi_batch(FIXTURE_PRICES, 14)
         for val in batch:
             if val is not None:
@@ -164,7 +158,7 @@ class TestRSI:
 
 class TestVWAP:
     def test_batch_incremental_parity(self):
-        """Batch and incremental VWAP must match exactly."""
+        # Batch and incremental VWAP must match exactly.
         batch = vwap_batch(FIXTURE_BARS)
         
         state = VWAPState()
@@ -173,12 +167,12 @@ class TestVWAP:
         assert_parity(batch, incremental, "VWAP")
     
     def test_first_bar_has_value(self):
-        """VWAP should have value from first bar (if volume > 0)."""
+        # VWAP should have value from first bar (if volume > 0).
         batch = vwap_batch(FIXTURE_BARS)
         assert batch[0] is not None
     
     def test_reset(self):
-        """Reset should clear state for new session."""
+        # Reset should clear state for new session.
         state = VWAPState()
         for bar in FIXTURE_BARS[:10]:
             state.update(bar)
@@ -197,7 +191,7 @@ class TestVWAP:
 
 class TestMACD:
     def test_batch_incremental_parity(self):
-        """Batch and incremental MACD must match exactly."""
+        # Batch and incremental MACD must match exactly.
         batch = macd_batch(FIXTURE_PRICES, fast=12, slow=26, signal=9)
         
         state = MACDState(fast=12, slow=26, signal=9)
@@ -214,7 +208,7 @@ class TestMACD:
             assert_close(b.histogram, inc.histogram, tol=1e-10)
     
     def test_warmup(self):
-        """MACD needs slow + signal - 2 warmup bars."""
+        # MACD needs slow + signal - 2 warmup bars.
         fast, slow, signal = 12, 26, 9
         expected_warmup = slow + signal - 2  # 33
         
@@ -253,7 +247,7 @@ class TestLogReturns:
 
 class TestRollingVol:
     def test_batch_incremental_parity(self):
-        """Batch and incremental rolling vol must match exactly."""
+        # Batch and incremental rolling vol must match exactly.
         returns = log_returns_batch(FIXTURE_PRICES)
         # Filter out None for rolling vol
         valid_returns = [r for r in returns if r is not None]
@@ -269,7 +263,7 @@ class TestRollingVol:
         assert_parity(batch, incremental, "RollingVol")
     
     def test_warmup(self):
-        """First (window-1) values should be None."""
+        # First (window-1) values should be None.
         window = 10
         returns = [0.01] * 20
         batch = rolling_vol_batch(returns, window, 1.0)
@@ -281,7 +275,7 @@ class TestRollingVol:
 
 class TestATR:
     def test_batch_incremental_parity(self):
-        """Batch and incremental ATR must match exactly."""
+        # Batch and incremental ATR must match exactly.
         period = 14
         batch = atr_batch(FIXTURE_BARS, period)
         
@@ -291,7 +285,7 @@ class TestATR:
         assert_parity(batch, incremental, "ATR")
     
     def test_warmup(self):
-        """First `period` values should be None."""
+        # First `period` values should be None.
         period = 14
         batch = atr_batch(FIXTURE_BARS, period)
         
@@ -300,23 +294,21 @@ class TestATR:
         assert batch[period] is not None, f"ATR[{period}] should have value"
     
     def test_positive(self):
-        """ATR should always be non-negative."""
+        # ATR should always be non-negative.
         batch = atr_batch(FIXTURE_BARS, 14)
         for val in batch:
             if val is not None:
                 assert val >= 0, f"ATR should be non-negative: {val}"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Comprehensive Parity Test
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestComprehensiveParity:
-    """Run all parity checks with longer series to catch edge cases."""
+    # Run all parity checks with longer series to catch edge cases.
     
     @pytest.fixture
     def long_prices(self):
-        """Generate 200 prices with realistic variation."""
+        # Generate 200 prices with realistic variation.
         import random
         random.seed(42)  # Deterministic!
         prices = [100.0]

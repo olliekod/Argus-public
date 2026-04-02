@@ -1,14 +1,14 @@
-"""
-One-command post-run pipeline:
-1) Build runpack
-2) Build cross-run rollup
-3) Run readiness gate
+# Created by Oliver Meihls
 
-Exit codes:
-  0 -> readiness PASS
-  1 -> readiness FAIL
-  2 -> pipeline/config/runtime error
-"""
+# One-command post-run pipeline:
+# 1) Build runpack
+# 2) Build cross-run rollup
+# 3) Run readiness gate
+#
+# Exit codes:
+# 0 -> readiness PASS
+# 1 -> readiness FAIL
+# 2 -> pipeline/config/runtime error
 
 from __future__ import annotations
 

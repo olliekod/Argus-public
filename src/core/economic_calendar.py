@@ -1,10 +1,9 @@
-"""
-Economic Calendar
-=================
+# Created by Oliver Meihls
 
-Tracks high-impact economic events for trading blackout periods.
-Prevents entering trades before FOMC, CPI, and Jobs reports.
-"""
+# Economic Calendar
+#
+# Tracks high-impact economic events for trading blackout periods.
+# Prevents entering trades before FOMC, CPI, and Jobs reports.
 
 import logging
 from datetime import datetime, timedelta
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class EventRisk(Enum):
-    """Risk level for economic events."""
+    # Risk level for economic events.
     CRITICAL = "CRITICAL"   # FOMC - 48h blackout
     HIGH = "HIGH"           # CPI - 24h blackout
     MEDIUM = "MEDIUM"       # Jobs - 12h blackout
@@ -24,7 +23,7 @@ class EventRisk(Enum):
 
 @dataclass
 class EconomicEvent:
-    """Represents an economic event."""
+    # Represents an economic event.
     name: str
     date: datetime
     risk: EventRisk
@@ -33,14 +32,12 @@ class EconomicEvent:
 
 
 class EconomicCalendar:
-    """
-    Tracks economic events and blackout periods.
-    
-    Blackout periods:
-    - FOMC: 48 hours before meeting end (Wednesday 2 PM EST)
-    - CPI: 24 hours before release (8:30 AM EST)
-    - Jobs: 12 hours before release (8:30 AM EST first Friday)
-    """
+    # Tracks economic events and blackout periods.
+    #
+    # Blackout periods:
+    # - FOMC: 48 hours before meeting end (Wednesday 2 PM EST)
+    # - CPI: 24 hours before release (8:30 AM EST)
+    # - Jobs: 12 hours before release (8:30 AM EST first Friday)
     
     # 2025 FOMC Meeting Dates (month, day) - Wednesday end dates
     # Source: Federal Reserve Schedule
@@ -90,19 +87,17 @@ class EconomicCalendar:
     # This is calculated dynamically
 
     def __init__(self):
-        """Initialize economic calendar."""
+        # Initialize economic calendar.
         self._events_cache: Optional[List[EconomicEvent]] = None
         self._events_cache_year: Optional[int] = None
         logger.info("Economic Calendar initialized")
 
     @classmethod
     def _estimate_fomc_dates(cls, year: int) -> List[tuple]:
-        """
-        P3: Estimate FOMC meeting dates for years beyond hardcoded data.
-
-        The Fed typically meets 8 times per year roughly every 6 weeks.
-        This provides a reasonable approximation based on historical patterns.
-        """
+        # P3: Estimate FOMC meeting dates for years beyond hardcoded data.
+        #
+        # The Fed typically meets 8 times per year roughly every 6 weeks.
+        # This provides a reasonable approximation based on historical patterns.
         # Typical FOMC months and approximate Wednesday end dates
         return [
             (1, 29), (3, 19), (5, 7), (6, 18),
@@ -111,12 +106,10 @@ class EconomicCalendar:
 
     @classmethod
     def _estimate_cpi_dates(cls, year: int) -> List[tuple]:
-        """
-        P3: Estimate CPI release dates for years beyond hardcoded data.
-
-        CPI is typically released on the 2nd or 3rd Tuesday-Wednesday
-        of each month. This approximates mid-month.
-        """
+        # P3: Estimate CPI release dates for years beyond hardcoded data.
+        #
+        # CPI is typically released on the 2nd or 3rd Tuesday-Wednesday
+        # of each month. This approximates mid-month.
         return [
             (1, 14), (2, 12), (3, 12), (4, 10),
             (5, 13), (6, 11), (7, 15), (8, 12),
@@ -124,22 +117,20 @@ class EconomicCalendar:
         ]
     
     def _get_first_friday(self, year: int, month: int) -> datetime:
-        """Get first Friday of a given month."""
+        # Get first Friday of a given month.
         first_day = datetime(year, month, 1)
         # weekday(): Monday=0, Tuesday=1, ..., Friday=4
         days_until_friday = (4 - first_day.weekday()) % 7
         return first_day + timedelta(days=days_until_friday)
     
     def get_all_events(self, year: int = 2026) -> List[EconomicEvent]:
-        """
-        Get all economic events for the year.
-        
-        Args:
-            year: Year to get events for
-            
-        Returns:
-            List of EconomicEvent objects sorted by date
-        """
+        # Get all economic events for the year.
+        #
+        # Args:
+        # year: Year to get events for
+        #
+        # Returns:
+        # List of EconomicEvent objects sorted by date
         if self._events_cache and self._events_cache_year == year:
             return self._events_cache
 
@@ -195,15 +186,13 @@ class EconomicCalendar:
         return events
     
     def get_next_event(self, from_date: datetime = None) -> Optional[EconomicEvent]:
-        """
-        Get the next upcoming economic event.
-        
-        Args:
-            from_date: Date to search from (default: now)
-            
-        Returns:
-            Next EconomicEvent or None
-        """
+        # Get the next upcoming economic event.
+        #
+        # Args:
+        # from_date: Date to search from (default: now)
+        #
+        # Returns:
+        # Next EconomicEvent or None
         if from_date is None:
             from_date = datetime.now()
         
@@ -222,15 +211,13 @@ class EconomicCalendar:
         return None
     
     def is_blackout_period(self, check_time: datetime = None) -> Tuple[bool, Optional[EconomicEvent]]:
-        """
-        Check if we're in a blackout period.
-        
-        Args:
-            check_time: Time to check (default: now)
-            
-        Returns:
-            Tuple of (is_blackout, event_causing_blackout)
-        """
+        # Check if we're in a blackout period.
+        #
+        # Args:
+        # check_time: Time to check (default: now)
+        #
+        # Returns:
+        # Tuple of (is_blackout, event_causing_blackout)
         if check_time is None:
             check_time = datetime.now()
         
@@ -245,15 +232,13 @@ class EconomicCalendar:
         return (False, None)
     
     def get_blackout_warning(self, check_time: datetime = None) -> Optional[str]:
-        """
-        Get a warning message if in or near a blackout period.
-        
-        Args:
-            check_time: Time to check (default: now)
-            
-        Returns:
-            Warning string or None
-        """
+        # Get a warning message if in or near a blackout period.
+        #
+        # Args:
+        # check_time: Time to check (default: now)
+        #
+        # Returns:
+        # Warning string or None
         is_blackout, event = self.is_blackout_period(check_time)
         
         if is_blackout:
@@ -270,15 +255,13 @@ class EconomicCalendar:
         return None
     
     def get_events_this_week(self, from_date: datetime = None) -> List[EconomicEvent]:
-        """
-        Get all events in the next 7 days.
-        
-        Args:
-            from_date: Start date (default: now)
-            
-        Returns:
-            List of events in the next 7 days
-        """
+        # Get all events in the next 7 days.
+        #
+        # Args:
+        # from_date: Start date (default: now)
+        #
+        # Returns:
+        # List of events in the next 7 days
         if from_date is None:
             from_date = datetime.now()
         
@@ -288,12 +271,10 @@ class EconomicCalendar:
         return [e for e in events if from_date <= e.date <= end_date]
     
     def format_weekly_summary(self, from_date: datetime = None) -> str:
-        """
-        Format a weekly summary of upcoming events.
-        
-        Returns:
-            Formatted string for Telegram/console
-        """
+        # Format a weekly summary of upcoming events.
+        #
+        # Returns:
+        # Formatted string for Telegram/console
         events = self.get_events_this_week(from_date)
         
         if not events:
@@ -316,7 +297,7 @@ class EconomicCalendar:
 
 # Test function
 def test_calendar():
-    """Test the economic calendar."""
+    # Test the economic calendar.
     print("=" * 60)
     print("ECONOMIC CALENDAR TEST")
     print("=" * 60)

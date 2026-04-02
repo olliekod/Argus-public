@@ -1,7 +1,6 @@
-"""
-Argus Vision - Terminal UI v5 (NGE)
-====================================
-"""
+# Created by Oliver Meihls
+
+# Argus Vision - Terminal UI v5 (NGE)
 
 import asyncio
 import json
@@ -32,7 +31,7 @@ def _write_ui_crash(kind: str, e: Exception) -> None:
 
 
 def _ui_build_stamp() -> str:
-    """Stable per-build stamp from this module's file mtime."""
+    # Stable per-build stamp from this module's file mtime.
     try:
         ts = os.path.getmtime(__file__)
         return datetime.fromtimestamp(ts).strftime("%Y%m%d-%H%M")
@@ -161,12 +160,10 @@ from .simulation import (
 )
 
 
-# ======================================================================
 #  Helpers
-# ======================================================================
 
 def _sparkline(prices: deque, width: int = 10) -> str:
-    """Convert a price history deque to a unicode sparkline string."""
+    # Convert a price history deque to a unicode sparkline string.
     data = list(prices)
     if len(data) < 2:
         return "─" * width
@@ -183,7 +180,7 @@ def _sparkline(prices: deque, width: int = 10) -> str:
 
 
 def _wave_segment(frame: int, width: int, phase: int = 0) -> str:
-    """Return a short looping wave segment for section headers / accents."""
+    # Return a short looping wave segment for section headers / accents.
     if width <= 0:
         return ""
     off = (frame + phase) % len(_WAVE)
@@ -191,14 +188,13 @@ def _wave_segment(frame: int, width: int, phase: int = 0) -> str:
 
 
 def _header_lights(frame: int) -> str:
-    """Shared accent for all major section headers (NGE status lights)."""
+    # Shared accent for all major section headers (NGE status lights).
     return _LIGHTS[frame % len(_LIGHTS)]
 
 
 def _markets_sep_line(frame: int, width: int, phase: int = 0, speed_div: int = 4) -> str:
-    """Animated dotted separator for MARKETS: a single circle flows along the line.
-    speed_div: larger = slower (e.g. 4, 5, 6 for BTC, ETH, SOL).
-    """
+    # Animated dotted separator for MARKETS: a single circle flows along the line.
+    # speed_div: larger = slower (e.g. 4, 5, 6 for BTC, ETH, SOL).
     if width <= 0:
         return ""
     pos = (frame // speed_div + phase) % width
@@ -206,30 +202,29 @@ def _markets_sep_line(frame: int, width: int, phase: int = 0, speed_div: int = 4
 
 
 def _prob_bar(p_yes: float, width: int = 10) -> str:
-    """Render a filled probability bar using block characters."""
+    # Render a filled probability bar using block characters.
     filled = round(p_yes * width)
     return f"{'▓' * filled}{'░' * (width - filled)}"
 
 
 def _market_label(ticker: str, source: str = "") -> str:
-    """Convert a raw Kalshi ticker to a short human-readable label.
-
-    Format: ``ASSET WINDOW TYPE``
-
-    - ASSET  = BTC / ETH / SOL
-    - WINDOW = 15m / 60m / Range / Daily
-    - TYPE   = E (hold to expiry / settlement strategy)
-              S (mispricing scalp — early exit)
-              A (pair arbitrage sleeve)
-
-    Examples::
-
-        KXBTC15M-26MAR0217-B65000              → "BTC 15m E"
-        KXBTCH-26MAR0617-B66500                → "BTC 60m E"
-        KXBTC-26MAR0217-B65000                 → "BTC Range E"
-        KXETH15M-... source=mispricing_scalp   → "ETH 15m S"
-        KXBTC15M-... source=pair_arb           → "BTC 15m A"
-    """
+    # Convert a raw Kalshi ticker to a short human-readable label.
+    #
+    # Format: ``ASSET WINDOW TYPE``
+    #
+    # - ASSET  = BTC / ETH / SOL
+    # - WINDOW = 15m / 60m / Range / Daily
+    # - TYPE   = E (hold to expiry / settlement strategy)
+    # S (mispricing scalp — early exit)
+    # A (pair arbitrage sleeve)
+    #
+    # Examples::
+    #
+    # KXBTC15M-26MAR0217-B65000              → "BTC 15m E"
+    # KXBTCH-26MAR0617-B66500                → "BTC 60m E"
+    # KXBTC-26MAR0217-B65000                 → "BTC Range E"
+    # KXETH15M-... source=mispricing_scalp   → "ETH 15m S"
+    # KXBTC15M-... source=pair_arb           → "BTC 15m A"
     series = ticker.upper().split("-")[0] if "-" in ticker else ticker.upper()
 
     if "BTC" in series:
@@ -288,9 +283,7 @@ def _ui_scalp_family_allowed(asset: str, window_label: str) -> bool:
     return False
 
 
-# ======================================================================
 #  TickerState — per-market state
-# ======================================================================
 
 class TickerState:
     __slots__ = (
@@ -408,17 +401,13 @@ class TickerState:
         )
 
 
-# ======================================================================
 #  TerminalVisualizer
-# ======================================================================
 
 class TerminalVisualizer:
-    """
-    NGE-inspired terminal dashboard rendering at ~20 fps.
-
-    No alternate screen buffer is used, so copy-paste works normally.
-    The screen is cleared once at start, then the cursor homes each frame.
-    """
+    # NGE-inspired terminal dashboard rendering at ~20 fps.
+    #
+    # No alternate screen buffer is used, so copy-paste works normally.
+    # The screen is cleared once at start, then the cursor homes each frame.
 
     def __init__(
         self,
@@ -550,16 +539,15 @@ class TerminalVisualizer:
         first_entry_ts: float = 0.0,
         seed_balance_usd: Optional[float] = None,
     ):
-        """Load all-time stats from JSONL on startup.
-
-        first_entry_ts — Unix timestamp of the first JSONL record.  When
-        provided, the visualiser treats that moment as the bot's origin so
-        uptime and rate stats span the full history, not just this session.
-
-        seed_balance_usd — Pre-populate the balance display immediately so
-        "Awaiting balance update..." never shows on startup.  The periodic
-        balance poller will overwrite this with the live API value shortly.
-        """
+        # Load all-time stats from JSONL on startup.
+        #
+        # first_entry_ts — Unix timestamp of the first JSONL record.  When
+        # provided, the visualiser treats that moment as the bot's origin so
+        # uptime and rate stats span the full history, not just this session.
+        #
+        # seed_balance_usd — Pre-populate the balance display immediately so
+        # "Awaiting balance update..." never shows on startup.  The periodic
+        # balance poller will overwrite this with the live API value shortly.
         self._alltime_pnl = total_pnl
         # session_pnl starts at 0 — tracks only what was earned THIS session
         self._wins   = wins
@@ -572,11 +560,11 @@ class TerminalVisualizer:
         self._promoted_session_peak_pnl = 0.0
 
     def seed_bot_stats(self, bot_stats: Dict[str, Dict[str, Any]]) -> None:
-        """Seed dwarf ranking from paper_trades.jsonl so Net PnL is correct after restart."""
+        # Seed dwarf ranking from paper_trades.jsonl so Net PnL is correct after restart.
         self._bot_stats = {k: dict(v) for k, v in bot_stats.items()}
 
     def ensure_bot_stats_entries(self, bot_ids: List[str]) -> None:
-        """Pre-seed empty stats for all known bot_ids so the leaderboard shows dwarf names before they trade."""
+        # Pre-seed empty stats for all known bot_ids so the leaderboard shows dwarf names before they trade.
         empty = {
             "pnl": 0.0, "pnl_e": 0.0, "pnl_s": 0.0, "pnl_a": 0.0,
             "gross_pnl": 0.0, "fees_usd": 0.0,
@@ -611,7 +599,7 @@ class TerminalVisualizer:
             self._task.cancel()
 
     async def update_markets(self, added: Dict[str, MarketMetadata], removed: List[str]) -> None:
-        """Dynamically update tracked markets during a session."""
+        # Dynamically update tracked markets during a session.
         for ticker in removed:
             self._metadata.pop(ticker, None)
             self._states.pop(ticker, None)
@@ -620,7 +608,7 @@ class TerminalVisualizer:
             self._ensure_state(meta)
 
     def update_from_snapshot(self, snapshot: Dict[str, Any]) -> None:
-        """Update UI state from an IPC snapshot (used when UI runs in separate process)."""
+        # Update UI state from an IPC snapshot (used when UI runs in separate process).
         if not snapshot:
             return
         # Apply primary_bot_id from backend so promoted slot shows correct bot
@@ -712,7 +700,7 @@ class TerminalVisualizer:
                     self._price_hist[a].append(self._prices[a])
 
     def render_frame(self) -> None:
-        """Force one render (used by remote UI process after update_from_snapshot)."""
+        # Force one render (used by remote UI process after update_from_snapshot).
         # Remote mode: first time we have data, do a minimal one-line write to avoid Windows console crash on first big output.
         if self._remote_snapshot_queue is not None and not getattr(self, "_remote_minimal_render_done", False):
             if self._states or self._bot_stats:
@@ -721,6 +709,7 @@ class TerminalVisualizer:
                     sys.stdout.flush()
                 except Exception:
                     pass
+
                 self._remote_minimal_render_done = True
                 self._last_render_ts = time.time()
                 return
@@ -814,13 +803,12 @@ class TerminalVisualizer:
     # ── main event loop ───────────────────────────────────────────────
 
     async def _main_loop_remote(self) -> None:
-        """Loop for remote UI: fixed frame rate; consume snapshots when available.
-
-        Render rate is decoupled from snapshot rate so we get smooth ~20 fps even
-        when the backend sends large snapshots slowly (e.g. 1/sec with many bots).
-        We wait up to one frame for a snapshot; if none arrives, we re-render the
-        last state. This avoids the UI becoming a slideshow when IPC is slow.
-        """
+        # Loop for remote UI: fixed frame rate; consume snapshots when available.
+        #
+        # Render rate is decoupled from snapshot rate so we get smooth ~20 fps even
+        # when the backend sends large snapshots slowly (e.g. 1/sec with many bots).
+        # We wait up to one frame for a snapshot; if none arrives, we re-render the
+        # last state. This avoids the UI becoming a slideshow when IPC is slow.
         frame_duration = 1.0 / UI_TARGET_FPS
         first_loop = True
         first_snapshot_done = False
@@ -858,6 +846,7 @@ class TerminalVisualizer:
                 await asyncio.sleep(max(0.0, frame_duration - elapsed))
         except asyncio.CancelledError:
             pass
+
         except Exception as e:
             log.error("Remote UI error: %s\n%s", e, traceback.format_exc())
             _write_ui_crash("main_loop", e)
@@ -1129,11 +1118,9 @@ class TerminalVisualizer:
     # ── market selection ──────────────────────────────────────────────
 
     def _distance_to_spot(self, st: TickerState) -> float:
-        """
-        Normalized distance of this market to current spot (near-money measure).
-        Binary: |spot - strike| / spot. Range: |spot - mid| / spot, or 0 if spot in [floor, cap].
-        Matches runner _rank_near_money for consistency. Returns 999 if no spot or invalid range.
-        """
+        # Normalized distance of this market to current spot (near-money measure).
+        # Binary: |spot - strike| / spot. Range: |spot - mid| / spot, or 0 if spot in [floor, cap].
+        # Matches runner _rank_near_money for consistency. Returns 999 if no spot or invalid range.
         spot = self._prices.get(st.asset, 0.0) or 0.0
         if spot <= 0:
             return 999.0
@@ -1187,11 +1174,9 @@ class TerminalVisualizer:
         return f"{DKGRAY}PASS{RESET}"
 
     def _best_per_type(self) -> Dict[str, Dict[str, Optional[TickerState]]]:
-        """
-        Return best market per (asset, window_type).
-        Selection: within each (asset, window) prefer live OB first, then near-money.
-        This keeps displayed rows aligned with actively updating orderbooks.
-        """
+        # Return best market per (asset, window_type).
+        # Selection: within each (asset, window) prefer live OB first, then near-money.
+        # This keeps displayed rows aligned with actively updating orderbooks.
         now = time.time()
         if now - self._last_best_markets_update < 0.5 and self._best_markets_cache:
             # Invalidate if any displayed market has expired so we don't show EMPTY until next 0.5s tick
@@ -1248,7 +1233,7 @@ class TerminalVisualizer:
         return result
 
     def _count_active_markets(self) -> int:
-        """Count tradeable markets: has valid expiry and not yet expired."""
+        # Count tradeable markets: has valid expiry and not yet expired.
         now = time.time()
         return sum(1 for s in self._states.values() if s.exp_ts > 0 and s.exp_ts > now)
 
@@ -1460,21 +1445,21 @@ class TerminalVisualizer:
     # ── NGE panel renderers (all driven by real data) ───────────────────
 
     def _render_scan_sweep(self) -> List[str]:
-        """Left-side diagnostic: sweep position from WS + market count (real state)."""
+        # Left-side diagnostic: sweep position from WS + market count (real state).
         n_markets = len(self._states)
         ws_off = 1 if self._ws_connected else 0
         idx = (self._panel_scan + n_markets + ws_off) % len(_SCAN_SWEEP_FRAMES)
         return list(_SCAN_SWEEP_FRAMES[idx])
 
     def _render_radar(self) -> str:
-        """Target acquisition: radar position from frame; targets = actionable market count."""
+        # Target acquisition: radar position from frame; targets = actionable market count.
         idx = self._panel_radar % len(_RADAR_FRAMES)
         n_actionable = sum(1 for s in self._states.values() if s.is_actionable())
         # Optional: color or width from n_actionable (real targets locked)
         return _RADAR_FRAMES[idx]
 
     def _render_telemetry_bars(self) -> str:
-        """Vertical bar telemetry: 8 levels from real rates (OB/s, ticks/s, fills/hr, etc.)."""
+        # Vertical bar telemetry: 8 levels from real rates (OB/s, ticks/s, fills/hr, etc.).
         up_s = max(1, int(time.time() - self._start_time))
         ob_s = self._counts["ob"] / up_s
         tick_s = self._counts["tick"] / up_s
@@ -1494,7 +1479,7 @@ class TerminalVisualizer:
         return "│" + "".join(_BAR_LEVELS[h] for h in bars) + "│"
 
     def _render_scope(self) -> List[str]:
-        """Oscilloscope: wave from real BTC price history or first market p_yes."""
+        # Oscilloscope: wave from real BTC price history or first market p_yes.
         data = list(self._price_hist.get("BTC", deque(maxlen=12)))
         if len(data) < 3:
             data = list(self._price_hist.get("ETH", deque(maxlen=12)))
@@ -1522,17 +1507,17 @@ class TerminalVisualizer:
         ]
 
     def _render_grid(self) -> List[str]:
-        """Subsystem diagnostics: WS vs data; flicker reflects real state."""
+        # Subsystem diagnostics: WS vs data; flicker reflects real state.
         idx = (self._panel_grid + (1 if self._ws_connected else 0)) % len(_GRID_FRAMES)
         return list(_GRID_FRAMES[idx])
 
     def _render_frame_indicator(self) -> str:
-        """Status module: ACTIVE. animation; label reflects SIM/LIVE (real mode)."""
+        # Status module: ACTIVE. animation; label reflects SIM/LIVE (real mode).
         idx = self._panel_frame % len(_FRAME_ACTIVE)
         return _FRAME_ACTIVE[idx].strip()
 
     def _render_cascade(self) -> List[str]:
-        """Streaming system data: real ticker snippets from fills; pad from active markets."""
+        # Streaming system data: real ticker snippets from fills; pad from active markets.
         rows = []
         cascade_src = list(self._cascade_buffer)
         if len(cascade_src) < 5:
@@ -1546,12 +1531,12 @@ class TerminalVisualizer:
         return rows
 
     def _render_background_line(self) -> List[str]:
-        """Low-frequency global fill sweep (frame-based, no fake data)."""
+        # Low-frequency global fill sweep (frame-based, no fake data).
         idx = (self._panel_bg // 15) % len(_BACKGROUND_FRAMES)
         return list(_BACKGROUND_FRAMES[idx])
 
     def _render_population_epoch_indicator(self, width: int, now: float, frame: int) -> List[str]:
-        """Render an epoch/reseed countdown block for population manager."""
+        # Render an epoch/reseed countdown block for population manager.
         if not self._population_enabled:
             return [f"  {DKGRAY}EPOCH WINDOW  disabled{RESET}"]
 

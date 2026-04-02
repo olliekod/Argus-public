@@ -1,10 +1,10 @@
-"""
-End-to-end test: valid signal → order placement.
+# Created by Oliver Meihls
 
-Wires StrategyEngine + ExecutionEngine with a mock REST client and
-verifies that a fair-probability + orderbook combination with sufficient
-edge actually calls create_order on the REST layer.
-"""
+# End-to-end test: valid signal → order placement.
+#
+# Wires StrategyEngine + ExecutionEngine with a mock REST client and
+# verifies that a fair-probability + orderbook combination with sufficient
+# edge actually calls create_order on the REST layer.
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def _make_orderbook(
     no_bid: int = 40,
     seq: int = 1,
 ) -> OrderbookState:
-    """Orderbook where implied YES ask = 100 - no_bid, implied NO ask = 100 - yes_bid."""
+    # Orderbook where implied YES ask = 100 - no_bid, implied NO ask = 100 - yes_bid.
     return OrderbookState(
         market_ticker=ticker,
         best_yes_bid_cents=yes_bid,
@@ -96,7 +96,7 @@ def _make_metadata(
 
 
 class MockRestClient:
-    """Captures create_order calls for assertion."""
+    # Captures create_order calls for assertion.
 
     def __init__(self) -> None:
         self.orders: list[Dict[str, Any]] = []
@@ -109,11 +109,9 @@ class MockRestClient:
 
 @pytest.mark.asyncio
 async def test_valid_edge_triggers_order() -> None:
-    """
-    A fair p_yes=0.80 vs implied YES ask=60¢ gives EV_yes=0.20 which
-    exceeds min_edge=0.02.  This should produce a TradeSignal that the
-    ExecutionEngine turns into a create_order call.
-    """
+    # A fair p_yes=0.80 vs implied YES ask=60¢ gives EV_yes=0.20 which
+    # exceeds min_edge=0.02.  This should produce a TradeSignal that the
+    # ExecutionEngine turns into a create_order call.
     bus = Bus()
     cfg = _make_config()
     rest = MockRestClient()
@@ -161,10 +159,8 @@ async def test_valid_edge_triggers_order() -> None:
 
 @pytest.mark.asyncio
 async def test_no_edge_does_not_trigger_order() -> None:
-    """
-    A fair p_yes=0.55 vs implied YES ask=60¢ gives EV_yes = -0.05,
-    which is below the threshold.  No order should be placed.
-    """
+    # A fair p_yes=0.55 vs implied YES ask=60¢ gives EV_yes = -0.05,
+    # which is below the threshold.  No order should be placed.
     bus = Bus()
     cfg = _make_config()
     rest = MockRestClient()
@@ -198,13 +194,11 @@ async def test_no_edge_does_not_trigger_order() -> None:
 
 @pytest.mark.asyncio
 async def test_dry_run_blocks_order() -> None:
-    """
-    With dry_run=True and sufficient edge, the execution engine must NOT call
-    create_order on the REST client.  Instead, it publishes a synthetic paper
-    FillEvent on kalshi.fills so the settlement tracker and UI can track paper
-    performance.  dry_run does not silently swallow the signal — it produces a
-    paper fill that is observable on the bus.
-    """
+    # With dry_run=True and sufficient edge, the execution engine must NOT call
+    # create_order on the REST client.  Instead, it publishes a synthetic paper
+    # FillEvent on kalshi.fills so the settlement tracker and UI can track paper
+    # performance.  dry_run does not silently swallow the signal — it produces a
+    # paper fill that is observable on the bus.
     bus = Bus()
     cfg = _make_config(dry_run=True)
     rest = MockRestClient()
@@ -245,10 +239,8 @@ async def test_dry_run_blocks_order() -> None:
 
 @pytest.mark.asyncio
 async def test_no_side_buy_triggered() -> None:
-    """
-    When p_yes is low (0.20), EV_no = (1 - 0.20) - 0.60 = 0.20 which
-    exceeds the threshold.  Should trigger a NO buy.
-    """
+    # When p_yes is low (0.20), EV_no = (1 - 0.20) - 0.60 = 0.20 which
+    # exceeds the threshold.  Should trigger a NO buy.
     bus = Bus()
     cfg = _make_config()
     rest = MockRestClient()
@@ -286,7 +278,7 @@ async def test_no_side_buy_triggered() -> None:
 
 @pytest.mark.asyncio
 async def test_ws_trading_disabled_blocks_signal() -> None:
-    """ws_trading_enabled=False should prevent signal publication."""
+    # ws_trading_enabled=False should prevent signal publication.
     bus = Bus()
     cfg = _make_config(ws_trading_enabled=False)
     rest = MockRestClient()

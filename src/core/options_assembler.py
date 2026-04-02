@@ -1,10 +1,9 @@
-"""
-Options Chain Assembler
-=======================
+# Created by Oliver Meihls
 
-Converts raw connector data into deterministic OptionChainSnapshotEvents.
-Ensures reproducible ordering and deduplication for tape recording.
-"""
+# Options Chain Assembler
+#
+# Converts raw connector data into deterministic OptionChainSnapshotEvents.
+# Ensures reproducible ordering and deduplication for tape recording.
 
 from __future__ import annotations
 
@@ -27,36 +26,35 @@ logger = logging.getLogger(__name__)
 
 
 def _now_ms() -> int:
-    """Current time as int milliseconds."""
+    # Current time as int milliseconds.
     return int(time.time() * 1000)
 
 
 class SequenceProvider:
-    """Thread-safe monotonic sequence ID provider."""
+    # Thread-safe monotonic sequence ID provider.
     
     def __init__(self, start: int = 0) -> None:
         self._seq = start
     
     def next(self) -> int:
-        """Get next sequence ID."""
+        # Get next sequence ID.
         self._seq += 1
         return self._seq
     
     @property
     def current(self) -> int:
-        """Get current sequence ID without incrementing."""
+        # Get current sequence ID without incrementing.
         return self._seq
 
 
 class OptionsChainAssembler:
-    """Assembles raw connector data into deterministic chain snapshots.
-    
-    Guarantees:
-    - Quotes sorted by strike (ascending)
-    - Sequence IDs assigned monotonically
-    - Deterministic: identical inputs → identical outputs
-    - No wall-clock reads during replay mode
-    """
+    # Assembles raw connector data into deterministic chain snapshots.
+    #
+    # Guarantees:
+    # - Quotes sorted by strike (ascending)
+    # - Sequence IDs assigned monotonically
+    # - Deterministic: identical inputs → identical outputs
+    # - No wall-clock reads during replay mode
     
     def __init__(
         self,
@@ -65,14 +63,13 @@ class OptionsChainAssembler:
         on_contract: Optional[Callable[[OptionContractEvent], None]] = None,
         replay_mode: bool = False,
     ) -> None:
-        """Initialize assembler.
-        
-        Args:
-            sequence_provider: Provider for monotonic sequence IDs
-            on_chain_snapshot: Callback for chain snapshots (for bus publishing)
-            on_contract: Callback for new contracts
-            replay_mode: If True, use event timestamps instead of wall clock
-        """
+        # Initialize assembler.
+        #
+        # Args:
+        # sequence_provider: Provider for monotonic sequence IDs
+        # on_chain_snapshot: Callback for chain snapshots (for bus publishing)
+        # on_contract: Callback for new contracts
+        # replay_mode: If True, use event timestamps instead of wall clock
         self._seq = sequence_provider or SequenceProvider()
         self._on_chain_snapshot = on_chain_snapshot
         self._on_contract = on_contract
@@ -97,23 +94,22 @@ class OptionsChainAssembler:
         underlying_bid: float = 0.0,
         underlying_ask: float = 0.0,
     ) -> OptionChainSnapshotEvent:
-        """Build atomic chain snapshot with deterministic ordering.
-        
-        Args:
-            symbol: Underlying symbol
-            expiration_ms: Expiration as UTC milliseconds
-            underlying_price: Current underlying price
-            raw_puts: List of raw put quote dicts
-            raw_calls: List of raw call quote dicts
-            provider: Data provider name
-            source_ts_ms: Provider source timestamp
-            timestamp_ms: Logical timestamp (defaults to now)
-            underlying_bid: Underlying bid price
-            underlying_ask: Underlying ask price
-            
-        Returns:
-            Deterministic OptionChainSnapshotEvent
-        """
+        # Build atomic chain snapshot with deterministic ordering.
+        #
+        # Args:
+        # symbol: Underlying symbol
+        # expiration_ms: Expiration as UTC milliseconds
+        # underlying_price: Current underlying price
+        # raw_puts: List of raw put quote dicts
+        # raw_calls: List of raw call quote dicts
+        # provider: Data provider name
+        # source_ts_ms: Provider source timestamp
+        # timestamp_ms: Logical timestamp (defaults to now)
+        # underlying_bid: Underlying bid price
+        # underlying_ask: Underlying ask price
+        #
+        # Returns:
+        # Deterministic OptionChainSnapshotEvent
         now_ms = timestamp_ms if timestamp_ms else _now_ms()
         
         # Dedupe and sort puts
@@ -172,7 +168,7 @@ class OptionsChainAssembler:
         timestamp_ms: int,
         source_ts_ms: int,
     ) -> List[OptionQuoteEvent]:
-        """Process raw quotes into sorted, deduplicated OptionQuoteEvents."""
+        # Process raw quotes into sorted, deduplicated OptionQuoteEvents.
         # Dedupe by contract_id
         seen: Dict[str, Dict[str, Any]] = {}
         for raw in raw_quotes:
@@ -210,7 +206,7 @@ class OptionsChainAssembler:
         timestamp_ms: int,
         source_ts_ms: int,
     ) -> Optional[OptionQuoteEvent]:
-        """Convert raw quote dict to OptionQuoteEvent."""
+        # Convert raw quote dict to OptionQuoteEvent.
         try:
             bid = raw.get("bid", 0.0)
             ask = raw.get("ask", 0.0)
@@ -249,7 +245,7 @@ class OptionsChainAssembler:
         provider: str,
         timestamp_ms: int,
     ) -> None:
-        """Emit contract event for new contracts."""
+        # Emit contract event for new contracts.
         if not self._on_contract:
             return
         
@@ -275,22 +271,21 @@ class OptionsChainAssembler:
         timestamp_ms: int,
         min_interval_ms: int = 60000,
     ) -> bool:
-        """Check if a snapshot would be a duplicate.
-        
-        Args:
-            symbol: Underlying symbol
-            expiration_ms: Expiration timestamp
-            timestamp_ms: Proposed snapshot timestamp
-            min_interval_ms: Minimum interval between snapshots
-            
-        Returns:
-            True if this would be a duplicate snapshot
-        """
+        # Check if a snapshot would be a duplicate.
+        #
+        # Args:
+        # symbol: Underlying symbol
+        # expiration_ms: Expiration timestamp
+        # timestamp_ms: Proposed snapshot timestamp
+        # min_interval_ms: Minimum interval between snapshots
+        #
+        # Returns:
+        # True if this would be a duplicate snapshot
         key = f"{symbol}_{expiration_ms}"
         last_ts = self._last_snapshot.get(key, 0)
         return (timestamp_ms - last_ts) < min_interval_ms
     
     def reset(self) -> None:
-        """Reset assembler state (for testing)."""
+        # Reset assembler state (for testing).
         self._last_snapshot.clear()
         self._known_contracts.clear()

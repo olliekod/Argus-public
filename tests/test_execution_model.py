@@ -1,8 +1,8 @@
-"""
-Tests for the Conservative Execution Model.
+# Created by Oliver Meihls
 
-Validates fill logic, rejection rules, spread fills, and the ledger.
-"""
+# Tests for the Conservative Execution Model.
+#
+# Validates fill logic, rejection rules, spread fills, and the ledger.
 
 from __future__ import annotations
 
@@ -18,9 +18,7 @@ from src.analysis.execution_model import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Fixtures
-# ═══════════════════════════════════════════════════════════════════════════
 
 @pytest.fixture
 def model() -> ExecutionModel:
@@ -29,7 +27,7 @@ def model() -> ExecutionModel:
 
 @pytest.fixture
 def liquid_quote() -> Quote:
-    """A healthy, liquid quote."""
+    # A healthy, liquid quote.
     return Quote(
         bid=1.20,
         ask=1.35,
@@ -45,9 +43,7 @@ def sim_ts() -> int:
     return 1_700_000_000_000
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Basic fill tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestBasicFills:
     def test_sell_fills_at_bid_minus_slippage(self, model, liquid_quote, sim_ts):
@@ -89,9 +85,7 @@ class TestBasicFills:
         assert result.fill_price == 0.0  # floored (0.01 - 0.10 → 0)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Rejection tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRejections:
     def test_zero_bid_rejected(self, model, sim_ts):
@@ -147,21 +141,19 @@ class TestRejections:
         assert result.reject_reason == RejectReason.INSUFFICIENT_SIZE
 
     def test_size_zero_skips_check(self, model, sim_ts):
-        """Size=0 means unknown → skip size check."""
+        # Size=0 means unknown → skip size check.
         q = Quote(bid=1.00, ask=1.10, bid_size=0, ask_size=0, quote_ts_ms=sim_ts)
         result = model.attempt_fill(q, "SELL", 100, sim_ts)
         assert result.filled is True
 
     def test_stale_check_skipped_when_ts_zero(self, model):
-        """quote_ts_ms=0 means unknown → skip staleness check."""
+        # quote_ts_ms=0 means unknown → skip staleness check.
         q = Quote(bid=1.00, ask=1.10, quote_ts_ms=0)
         result = model.attempt_fill(q, "BUY", 1, sim_ts_ms=1_700_000_999_000)
         assert result.filled is True
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Spread fill tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSpreadFills:
     def test_fill_spread_both_legs(self, model, sim_ts):
@@ -202,9 +194,7 @@ class TestSpreadFills:
         assert result["net_debit"] == pytest.approx(54.00, abs=0.01)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Ledger tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestLedger:
     def test_ledger_tracks_fills_and_rejects(self, model, sim_ts):

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-Compare multiple Polymarket wallets on core behavior metrics.
+# Created by Oliver Meihls
 
-Usage:
-  python scripts/polymarket_wallet_compare.py --wallet 0xaaa --wallet 0xbbb
-"""
+# Compare multiple Polymarket wallets on core behavior metrics.
+#
+# Usage:
+# python scripts/polymarket_wallet_compare.py --wallet 0xaaa --wallet 0xbbb
 
 from __future__ import annotations
 

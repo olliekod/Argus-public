@@ -1,20 +1,19 @@
-"""
-Uniformity Monitor
-==================
+# Created by Oliver Meihls
 
-Detects when paper traders converge on identical decisions, distinguishing
-bug-induced convergence from legitimate market crowding.
-
-Key metrics:
-- HHI (Herfindahl-Hirschman Index): Measures concentration of choices
-  - HHI = sum(share_i^2) where share_i = count_i / total
-  - HHI = 1.0 means all traders chose the same value (max concentration)
-  - HHI = 1/N means perfectly uniform distribution across N categories
-- Entropy: Information-theoretic measure of diversity
-  - Higher entropy = more diverse choices
-  - Zero entropy = all identical
-- Modal percentage: What fraction chose the most popular value
-"""
+# Uniformity Monitor
+#
+# Detects when paper traders converge on identical decisions, distinguishing
+# bug-induced convergence from legitimate market crowding.
+#
+# Key metrics:
+# - HHI (Herfindahl-Hirschman Index): Measures concentration of choices
+# - HHI = sum(share_i^2) where share_i = count_i / total
+# - HHI = 1.0 means all traders chose the same value (max concentration)
+# - HHI = 1/N means perfectly uniform distribution across N categories
+# - Entropy: Information-theoretic measure of diversity
+# - Higher entropy = more diverse choices
+# - Zero entropy = all identical
+# - Modal percentage: What fraction chose the most popular value
 
 import logging
 import math
@@ -38,7 +37,7 @@ MIN_SAMPLE_SIZE = 20
 
 
 def compute_hhi(values: List[Any]) -> float:
-    """Compute Herfindahl-Hirschman Index for a list of values."""
+    # Compute Herfindahl-Hirschman Index for a list of values.
     if not values:
         return 0.0
     counts = Counter(values)
@@ -47,7 +46,7 @@ def compute_hhi(values: List[Any]) -> float:
 
 
 def compute_entropy(values: List[Any]) -> float:
-    """Compute Shannon entropy for a list of values."""
+    # Compute Shannon entropy for a list of values.
     if not values:
         return 0.0
     counts = Counter(values)
@@ -61,7 +60,7 @@ def compute_entropy(values: List[Any]) -> float:
 
 
 def analyze_variable(values: List[Any], variable_name: str) -> Dict[str, Any]:
-    """Analyze a single variable's distribution across traders."""
+    # Analyze a single variable's distribution across traders.
     if len(values) < MIN_SAMPLE_SIZE:
         return {
             'variable_name': variable_name,
@@ -108,17 +107,16 @@ async def run_uniformity_check(
     db=None,
     strategy_type: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Run uniformity check on recent trades.
-
-    Args:
-        trades: List of trade dicts with keys like 'strikes', 'expiry',
-                'entry_credit', 'contracts', 'trader_id'
-        db: Optional database for persisting results
-        strategy_type: If set, only analyze trades of this strategy type
-
-    Returns:
-        List of analysis results, one per variable checked.
-    """
+    # Run uniformity check on recent trades.
+    #
+    # Args:
+    # trades: List of trade dicts with keys like 'strikes', 'expiry',
+    # 'entry_credit', 'contracts', 'trader_id'
+    # db: Optional database for persisting results
+    # strategy_type: If set, only analyze trades of this strategy type
+    #
+    # Returns:
+    # List of analysis results, one per variable checked.
     if strategy_type:
         trades = [t for t in trades if t.get('strategy_type') == strategy_type]
 
@@ -186,7 +184,7 @@ async def run_uniformity_check(
 
 
 def format_uniformity_report(results: List[Dict[str, Any]]) -> str:
-    """Format uniformity results as a human-readable string."""
+    # Format uniformity results as a human-readable string.
     if not results:
         return "No uniformity data available."
 

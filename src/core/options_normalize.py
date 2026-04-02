@@ -1,13 +1,13 @@
-"""Option chain normalization utilities.
+# Created by Oliver Meihls
 
-Multiplier handling
--------------------
-The ``shares_per_contract`` (multiplier) is extracted from the API response
-and defaults to 100 when absent.  Non-standard multipliers (≠ 100) may
-occur after corporate actions (stock splits, mergers, special dividends).
-Such contracts are flagged in ``meta["non_standard_multiplier"]`` so
-downstream consumers can apply conservative handling.
-"""
+# Option chain normalization utilities.
+#
+# Multiplier handling
+# The ``shares_per_contract`` (multiplier) is extracted from the API response
+# and defaults to 100 when absent.  Non-standard multipliers (≠ 100) may
+# occur after corporate actions (stock splits, mergers, special dividends).
+# Such contracts are flagged in ``meta["non_standard_multiplier"]`` so
+# downstream consumers can apply conservative handling.
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def _int_or_default(value: Any, default: int) -> int:
 
 
 def normalize_tastytrade_nested_chain(raw: Dict[str, Any]) -> list[Dict[str, Any]]:
-    """Normalize tastytrade nested option chain response into a flat list."""
+    # Normalize tastytrade nested option chain response into a flat list.
     if not raw or not isinstance(raw, dict):
         return []
 

@@ -1,17 +1,16 @@
-"""
-Async REST client for the Kalshi Trade API v2.
+# Created by Oliver Meihls
 
-Features
---------
-* **Token-bucket rate limiting** — separate buckets for reads (GET) and
-  writes (POST / DELETE).
-* **Automatic retries** with exponential back-off + jitter for transient
-  HTTP errors (429, 500, 502, 503, 504) and connection errors.
-* **Idempotency** — POST requests carry an ``Idempotency-Key`` header so
-  retried order submissions are safe.
-* **Cursor pagination** helper for list endpoints (``/markets``, etc.).
-* **Auth header injection** via ``kalshi_auth.build_headers``.
-"""
+# Async REST client for the Kalshi Trade API v2.
+#
+# Features
+# * **Token-bucket rate limiting** — separate buckets for reads (GET) and
+# writes (POST / DELETE).
+# * **Automatic retries** with exponential back-off + jitter for transient
+# HTTP errors (429, 500, 502, 503, 504) and connection errors.
+# * **Idempotency** — POST requests carry an ``Idempotency-Key`` header so
+# retried order submissions are safe.
+# * **Cursor pagination** helper for list endpoints (``/markets``, etc.).
+# * **Auth header injection** via ``kalshi_auth.build_headers``.
 
 from __future__ import annotations
 
@@ -36,15 +35,12 @@ _MAX_RETRIES = 4
 _BASE_BACKOFF_S = 0.5
 
 
-# ---------------------------------------------------------------------------
 #  Async token-bucket rate limiter
-# ---------------------------------------------------------------------------
 
 class _TokenBucket:
-    """Simple async token-bucket that refills at a fixed rate.
-
-    One token = one request.  ``acquire()`` awaits until a token is available.
-    """
+    # Simple async token-bucket that refills at a fixed rate.
+    #
+    # One token = one request.  ``acquire()`` awaits until a token is available.
 
     def __init__(self, rate_per_sec: float) -> None:
         self._rate = rate_per_sec
@@ -73,12 +69,10 @@ class _TokenBucket:
                 await asyncio.sleep(wait)
 
 
-# ---------------------------------------------------------------------------
 #  REST client
-# ---------------------------------------------------------------------------
 
 class KalshiRestClient:
-    """Authenticated, rate-limited, retrying async client for the Kalshi API."""
+    # Authenticated, rate-limited, retrying async client for the Kalshi API.
 
     def __init__(self, config: KalshiConfig) -> None:
         self._cfg = config
@@ -106,12 +100,11 @@ class KalshiRestClient:
             )
 
     async def measure_rtt_ms(self, samples: int = 5) -> float:
-        """Ping the Kalshi REST endpoint and return median round-trip time in ms.
-
-        Uses the unauthenticated /exchange/status endpoint so no API key is
-        needed.  Takes *samples* measurements and returns the median to avoid
-        outliers from cold-start TCP setup or transient congestion.
-        """
+        # Ping the Kalshi REST endpoint and return median round-trip time in ms.
+        #
+        # Uses the unauthenticated /exchange/status endpoint so no API key is
+        # needed.  Takes *samples* measurements and returns the median to avoid
+        # outliers from cold-start TCP setup or transient congestion.
         url = f"{self._base}/exchange/status"
         times: list[float] = []
         for _ in range(samples):
@@ -122,6 +115,7 @@ class KalshiRestClient:
                 times.append((time.monotonic() - t0) * 1000)
             except Exception:
                 pass
+
         if not times:
             return 200.0  # conservative fallback
         times.sort()
@@ -145,13 +139,12 @@ class KalshiRestClient:
         timeout: Optional[aiohttp.ClientTimeout] = None,
         ignore_404: bool = False,
     ) -> Dict[str, Any]:
-        """Execute a single API request with auth, rate limiting, and retries.
-
-        Pass timeout=ClientTimeout(total=60) for discovery/pagination requests
-        that may be slow under load. If ignore_404 is True, a 404 response
-        is treated as success (return {}) and not logged as error — use for
-        idempotent operations like cancel order where "not found" is acceptable.
-        """
+        # Execute a single API request with auth, rate limiting, and retries.
+        #
+        # Pass timeout=ClientTimeout(total=60) for discovery/pagination requests
+        # that may be slow under load. If ignore_404 is True, a 404 response
+        # is treated as success (return {}) and not logged as error — use for
+        # idempotent operations like cancel order where "not found" is acceptable.
         assert self._session is not None, "call start() first"
 
         # Pick the right bucket.
@@ -332,11 +325,10 @@ class KalshiRestClient:
         )
 
     async def get_balance(self) -> int:
-        """Return account balance in cents (divide by 100 for dollars).
-
-        Prefers balance_dollars (fixed-point string) when present (March 2026
-        subpenny migration); falls back to legacy balance (integer cents).
-        """
+        # Return account balance in cents (divide by 100 for dollars).
+        #
+        # Prefers balance_dollars (fixed-point string) when present (March 2026
+        # subpenny migration); falls back to legacy balance (integer cents).
         resp = await self._request("GET", "/portfolio/balance")
         # Prefer _dollars for March 2026 migration.
         if "balance_dollars" in resp:
@@ -360,12 +352,11 @@ class KalshiRestClient:
         limit: int = 100,
         timeout: Optional[aiohttp.ClientTimeout] = None,
     ) -> AsyncIterator[Dict[str, Any]]:
-        """Yield all items across paginated responses.
-
-        Uses cursor-based pagination.  *items_key* is the JSON key under
-        which the result list lives (``"markets"``, ``"orders"``, …).
-        Pass timeout for discovery (e.g. 60s) when API may be slow.
-        """
+        # Yield all items across paginated responses.
+        #
+        # Uses cursor-based pagination.  *items_key* is the JSON key under
+        # which the result list lives (``"markets"``, ``"orders"``, …).
+        # Pass timeout for discovery (e.g. 60s) when API may be slow.
         cursor: Optional[str] = None
         base_params = dict(params or {})
         base_params["limit"] = limit

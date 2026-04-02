@@ -1,10 +1,9 @@
-"""
-Test Telegram Messages
-======================
+# Created by Oliver Meihls
 
-Sends sample messages to verify Telegram is working.
-Run: python scripts/test_telegram.py
-"""
+# Test Telegram Messages
+#
+# Sends sample messages to verify Telegram is working.
+# Run: python scripts/test_telegram.py
 
 import pytest
 
@@ -23,7 +22,7 @@ from src.core.config import load_all_config
 
 
 async def test_telegram():
-    """Send sample Telegram messages."""
+    # Send sample Telegram messages.
     print("=" * 50)
     print("TELEGRAM TEST")
     print("=" * 50)

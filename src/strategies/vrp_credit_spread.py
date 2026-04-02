@@ -1,22 +1,21 @@
-"""
-VRP Credit Spread Strategy (Reference Strategy #2)
-=================================================
+# Created by Oliver Meihls
 
-Generates credit spread signals when Volatility Risk Premium (VRP) is high,
-conditioned on market and symbol regimes.
-
-Signal Logic:
-1.  Monitor IV (from Greeks/Snapshots) and RV (Realized Volatility).
-2.  Compute VRP = IV - RV.
-3.  If VRP > Threshold AND Regime == BULLISH/NEUTRAL AND Volatility is STABLE:
-    - Emit intent to SELL Put Spread.
-
-IV Source Selection (data-source policy):
-- PRIMARY: Tastytrade snapshots (``atm_iv`` / surface fields).
-- FALLBACK: Derived IV computed from Tastytrade bid/ask quotes
-  when ``atm_iv`` is missing.
-- Alpaca is bars and outcomes only; it is never used for IV or options data.
-"""
+# VRP Credit Spread Strategy (Reference Strategy #2)
+#
+# Generates credit spread signals when Volatility Risk Premium (VRP) is high,
+# conditioned on market and symbol regimes.
+#
+# Signal Logic:
+# 1.  Monitor IV (from Greeks/Snapshots) and RV (Realized Volatility).
+# 2.  Compute VRP = IV - RV.
+# 3.  If VRP > Threshold AND Regime == BULLISH/NEUTRAL AND Volatility is STABLE:
+# - Emit intent to SELL Put Spread.
+#
+# IV Source Selection (data-source policy):
+# - PRIMARY: Tastytrade snapshots (``atm_iv`` / surface fields).
+# - FALLBACK: Derived IV computed from Tastytrade bid/ask quotes
+# when ``atm_iv`` is missing.
+# - Alpaca is bars and outcomes only; it is never used for IV or options data.
 
 import logging
 import math
@@ -37,14 +36,13 @@ _ALPACA = "alpaca"
 
 
 def _derive_iv_from_quotes(snapshot: Any) -> Optional[float]:
-    """Attempt to derive ATM implied volatility from bid/ask quotes.
-
-    This is a simplified Newton-Raphson IV solver used as a fallback
-    when the snapshot's ``atm_iv`` field is absent.  It uses the
-    midpoint of the closest-to-ATM put as a proxy.
-
-    Returns None if derivation is not possible.
-    """
+    # Attempt to derive ATM implied volatility from bid/ask quotes.
+    #
+    # This is a simplified Newton-Raphson IV solver used as a fallback
+    # when the snapshot's ``atm_iv`` field is absent.  It uses the
+    # midpoint of the closest-to-ATM put as a proxy.
+    #
+    # Returns None if derivation is not possible.
     try:
         import json as _json
 
@@ -102,6 +100,7 @@ def _derive_iv_from_quotes(snapshot: Any) -> Optional[float]:
                         continue
                 except (TypeError, ValueError):
                     pass
+
             bid = p.get("bid")
             ask = p.get("ask")
             if bid is not None and ask is not None:
@@ -126,6 +125,7 @@ def _derive_iv_from_quotes(snapshot: Any) -> Optional[float]:
                     return round(iv_f, 6)
             except (TypeError, ValueError):
                 pass
+
         bid, ask = best.get("bid"), best.get("ask")
         if bid is not None and ask is not None:
             try:
@@ -161,16 +161,15 @@ def _derive_iv_from_quotes(snapshot: Any) -> Optional[float]:
 
 
 def _select_iv_from_snapshots(visible_snapshots: List[Any]) -> Optional[float]:
-    """Select the best IV value from visible snapshots.
-
-    Selection order:
-    1. Latest Tastytrade snapshot with non-null ``atm_iv``.
-    2. Derived IV from latest Tastytrade snapshot's bid/ask quotes.
-    3. Latest snapshot from any other allowed provider with ``atm_iv`` (replay fallback).
-    4. None — logs one-line reason and strategy skips deterministically.
-
-    Alpaca is never used for IV (bars/outcomes only).
-    """
+    # Select the best IV value from visible snapshots.
+    #
+    # Selection order:
+    # 1. Latest Tastytrade snapshot with non-null ``atm_iv``.
+    # 2. Derived IV from latest Tastytrade snapshot's bid/ask quotes.
+    # 3. Latest snapshot from any other allowed provider with ``atm_iv`` (replay fallback).
+    # 4. None — logs one-line reason and strategy skips deterministically.
+    #
+    # Alpaca is never used for IV (bars/outcomes only).
     if not visible_snapshots:
         return None
 
@@ -252,14 +251,13 @@ def _select_iv_from_snapshots(visible_snapshots: List[Any]) -> Optional[float]:
 
 
 def _select_atm_put_quote(visible_snapshots: List[Any], underlying_price: float) -> Optional[Dict[str, Any]]:
-    """Return the best available ATM put quote dict from visible snapshots.
-
-    Used to attach real option pricing to a TradeIntent so that the
-    execution model fills at actual option prices rather than equity OHLC.
-
-    Returns a dict with keys: bid, ask, bid_size, ask_size, quote_ts_ms, recv_ts_ms
-    or None if no usable quote is found.
-    """
+    # Return the best available ATM put quote dict from visible snapshots.
+    #
+    # Used to attach real option pricing to a TradeIntent so that the
+    # execution model fills at actual option prices rather than equity OHLC.
+    #
+    # Returns a dict with keys: bid, ask, bid_size, ask_size, quote_ts_ms, recv_ts_ms
+    # or None if no usable quote is found.
     if not visible_snapshots or underlying_price <= 0:
         return None
 
@@ -321,20 +319,18 @@ def _select_atm_put_quote(visible_snapshots: List[Any], underlying_price: float)
 
 
 class VRPCreditSpreadStrategy(ReplayStrategy):
-    """Ref strategy for VRP put spread selling.
-
-    Uses Tastytrade snapshots as the authoritative IV source.
-    Falls back to derived IV (Brenner-Subrahmanyam approximation)
-    from Tastytrade bid/ask when ``atm_iv`` is absent.
-    Alpaca is never used for IV (bars and outcomes only).
-
-    Parameters
-    ----------
-    thresholds : dict, optional
-        Strategy parameters dict.  Accepts a ``symbol`` key to specify
-        the underlying (default ``"IBIT"``).  The symbol is used for
-        both regime-scope lookup and TradeIntent symbol.
-    """
+    # Ref strategy for VRP put spread selling.
+    #
+    # Uses Tastytrade snapshots as the authoritative IV source.
+    # Falls back to derived IV (Brenner-Subrahmanyam approximation)
+    # from Tastytrade bid/ask when ``atm_iv`` is absent.
+    # Alpaca is never used for IV (bars and outcomes only).
+    #
+    # Parameters
+    # thresholds : dict, optional
+    # Strategy parameters dict.  Accepts a ``symbol`` key to specify
+    # the underlying (default ``"IBIT"``).  The symbol is used for
+    # both regime-scope lookup and TradeIntent symbol.
 
     def __init__(self, thresholds: Optional[Dict[str, Any]] = None):
         self._thresholds = thresholds or {

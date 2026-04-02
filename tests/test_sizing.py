@@ -1,16 +1,15 @@
-"""
-Tests for Position Sizing Module
-==================================
+# Created by Oliver Meihls
 
-Verifies:
-- Fractional Kelly formula: c * mu / sigma^2
-- Per-play cap enforcement (7% max)
-- Zero sizing when edge <= cost
-- Vol-target overlay
-- Options spread sizing (contracts_from_risk_budget)
-- Confidence shrinkage
-- Full sizing pipeline
-"""
+# Tests for Position Sizing Module
+#
+# Verifies:
+# - Fractional Kelly formula: c * mu / sigma^2
+# - Per-play cap enforcement (7% max)
+# - Zero sizing when edge <= cost
+# - Vol-target overlay
+# - Options spread sizing (contracts_from_risk_budget)
+# - Confidence shrinkage
+# - Full sizing pipeline
 
 from __future__ import annotations
 
@@ -47,7 +46,7 @@ class TestShrinkMu:
 
 class TestFractionalKellySize:
     def test_quarter_kelly_basic(self):
-        """f = 0.25 * mu / sigma^2"""
+        # f = 0.25 * mu / sigma^2
         f = Forecast(
             strategy_id="test", instrument="SPY",
             mu=0.05, sigma=0.10, confidence=1.0,
@@ -58,7 +57,7 @@ class TestFractionalKellySize:
         assert w == 0.07
 
     def test_small_edge(self):
-        """Small edge, no cap hit."""
+        # Small edge, no cap hit.
         f = Forecast(
             strategy_id="test", instrument="SPY",
             mu=0.001, sigma=0.10, confidence=1.0,
@@ -68,7 +67,7 @@ class TestFractionalKellySize:
         assert abs(w - expected) < 1e-6
 
     def test_cap_enforcement(self):
-        """Kelly weight exceeding cap is clamped."""
+        # Kelly weight exceeding cap is clamped.
         f = Forecast(
             strategy_id="test", instrument="SPY",
             mu=1.0, sigma=0.10, confidence=1.0,
@@ -77,7 +76,7 @@ class TestFractionalKellySize:
         assert w == 0.07
 
     def test_zero_when_edge_below_cost(self):
-        """Size = 0 when mu <= cost."""
+        # Size = 0 when mu <= cost.
         f = Forecast(
             strategy_id="test", instrument="SPY",
             mu=0.001, sigma=0.10, cost=0.002, confidence=1.0,
@@ -94,7 +93,7 @@ class TestFractionalKellySize:
         assert w == 0.0
 
     def test_zero_sigma(self):
-        """Zero volatility should return 0."""
+        # Zero volatility should return 0.
         f = Forecast(
             strategy_id="test", instrument="SPY",
             mu=0.05, sigma=0.0, confidence=1.0,
@@ -111,7 +110,7 @@ class TestFractionalKellySize:
         assert w == 0.0
 
     def test_with_shrinkage(self):
-        """Low confidence should reduce position size."""
+        # Low confidence should reduce position size.
         # Use small mu/sigma to avoid hitting the cap
         f_high = Forecast(
             strategy_id="test", instrument="SPY",
@@ -126,7 +125,7 @@ class TestFractionalKellySize:
         assert w_low < w_high
 
     def test_no_shrinkage(self):
-        """Without shrinkage, confidence doesn't affect sizing."""
+        # Without shrinkage, confidence doesn't affect sizing.
         f = Forecast(
             strategy_id="test", instrument="SPY",
             mu=0.002, sigma=0.20, confidence=0.5,
@@ -136,7 +135,7 @@ class TestFractionalKellySize:
         assert w_no_shrink > w_shrink
 
     def test_custom_kelly_fraction(self):
-        """Half-Kelly vs quarter-Kelly."""
+        # Half-Kelly vs quarter-Kelly.
         # Use values small enough that neither hits the cap
         f = Forecast(
             strategy_id="test", instrument="SPY",
@@ -159,17 +158,17 @@ class TestFractionalKellySize:
 
 class TestVolTargetOverlay:
     def test_basic_scaling(self):
-        """If strategy vol = 20% and target = 10%, scale by 0.5."""
+        # If strategy vol = 20% and target = 10%, scale by 0.5.
         w = vol_target_overlay(0.04, forecast_sigma=0.20, target_vol_annual=0.10)
         assert abs(w - 0.02) < 1e-6
 
     def test_high_vol_reduces(self):
-        """High forecast vol should reduce weight."""
+        # High forecast vol should reduce weight.
         w = vol_target_overlay(0.04, forecast_sigma=0.40, target_vol_annual=0.10)
         assert abs(w - 0.01) < 1e-6
 
     def test_low_vol_amplifies(self):
-        """Low forecast vol should amplify weight."""
+        # Low forecast vol should amplify weight.
         w = vol_target_overlay(0.02, forecast_sigma=0.05, target_vol_annual=0.10)
         assert abs(w - 0.04) < 1e-6
 
@@ -177,18 +176,18 @@ class TestVolTargetOverlay:
         assert vol_target_overlay(0.04, 0.0, 0.10) == 0.0
 
     def test_negative_weight(self):
-        """Negative weight should scale correctly."""
+        # Negative weight should scale correctly.
         w = vol_target_overlay(-0.04, 0.20, 0.10)
         assert abs(w - (-0.02)) < 1e-6
 
 
 class TestContractsFromRiskBudget:
     def test_basic(self):
-        """$700 budget, $100 max loss -> 7 contracts."""
+        # $700 budget, $100 max loss -> 7 contracts.
         assert contracts_from_risk_budget(700.0, 100.0) == 7
 
     def test_fractional_floors(self):
-        """$750 budget, $100 max loss -> 7 contracts (floor)."""
+        # $750 budget, $100 max loss -> 7 contracts (floor).
         assert contracts_from_risk_budget(750.0, 100.0) == 7
 
     def test_zero_max_loss(self):
@@ -221,7 +220,7 @@ class TestSizePosition:
         assert result["instrument"] == "SPY"
 
     def test_cap_enforced(self):
-        """Weight should never exceed per_play_cap."""
+        # Weight should never exceed per_play_cap.
         f = Forecast(
             strategy_id="test", instrument="SPY",
             mu=1.0, sigma=0.10, confidence=1.0,

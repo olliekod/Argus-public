@@ -1,6 +1,6 @@
-"""
-Tests for scripts/kalshi_aggregate_training.py — merge run archives into classifier dataset.
-"""
+# Created by Oliver Meihls
+
+# Tests for scripts/kalshi_aggregate_training.py — merge run archives into classifier dataset.
 from __future__ import annotations
 
 import csv
@@ -27,7 +27,7 @@ def test_help_flag():
 
 
 def test_aggregation_deduplicates_and_produces_csv(tmp_path):
-    """Two run files with one overlapping order_id → deduplicated output."""
+    # Two run files with one overlapping order_id → deduplicated output.
     run_dir = tmp_path / "training_data"
     run_dir.mkdir()
 
@@ -92,7 +92,7 @@ def test_aggregation_deduplicates_and_produces_csv(tmp_path):
 
 
 def test_empty_input_dir_returns_zero(tmp_path):
-    """Empty input directory must return gracefully with zero counts."""
+    # Empty input directory must return gracefully with zero counts.
     run_dir = tmp_path / "training_data"
     run_dir.mkdir()
     out_dir = tmp_path / "out"
@@ -107,7 +107,7 @@ def test_empty_input_dir_returns_zero(tmp_path):
 
 
 def test_records_without_order_id_are_included(tmp_path):
-    """Records lacking order_id must still be included (not silently dropped)."""
+    # Records lacking order_id must still be included (not silently dropped).
     run_dir = tmp_path / "training_data"
     run_dir.mkdir()
     out_dir = tmp_path / "out"

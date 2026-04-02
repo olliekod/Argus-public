@@ -1,29 +1,26 @@
-"""
-Tastytrade DXLink Streamer Client
-==================================
+# Created by Oliver Meihls
 
-Async WebSocket client for DXLink streaming with a strict state machine:
-
-    SETUP_SENT -> AUTH_SENT -> FEED_CHANNEL_READY -> FEED_SETUP_DONE -> SUBSCRIBED
-
-Each transition has an explicit timeout; exceeding any threshold raises
-``DXLinkHandshakeError`` (exit code 6).
-
-Reconnect policy: exponential back-off with cap; re-auth and re-subscribe
-after reconnect; hard reset on protocol violations.
-
-Token refresh
--------------
-The streamer accepts an optional ``token_refresh_cb`` async callback.  When
-the DXLink quote token is close to expiry the streamer invokes the callback
-to obtain a fresh token before the next reconnect.  The callback should
-return a ``(new_token, new_dxlink_url)`` tuple.
-
-Log redaction
--------------
-All outbound/inbound frames that contain tokens are redacted before they
-hit the log to prevent credential leakage.
-"""
+# Tastytrade DXLink Streamer Client
+#
+# Async WebSocket client for DXLink streaming with a strict state machine:
+#
+# SETUP_SENT -> AUTH_SENT -> FEED_CHANNEL_READY -> FEED_SETUP_DONE -> SUBSCRIBED
+#
+# Each transition has an explicit timeout; exceeding any threshold raises
+# ``DXLinkHandshakeError`` (exit code 6).
+#
+# Reconnect policy: exponential back-off with cap; re-auth and re-subscribe
+# after reconnect; hard reset on protocol violations.
+#
+# Token refresh
+# The streamer accepts an optional ``token_refresh_cb`` async callback.  When
+# the DXLink quote token is close to expiry the streamer invokes the callback
+# to obtain a fresh token before the next reconnect.  The callback should
+# return a ``(new_token, new_dxlink_url)`` tuple.
+#
+# Log redaction
+# All outbound/inbound frames that contain tokens are redacted before they
+# hit the log to prevent credential leakage.
 
 from __future__ import annotations
 
@@ -67,9 +64,7 @@ from .tastytrade_dxlink_parser import (
 logger = logging.getLogger("argus.dxlink.streamer")
 
 
-# ---------------------------------------------------------------------------
 # Token redaction
-# ---------------------------------------------------------------------------
 
 _TOKEN_RE = re.compile(
     r'("token"\s*:\s*")([^"]{8})[^"]*(")',
@@ -78,25 +73,25 @@ _TOKEN_RE = re.compile(
 
 
 def _redact(text: str) -> str:
-    """Redact bearer / auth tokens in JSON text for safe logging."""
+    # Redact bearer / auth tokens in JSON text for safe logging.
     return _TOKEN_RE.sub(r"\g<1>\g<2>…REDACTED\3", text)
 
 
-# ---------------------------------------------------------------------------
 # Errors
-# ---------------------------------------------------------------------------
 
 class DXLinkHandshakeError(RuntimeError):
-    """Raised when any handshake phase exceeds its timeout.  Exit code 6."""
+    # Raised when any handshake phase exceeds its timeout.  Exit code 6.
 
+
+    pass
 
 class DXLinkAuthError(RuntimeError):
-    """Raised on authentication / token errors."""
+    # Raised on authentication / token errors.
 
 
-# ---------------------------------------------------------------------------
 # State machine
-# ---------------------------------------------------------------------------
+
+    pass
 
 class _Phase(Enum):
     DISCONNECTED = auto()
@@ -107,13 +102,11 @@ class _Phase(Enum):
     SUBSCRIBED = auto()
 
 
-# ---------------------------------------------------------------------------
 # Configuration
-# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class StreamerConfig:
-    """Timeouts and backoff knobs for the DXLink streamer."""
+    # Timeouts and backoff knobs for the DXLink streamer.
 
     # Per-phase handshake timeouts (seconds)
     setup_timeout: float = 10.0
@@ -140,16 +133,14 @@ class StreamerConfig:
     token_refresh_ahead_s: float = 120.0
 
 
-# ---------------------------------------------------------------------------
 # Streamer
-# ---------------------------------------------------------------------------
 
 EventCallback = Callable[[QuoteEvent | GreeksEvent], None]
 TokenRefreshCallback = Callable[[], Awaitable[Tuple[str, str]]]
 
 
 class TastytradeStreamer:
-    """Async DXLink WebSocket streamer with strict state machine."""
+    # Async DXLink WebSocket streamer with strict state machine.
 
     def __init__(
         self,
@@ -184,18 +175,16 @@ class TastytradeStreamer:
         # Collected events (for audit / one-shot modes)
         self.events: List[QuoteEvent | GreeksEvent] = []
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+# Public API
 
     async def connect_and_subscribe(self) -> None:
-        """Run the full handshake sequence.  Raises on timeout."""
+        # Run the full handshake sequence.  Raises on timeout.
         self._phase = _Phase.DISCONNECTED
         self._ws = await websockets.connect(self._url)
         await self._handshake()
 
     async def run_forever(self) -> None:
-        """Connect, subscribe, and consume events until stopped."""
+        # Connect, subscribe, and consume events until stopped.
         self._running = True
         while self._running:
             try:
@@ -215,7 +204,7 @@ class TastytradeStreamer:
         await self._close()
 
     async def run_for(self, duration_s: float) -> List[QuoteEvent | GreeksEvent]:
-        """Connect, subscribe, collect events for *duration_s* seconds, then close."""
+        # Connect, subscribe, collect events for *duration_s* seconds, then close.
         self.events.clear()
         await self.connect_and_subscribe()
         deadline = asyncio.get_event_loop().time() + duration_s
@@ -239,9 +228,7 @@ class TastytradeStreamer:
         self._running = False
         await self._close()
 
-    # ------------------------------------------------------------------
-    # Handshake
-    # ------------------------------------------------------------------
+# Handshake
 
     async def _handshake(self) -> None:
         # 1. SETUP
@@ -307,7 +294,7 @@ class TastytradeStreamer:
         timeout: float,
         label: str,
     ) -> DXLinkFrame:
-        """Read frames until *predicate* matches or *timeout* expires."""
+        # Read frames until *predicate* matches or *timeout* expires.
         deadline = asyncio.get_event_loop().time() + timeout
         while True:
             remaining = deadline - asyncio.get_event_loop().time()
@@ -337,9 +324,7 @@ class TastytradeStreamer:
 
             logger.debug("Ignoring frame while waiting for %s: %s", label, _redact(str(raw.get("type"))))
 
-    # ------------------------------------------------------------------
-    # Event consumption
-    # ------------------------------------------------------------------
+# Event consumption
 
     async def _consume_loop(self) -> None:
         while self._running:
@@ -379,9 +364,7 @@ class TastytradeStreamer:
 
         logger.debug("Unhandled frame type: %s", frame.msg_type)
 
-    # ------------------------------------------------------------------
-    # Reconnect
-    # ------------------------------------------------------------------
+# Reconnect
 
     async def _reconnect_backoff(self) -> None:
         self._reconnect_count += 1
@@ -396,20 +379,15 @@ class TastytradeStreamer:
         logger.info("Reconnecting in %.1fs (attempt %d)", delay, self._reconnect_count)
         await asyncio.sleep(delay)
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+# Helpers
 
-    # ------------------------------------------------------------------
-    # Proactive token refresh
-    # ------------------------------------------------------------------
+# Proactive token refresh
 
     async def _maybe_refresh_token(self) -> None:
-        """Refresh the DXLink token if it is close to expiry.
-
-        Invokes the user-supplied ``token_refresh_cb`` callback which
-        should return ``(new_token, new_dxlink_url)``.
-        """
+        # Refresh the DXLink token if it is close to expiry.
+        #
+        # Invokes the user-supplied ``token_refresh_cb`` callback which
+        # should return ``(new_token, new_dxlink_url)``.
         if not self._token_refresh_cb:
             return
         if self._cfg.token_refresh_ahead_s <= 0:
@@ -433,9 +411,7 @@ class TastytradeStreamer:
         except Exception:
             logger.exception("Token refresh callback failed — using old token")
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+# Helpers
 
     async def _send(self, msg: Dict[str, Any]) -> None:
         text = json.dumps(msg)
@@ -448,5 +424,6 @@ class TastytradeStreamer:
                 await self._ws.close()
             except Exception:
                 pass
+
             self._ws = None
         self._phase = _Phase.DISCONNECTED

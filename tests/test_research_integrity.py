@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import pytest
 import json
 import hashlib
@@ -7,7 +9,7 @@ from src.analysis.experiment_runner import ExperimentRunner, ExperimentConfig, R
 from src.core.outcome_engine import BarData
 
 def test_sharpe_proxy_math():
-    """Verify Sharpe formula using a simple known return sequence."""
+    # Verify Sharpe formula using a simple known return sequence.
     port = VirtualPortfolio(starting_cash=1000.0)
     
     # Create a 10% gain over 100 bars. 
@@ -57,7 +59,7 @@ class ManifestStrategy(ReplayStrategy):
     def finalize(self): return {}
 
 def test_manifest_integrity(tmp_path):
-    """Verify that every run produces a rich manifest."""
+    # Verify that every run produces a rich manifest.
     runner = ExperimentRunner(output_dir=str(tmp_path))
     pack_path = tmp_path / "integrity_pack.json"
     pack_data = {"bars": [{"timestamp_ms": 1000, "open": 100, "high": 101, "low": 99, "close": 100, "symbol": "SPY"}], "outcomes": [], "regimes": []}
@@ -92,7 +94,7 @@ def test_manifest_integrity(tmp_path):
     assert "git_commit" in m["environment"]
 
 def test_walk_forward_day_alignment():
-    """Verify that walk-forward splits align with the first bar of the day."""
+    # Verify that walk-forward splits align with the first bar of the day.
     runner = ExperimentRunner()
     
     # 3 days, 10 bars each

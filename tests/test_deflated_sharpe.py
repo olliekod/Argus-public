@@ -1,15 +1,14 @@
-"""
-Tests for Deflated Sharpe Ratio
-================================
+# Created by Oliver Meihls
 
-Verifies:
-- DSR formula correctness for known inputs
-- DSR increases with higher Sharpe
-- DSR increases with more observations (T)
-- DSR decreases with more trials (N)
-- Threshold Sharpe increases with N
-- Edge cases: insufficient data, zero variance, extreme skew/kurtosis
-"""
+# Tests for Deflated Sharpe Ratio
+#
+# Verifies:
+# - DSR formula correctness for known inputs
+# - DSR increases with higher Sharpe
+# - DSR increases with more observations (T)
+# - DSR decreases with more trials (N)
+# - Threshold Sharpe increases with N
+# - Edge cases: insufficient data, zero variance, extreme skew/kurtosis
 
 from __future__ import annotations
 
@@ -96,20 +95,20 @@ class TestComputeSharpeStats:
 
 class TestThresholdSharpe:
     def test_increases_with_n(self):
-        """More trials -> higher threshold (harder to beat random)."""
+        # More trials -> higher threshold (harder to beat random).
         sr0_10 = threshold_sharpe_ratio(1.0, 10)
         sr0_100 = threshold_sharpe_ratio(1.0, 100)
         sr0_1000 = threshold_sharpe_ratio(1.0, 1000)
         assert sr0_10 < sr0_100 < sr0_1000
 
     def test_increases_with_variance(self):
-        """Higher cross-sectional variance -> higher threshold."""
+        # Higher cross-sectional variance -> higher threshold.
         sr0_low = threshold_sharpe_ratio(0.1, 50)
         sr0_high = threshold_sharpe_ratio(1.0, 50)
         assert sr0_low < sr0_high
 
     def test_single_trial(self):
-        """With 1 trial, threshold is finite and less than for many trials."""
+        # With 1 trial, threshold is finite and less than for many trials.
         sr0 = threshold_sharpe_ratio(1.0, 1)
         assert math.isfinite(sr0)
         assert sr0 < threshold_sharpe_ratio(1.0, 100)
@@ -123,7 +122,7 @@ class TestThresholdSharpe:
 
 class TestDSR:
     def test_high_sharpe_high_dsr(self):
-        """A very high observed Sharpe should yield DSR close to 1."""
+        # A very high observed Sharpe should yield DSR close to 1.
         dsr = compute_deflated_sharpe_ratio(
             observed_sharpe=3.0,
             threshold_sr=0.5,
@@ -134,7 +133,7 @@ class TestDSR:
         assert dsr > 0.99
 
     def test_low_sharpe_low_dsr(self):
-        """An observed Sharpe below threshold should yield DSR < 0.5."""
+        # An observed Sharpe below threshold should yield DSR < 0.5.
         dsr = compute_deflated_sharpe_ratio(
             observed_sharpe=0.3,
             threshold_sr=1.5,
@@ -145,7 +144,7 @@ class TestDSR:
         assert dsr < 0.5
 
     def test_dsr_increases_with_sharpe(self):
-        """DSR should increase as observed Sharpe increases."""
+        # DSR should increase as observed Sharpe increases.
         sr0 = 0.5
         dsr_low = compute_deflated_sharpe_ratio(0.5, sr0, 200)
         dsr_med = compute_deflated_sharpe_ratio(1.0, sr0, 200)
@@ -153,7 +152,7 @@ class TestDSR:
         assert dsr_low < dsr_med < dsr_high
 
     def test_dsr_increases_with_observations(self):
-        """DSR should increase with more observations (tighter CI)."""
+        # DSR should increase with more observations (tighter CI).
         dsr_10 = compute_deflated_sharpe_ratio(1.0, 0.5, 10)
         dsr_50 = compute_deflated_sharpe_ratio(1.0, 0.5, 50)
         dsr_500 = compute_deflated_sharpe_ratio(1.0, 0.5, 500)
@@ -161,7 +160,7 @@ class TestDSR:
         assert dsr_50 <= dsr_500
 
     def test_dsr_at_threshold(self):
-        """When observed SR == threshold SR, DSR should be ~0.5."""
+        # When observed SR == threshold SR, DSR should be ~0.5.
         dsr = compute_deflated_sharpe_ratio(1.0, 1.0, 1000)
         assert 0.45 < dsr < 0.55
 
@@ -170,7 +169,7 @@ class TestDSR:
         assert compute_deflated_sharpe_ratio(1.0, 0.5, 0) == 0.0
 
     def test_negative_denominator_guard(self):
-        """Extreme kurtosis should not crash, just return 0."""
+        # Extreme kurtosis should not crash, just return 0.
         dsr = compute_deflated_sharpe_ratio(
             observed_sharpe=0.5,
             threshold_sr=0.5,
@@ -183,7 +182,7 @@ class TestDSR:
 
 class TestEndToEndDSR:
     def test_positive_returns(self):
-        """Positive mean return series yields valid DSR in [0, 1] and correct metadata."""
+        # Positive mean return series yields valid DSR in [0, 1] and correct metadata.
         returns = [0.01, -0.005, 0.015, -0.002, 0.01] * 40  # 200 obs, positive mean
         result = deflated_sharpe_ratio(returns, n_trials=5)
         assert 0.0 <= result["dsr"] <= 1.0
@@ -192,14 +191,14 @@ class TestEndToEndDSR:
         assert result["observed_sharpe"] > 0
 
     def test_many_trials_lower_dsr(self):
-        """More trials should lower DSR (harder to beat random)."""
+        # More trials should lower DSR (harder to beat random).
         returns = [0.01, -0.005, 0.015, -0.002, 0.01] * 40
         dsr_5 = deflated_sharpe_ratio(returns, n_trials=5)
         dsr_100 = deflated_sharpe_ratio(returns, n_trials=100)
         assert dsr_5["dsr"] >= dsr_100["dsr"]
 
     def test_with_all_sharpes(self):
-        """Providing all_sharpes should change the result."""
+        # Providing all_sharpes should change the result.
         returns = [0.01] * 100
         all_sharpes = [0.5, 0.3, 0.2, 0.4, 0.6]
         result = deflated_sharpe_ratio(returns, n_trials=5, all_sharpes=all_sharpes)

@@ -1,18 +1,17 @@
-"""
-Pantheon Context Loader
-=======================
+# Created by Oliver Meihls
 
-Provides one-call bootstrap functions that populate a :class:`ContextInjector`
-from live Argus data sources.
-
-Called once at :class:`~scripts.research_engine.ResearchEngine` startup and
-refreshed between research cases.
-
-Data sources:
-- ``data/argus.db``    — symbol universe (bar availability), experiment results
-- ``data/factory.db``  — promoted strategy library
-- ``config/``          — risk engine hard limits
-"""
+# Pantheon Context Loader
+#
+# Provides one-call bootstrap functions that populate a :class:`ContextInjector`
+# from live Argus data sources.
+#
+# Called once at :class:`~scripts.research_engine.ResearchEngine` startup and
+# refreshed between research cases.
+#
+# Data sources:
+# - ``data/argus.db``    — symbol universe (bar availability), experiment results
+# - ``data/factory.db``  — promoted strategy library
+# - ``config/``          — risk engine hard limits
 
 from __future__ import annotations
 
@@ -25,18 +24,15 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Individual Loaders
-# ═══════════════════════════════════════════════════════════════════════════
 
 def load_available_symbols(
     db_path: str = "data/argus.db",
 ) -> List[str]:
-    """Query argus.db for all symbols that have actual bar data.
-
-    Returns a deduplicated, sorted list of confirmed tradeable tickers.
-    Returns empty list gracefully if the DB or table does not exist.
-    """
+    # Query argus.db for all symbols that have actual bar data.
+    #
+    # Returns a deduplicated, sorted list of confirmed tradeable tickers.
+    # Returns empty list gracefully if the DB or table does not exist.
     path = Path(db_path)
     if not path.exists():
         logger.debug("context_loader: argus.db not found at %s — symbol universe empty", db_path)
@@ -69,11 +65,10 @@ def load_strategy_library(
     factory_db: str = "data/factory.db",
     max_entries: int = 30,
 ) -> List[Dict[str, Any]]:
-    """Query factory.db for all promoted strategies.
-
-    Returns a list of dicts with keys: name, grading, universe, signals.
-    Used by Prometheus (novelty) and Athena (novelty scoring).
-    """
+    # Query factory.db for all promoted strategies.
+    #
+    # Returns a list of dicts with keys: name, grading, universe, signals.
+    # Used by Prometheus (novelty) and Athena (novelty scoring).
     path = Path(factory_db)
     if not path.exists():
         logger.debug("context_loader: factory.db not found at %s — strategy library empty", factory_db)
@@ -103,6 +98,7 @@ def load_strategy_library(
                     manifest = json.loads(row["final_manifest"])
                 except Exception:
                     pass
+
             entries.append({
                 "name": row["name"],
                 "grading": row["grading"],
@@ -122,14 +118,13 @@ def load_hades_performance_log(
     argus_db: str = "data/argus.db",
     max_entries: int = 10,
 ) -> List[Dict[str, Any]]:
-    """Query the experiment_results table for recent backtest outcomes.
-
-    Returns a list of dicts with: strategy_name, sharpe, pnl, win_rate,
-    kill_reason, grading.
-
-    Returns empty list gracefully if the table doesn't exist (Hades hasn't
-    run yet, or different schema).
-    """
+    # Query the experiment_results table for recent backtest outcomes.
+    #
+    # Returns a list of dicts with: strategy_name, sharpe, pnl, win_rate,
+    # kill_reason, grading.
+    #
+    # Returns empty list gracefully if the table doesn't exist (Hades hasn't
+    # run yet, or different schema).
     path = Path(argus_db)
     if not path.exists():
         return []
@@ -178,11 +173,10 @@ def load_hades_performance_log(
 
 
 def load_risk_limits(config: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract key risk caps from the loaded Argus config dict.
-
-    Returns a flat dict of the most operationally relevant hard limits
-    for Prometheus to respect when sizing strategies.
-    """
+    # Extract key risk caps from the loaded Argus config dict.
+    #
+    # Returns a flat dict of the most operationally relevant hard limits
+    # for Prometheus to respect when sizing strategies.
     risk = config.get("risk_engine", {})
     limits: Dict[str, Any] = {}
 
@@ -209,35 +203,30 @@ def load_risk_limits(config: Dict[str, Any]) -> Dict[str, Any]:
     return limits
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Master Bootstrap
-# ═══════════════════════════════════════════════════════════════════════════
 
 def bootstrap_context_injector(
     config: Optional[Dict[str, Any]] = None,
     argus_db: str = "data/argus.db",
     factory_db: str = "data/factory.db",
 ) -> "ContextInjector":  # type: ignore[name-defined]
-    """Build a fully-enriched ContextInjector from all live Argus data sources.
-
-    Called once at ResearchEngine startup. Safe to call repeatedly — all
-    loaders handle missing tables / DBs gracefully and return empty lists.
-
-    Parameters
-    ----------
-    config : dict, optional
-        Loaded Argus config dict (from ``load_config()``). Used for risk limits.
-        If None, conservative defaults are applied.
-    argus_db : str
-        Path to argus.db (symbol universe + Hades results).
-    factory_db : str
-        Path to factory.db (promoted strategy library).
-
-    Returns
-    -------
-    ContextInjector
-        Fully populated context injector ready for use in the debate pipeline.
-    """
+    # Build a fully-enriched ContextInjector from all live Argus data sources.
+    #
+    # Called once at ResearchEngine startup. Safe to call repeatedly — all
+    # loaders handle missing tables / DBs gracefully and return empty lists.
+    #
+    # Parameters
+    # config : dict, optional
+    # Loaded Argus config dict (from ``load_config()``). Used for risk limits.
+    # If None, conservative defaults are applied.
+    # argus_db : str
+    # Path to argus.db (symbol universe + Hades results).
+    # factory_db : str
+    # Path to factory.db (promoted strategy library).
+    #
+    # Returns
+    # ContextInjector
+    # Fully populated context injector ready for use in the debate pipeline.
     from src.agent.pantheon.roles import ContextInjector
 
     ctx = ContextInjector()
@@ -284,12 +273,10 @@ def bootstrap_context_injector(
     return ctx
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _infer_category(manifest: Dict[str, Any]) -> str:
-    """Infer a rough strategy category from the manifest for library display."""
+    # Infer a rough strategy category from the manifest for library display.
     name = manifest.get("name", "").lower()
     signals = [s.lower() for s in manifest.get("signals", [])]
     direction = manifest.get("direction", "").upper()

@@ -1,11 +1,11 @@
-"""
-Compact causal-slice report for Argus Kalshi paper logs.
+# Created by Oliver Meihls
 
-Reads logs/paper_trades.jsonl and analyzes settlement outcomes grouped by
-decision_context fields written at fill time.
-
-This script is JSONL-only and does not write to the DB.
-"""
+# Compact causal-slice report for Argus Kalshi paper logs.
+#
+# Reads logs/paper_trades.jsonl and analyzes settlement outcomes grouped by
+# decision_context fields written at fill time.
+#
+# This script is JSONL-only and does not write to the DB.
 
 from __future__ import annotations
 

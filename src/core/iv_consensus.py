@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 import json
@@ -75,11 +77,10 @@ _OCC_PATTERN = re.compile(r"^\.?([A-Z]+)(\d{6})([CP])(\d+(?:\.\d+)?)$")
 
 
 def normalize_iv(iv: Optional[float]) -> Optional[float]:
-    """Normalize IV to decimal (e.g. 0.22 = 22%). Rejects None/NaN/<=0 or >10.
-
-    If the raw value is > 1.5, it is interpreted as percent (e.g. 47.0 → 0.47).
-    Logged at DEBUG as normalize_iv_percent_interpreted so we don't flood WARNING.
-    """
+    # Normalize IV to decimal (e.g. 0.22 = 22%). Rejects None/NaN/<=0 or >10.
+    #
+    # If the raw value is > 1.5, it is interpreted as percent (e.g. 47.0 → 0.47).
+    # Logged at DEBUG as normalize_iv_percent_interpreted so we don't flood WARNING.
     if iv is None:
         return None
     try:
@@ -241,17 +242,17 @@ class IVConsensusEngine:
 
     @property
     def last_update_ms(self) -> int:
-        """Midnight-UTC epoch ms of the most recent observation."""
+        # Midnight-UTC epoch ms of the most recent observation.
         return self._last_update_ms
 
     @property
     def last_source_update_ms(self) -> Dict[str, int]:
-        """Epoch ms of the most recent observation per source."""
+        # Epoch ms of the most recent observation per source.
         return dict(self._last_source_update_ms)
 
     @property
     def size(self) -> int:
-        """Total number of unique contract observations."""
+        # Total number of unique contract observations.
         return len(self._contract_obs)
 
     def _usable(self, obs: Optional[SourceObservation], as_of_ms: int, freshness_ms: int) -> bool:

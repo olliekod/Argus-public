@@ -1,9 +1,10 @@
-"""Track expected-vs-realized edge retention per context key.
+# Created by Oliver Meihls
 
-Maintains rolling windows of expected edge (at signal time) and realized edge
-(at settlement) for each context key.  Provides retention ratios and weight
-multipliers so the farm can down-weight contexts where edge is decaying.
-"""
+# Track expected-vs-realized edge retention per context key.
+#
+# Maintains rolling windows of expected edge (at signal time) and realized edge
+# (at settlement) for each context key.  Provides retention ratios and weight
+# multipliers so the farm can down-weight contexts where edge is decaying.
 
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ from .config import KalshiConfig
 
 
 class EdgeTracker:
-    """Thread-safe rolling-window edge retention tracker."""
+    # Thread-safe rolling-window edge retention tracker.
 
     def __init__(self, cfg: KalshiConfig) -> None:
         self._enabled = cfg.enable_edge_tracking
@@ -39,7 +40,7 @@ class EdgeTracker:
     def record_entry(
         self, context_key: str, expected_edge: float, entry_price_cents: int
     ) -> None:
-        """Store expected edge at signal time."""
+        # Store expected edge at signal time.
         if not self._enabled:
             return
         with self._lock:
@@ -55,7 +56,7 @@ class EdgeTracker:
         entry_price_cents: int,
         quantity: int,
     ) -> None:
-        """Compute and store realized edge from settlement outcome."""
+        # Compute and store realized edge from settlement outcome.
         if not self._enabled:
             return
         if entry_price_cents <= 0 or quantity <= 0:
@@ -72,7 +73,7 @@ class EdgeTracker:
     # ── Queries ──────────────────────────────────────────────────────────
 
     def get_retention_ratio(self, context_key: str) -> float:
-        """Return realized_avg / expected_avg, or 1.0 if insufficient data."""
+        # Return realized_avg / expected_avg, or 1.0 if insufficient data.
         with self._lock:
             realized = self._realized.get(context_key)
             expected = self._expected.get(context_key)
@@ -89,14 +90,14 @@ class EdgeTracker:
             return realized_avg / expected_avg
 
     def get_weight_multiplier(self, context_key: str) -> float:
-        """Return 1.0 normally; decay_multiplier if retention < threshold."""
+        # Return 1.0 normally; decay_multiplier if retention < threshold.
         ratio = self.get_retention_ratio(context_key)
         if ratio < self._decay_threshold:
             return self._decay_multiplier
         return 1.0
 
     def diagnostics(self) -> Dict[str, Any]:
-        """Summary stats across all tracked context keys."""
+        # Summary stats across all tracked context keys.
         with self._lock:
             keys = set(self._expected.keys()) | set(self._realized.keys())
 

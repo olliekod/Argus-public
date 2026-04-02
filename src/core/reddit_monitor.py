@@ -1,10 +1,9 @@
-"""
-Reddit Sentiment Monitor
-========================
+# Created by Oliver Meihls
 
-Scrapes crypto subreddits for sentiment analysis.
-Uses strict bot filtering: account >= 90 days, karma >= 500.
-"""
+# Reddit Sentiment Monitor
+#
+# Scrapes crypto subreddits for sentiment analysis.
+# Uses strict bot filtering: account >= 90 days, karma >= 500.
 
 import asyncio
 import logging
@@ -27,7 +26,7 @@ except ImportError:
 
 @dataclass
 class RedditSentiment:
-    """Aggregated Reddit sentiment snapshot."""
+    # Aggregated Reddit sentiment snapshot.
     timestamp: str
     posts_analyzed: int
     comments_analyzed: int
@@ -47,18 +46,16 @@ class RedditSentiment:
 
 
 class RedditMonitor:
-    """
-    Reddit sentiment monitor with strict bot filtering.
-    
-    Monitors:
-    - r/Bitcoin
-    - r/CryptoCurrency
-    - r/wallstreetbets (crypto mentions only)
-    
-    Strict filtering:
-    - Account age >= 90 days
-    - Total karma >= 500
-    """
+    # Reddit sentiment monitor with strict bot filtering.
+    #
+    # Monitors:
+    # - r/Bitcoin
+    # - r/CryptoCurrency
+    # - r/wallstreetbets (crypto mentions only)
+    #
+    # Strict filtering:
+    # - Account age >= 90 days
+    # - Total karma >= 500
     
     # Subreddits to monitor
     SUBREDDITS = [
@@ -95,14 +92,12 @@ class RedditMonitor:
         client_secret: str = None,
         user_agent: str = "Argus/1.0",
     ):
-        """
-        Initialize Reddit monitor.
-        
-        Args:
-            client_id: Reddit app client ID
-            client_secret: Reddit app client secret
-            user_agent: User agent string for Reddit API
-        """
+        # Initialize Reddit monitor.
+        #
+        # Args:
+        # client_id: Reddit app client ID
+        # client_secret: Reddit app client secret
+        # user_agent: User agent string for Reddit API
         self.client_id = client_id
         self.client_secret = client_secret
         self.user_agent = user_agent
@@ -125,7 +120,7 @@ class RedditMonitor:
         )
     
     def _init_reddit(self) -> None:
-        """Initialize PRAW Reddit instance."""
+        # Initialize PRAW Reddit instance.
         try:
             self._reddit = praw.Reddit(
                 client_id=self.client_id,
@@ -138,20 +133,18 @@ class RedditMonitor:
             self._reddit = None
     
     def is_valid_user(self, author) -> Tuple[bool, str]:
-        """
-        Check if user passes strict bot filtering.
-        
-        Criteria:
-        - Account age >= 90 days
-        - Total karma >= 500
-        - Not AutoModerator or [deleted]
-        
-        Args:
-            author: PRAW Redditor object
-            
-        Returns:
-            (is_valid, rejection_reason)
-        """
+        # Check if user passes strict bot filtering.
+        #
+        # Criteria:
+        # - Account age >= 90 days
+        # - Total karma >= 500
+        # - Not AutoModerator or [deleted]
+        #
+        # Args:
+        # author: PRAW Redditor object
+        #
+        # Returns:
+        # (is_valid, rejection_reason)
         if author is None:
             return False, "deleted_user"
         
@@ -184,15 +177,13 @@ class RedditMonitor:
             return False, f"error_{str(e)[:20]}"
     
     def analyze_text(self, text: str) -> Dict:
-        """
-        Analyze text for sentiment and tickers.
-        
-        Args:
-            text: Post title, body, or comment text
-            
-        Returns:
-            Dict with sentiment scores and detected tickers
-        """
+        # Analyze text for sentiment and tickers.
+        #
+        # Args:
+        # text: Post title, body, or comment text
+        #
+        # Returns:
+        # Dict with sentiment scores and detected tickers
         text_lower = text.lower()
         
         # Count keyword matches
@@ -210,17 +201,15 @@ class RedditMonitor:
         }
     
     async def fetch_sentiment(self, force_refresh: bool = False) -> Optional[RedditSentiment]:
-        """
-        Fetch current sentiment from Reddit.
-        
-        Uses caching to respect rate limits.
-        
-        Args:
-            force_refresh: Bypass cache
-            
-        Returns:
-            RedditSentiment snapshot or None
-        """
+        # Fetch current sentiment from Reddit.
+        #
+        # Uses caching to respect rate limits.
+        #
+        # Args:
+        # force_refresh: Bypass cache
+        #
+        # Returns:
+        # RedditSentiment snapshot or None
         # Check cache
         if not force_refresh and self._cache and self._cache_time:
             if datetime.now() - self._cache_time < self._cache_ttl:
@@ -241,7 +230,7 @@ class RedditMonitor:
         return result
     
     def _fetch_sync(self) -> Optional[RedditSentiment]:
-        """Synchronous Reddit fetching (PRAW is not async)."""
+        # Synchronous Reddit fetching (PRAW is not async).
         posts_analyzed = 0
         comments_analyzed = 0
         users_filtered = 0
@@ -357,16 +346,14 @@ class RedditMonitor:
         sentiment: RedditSentiment,
         open_trades: List = None,
     ) -> str:
-        """
-        Compare retail sentiment to our current position.
-        
-        Args:
-            sentiment: Current Reddit sentiment
-            open_trades: List of open paper trades (if any)
-            
-        Returns:
-            Insight message for Telegram
-        """
+        # Compare retail sentiment to our current position.
+        #
+        # Args:
+        # sentiment: Current Reddit sentiment
+        # open_trades: List of open paper trades (if any)
+        #
+        # Returns:
+        # Insight message for Telegram
         open_trades = open_trades or []
         
         # Determine our bias
@@ -397,7 +384,7 @@ class RedditMonitor:
                 return f"📊 Retail sentiment: {score:+.0f}/100"
     
     def format_telegram(self, sentiment: RedditSentiment) -> str:
-        """Format sentiment for Telegram notification."""
+        # Format sentiment for Telegram notification.
         # Emoji based on score
         if sentiment.sentiment_score > 50:
             emoji = "🟢"
@@ -437,7 +424,7 @@ Confidence: {sentiment.confidence:.0%}
 Subreddits: {', '.join(sentiment.subreddits_scanned)}"""
     
     def get_stats(self) -> Dict:
-        """Get monitoring statistics."""
+        # Get monitoring statistics.
         return {
             'total_scanned': self._total_scanned,
             'total_filtered': self._total_filtered,
@@ -449,7 +436,7 @@ Subreddits: {', '.join(sentiment.subreddits_scanned)}"""
 
 
 async def test_reddit_monitor():
-    """Test the Reddit monitor (requires API keys)."""
+    # Test the Reddit monitor (requires API keys).
     print("Reddit Monitor Test")
     print("=" * 40)
     

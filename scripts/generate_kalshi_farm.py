@@ -1,11 +1,11 @@
-"""
-Generate Kalshi farm config. By default writes the FULL 21k-line YAML (legacy).
+# Created by Oliver Meihls
 
-For a small config that never drifts, use the compact farm format instead:
-  python scripts/generate_kalshi_farm.py --compact
-Then use: python -m argus_kalshi --settings config/kalshi_farm_compact.yaml
-Params are generated at load time from farm_grid.py (same grid, deterministic).
-"""
+# Generate Kalshi farm config. By default writes the FULL 21k-line YAML (legacy).
+#
+# For a small config that never drifts, use the compact farm format instead:
+# python scripts/generate_kalshi_farm.py --compact
+# Then use: python -m argus_kalshi --settings config/kalshi_farm_compact.yaml
+# Params are generated at load time from farm_grid.py (same grid, deterministic).
 import argparse
 import itertools
 import yaml
@@ -103,7 +103,7 @@ def generate_grid():
 
 
 def write_compact_config() -> None:
-    """Write the short farm YAML that uses farm_grid at load time (no 21k lines)."""
+    # Write the short farm YAML that uses farm_grid at load time (no 21k lines).
     out = Path("config/kalshi_farm_compact.yaml")
     out.parent.mkdir(exist_ok=True)
     content = """# Compact farm — params generated at load from farm_grid.py (deterministic, no drift).

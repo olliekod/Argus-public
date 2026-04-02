@@ -1,11 +1,11 @@
-"""
-Standalone UI client for Argus Kalshi when visualizer_process == "separate".
+# Created by Oliver Meihls
 
-Connect to the trading process IPC server and run the terminal UI from
-received snapshots so the trading event loop is not blocked by rendering.
-
-    python -m argus_kalshi.ui_client --connect 127.0.0.1:9999
-"""
+# Standalone UI client for Argus Kalshi when visualizer_process == "separate".
+#
+# Connect to the trading process IPC server and run the terminal UI from
+# received snapshots so the trading event loop is not blocked by rendering.
+#
+# python -m argus_kalshi.ui_client --connect 127.0.0.1:9999
 
 from __future__ import annotations
 
@@ -21,12 +21,12 @@ IPC_READ_LIMIT = 32 * 1024 * 1024  # 32 MB
 
 
 def _crash_log_path() -> str:
-    """Use cwd so the log is always in project/logs/ when run as subprocess from runner."""
+    # Use cwd so the log is always in project/logs/ when run as subprocess from runner.
     return os.path.join(os.getcwd(), "logs", "argus_ui_crash.log")
 
 
 def _log_crash(msg: str, exc: Optional[Exception] = None) -> None:
-    """Write crash info to a file so it survives the terminal closing."""
+    # Write crash info to a file so it survives the terminal closing.
     path = _crash_log_path()
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -36,13 +36,14 @@ def _log_crash(msg: str, exc: Optional[Exception] = None) -> None:
                 traceback.print_exception(type(exc), exc, getattr(exc, "__traceback__", None), file=f)
     except Exception:
         pass
+
     print(msg, file=sys.stderr)
     if exc:
         traceback.print_exception(type(exc), exc, getattr(exc, "__traceback__", None), file=sys.stderr)
 
 
 def _checkpoint(msg: str) -> None:
-    """Append a checkpoint line to the crash log (no exception). Use to see how far we got before a non-Python crash."""
+    # Append a checkpoint line to the crash log (no exception). Use to see how far we got before a non-Python crash.
     path = _crash_log_path()
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -53,7 +54,7 @@ def _checkpoint(msg: str) -> None:
 
 
 async def _connect_with_retry(host: str, port: int, max_attempts: int = 10) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
-    """Connect to IPC server with retries so UI can start before backend is fully ready."""
+    # Connect to IPC server with retries so UI can start before backend is fully ready.
     for attempt in range(max_attempts):
         try:
             return await asyncio.open_connection(host, port, limit=IPC_READ_LIMIT)
@@ -89,6 +90,7 @@ async def run_ui_client(host: str, port: int) -> None:
                     snapshot_queue.put_nowait(snapshot)
         except asyncio.CancelledError:
             pass
+
         except Exception as e:
             _log_crash(f"UI reader error: {e}", e)
 
@@ -114,6 +116,7 @@ async def run_ui_client(host: str, port: int) -> None:
         await recv_task
     except asyncio.CancelledError:
         pass
+
     finally:
         await vision.stop()
         writer.close()
@@ -155,6 +158,7 @@ def main(connect: Optional[str] = None) -> None:
         asyncio.run(run_ui_client(host, port))
     except KeyboardInterrupt:
         pass
+
     except ConnectionRefusedError:
         print(f"Cannot connect to {host}:{port} — is the trading process running with visualizer_process=separate?", file=sys.stderr)
         sys.exit(1)

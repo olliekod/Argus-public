@@ -1,14 +1,14 @@
-"""
-Tests for Deribit rate limiter correctness (10.2).
+# Created by Oliver Meihls
 
-Verifies:
-- Rate limiter resets after 60 seconds
-- Requests are throttled at the configured limit
-- Counter tracks correctly across the minute boundary
-- No burst beyond limit
-
-Uses monkeypatched time (no real sleeps).
-"""
+# Tests for Deribit rate limiter correctness (10.2).
+#
+# Verifies:
+# - Rate limiter resets after 60 seconds
+# - Requests are throttled at the configured limit
+# - Counter tracks correctly across the minute boundary
+# - No burst beyond limit
+#
+# Uses monkeypatched time (no real sleeps).
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from src.connectors.deribit_client import DeribitClient
 
 
 class FakeDatetime:
-    """Controllable datetime replacement for deterministic tests."""
+    # Controllable datetime replacement for deterministic tests.
 
     def __init__(self, start: datetime):
         self._now = start
@@ -37,7 +37,7 @@ class FakeDatetime:
 
 
 class TestDeribitRateLimiter:
-    """Validate rate limiter enforces 20 req/min for unauthenticated access."""
+    # Validate rate limiter enforces 20 req/min for unauthenticated access.
 
     @pytest.fixture
     def client(self):
@@ -50,7 +50,7 @@ class TestDeribitRateLimiter:
 
     @pytest.mark.asyncio
     async def test_counter_increments(self, client):
-        """Each request increments the counter."""
+        # Each request increments the counter.
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.json = AsyncMock(return_value={"result": {}})
@@ -70,7 +70,7 @@ class TestDeribitRateLimiter:
 
     @pytest.mark.asyncio
     async def test_counter_resets_after_60s(self, client):
-        """Counter resets to 0 after 60 seconds elapse."""
+        # Counter resets to 0 after 60 seconds elapse.
         t0 = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         client._last_reset = t0
         client._request_count = 15
@@ -98,7 +98,7 @@ class TestDeribitRateLimiter:
 
     @pytest.mark.asyncio
     async def test_throttle_at_limit(self, client):
-        """When at limit, should sleep until the minute resets."""
+        # When at limit, should sleep until the minute resets.
         t0 = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         client._last_reset = t0
         client._request_count = 20  # At the limit
@@ -128,12 +128,12 @@ class TestDeribitRateLimiter:
             assert 25 <= wait_time <= 35, f"Expected ~30s wait, got {wait_time}"
 
     def test_rate_limit_value(self, client):
-        """Rate limit should be 20 for unauthenticated."""
+        # Rate limit should be 20 for unauthenticated.
         assert client._rate_limit == 20
 
     @pytest.mark.asyncio
     async def test_no_burst_beyond_limit(self, client):
-        """Verify that request_count never exceeds _rate_limit before reset."""
+        # Verify that request_count never exceeds _rate_limit before reset.
         t0 = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
         client._last_reset = t0
         client._request_count = 0

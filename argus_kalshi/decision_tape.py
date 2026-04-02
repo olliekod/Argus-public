@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 import json
@@ -159,7 +161,7 @@ def build_tape_record(
 
 
 class DecisionTapeWriter:
-    """Background JSONL writer for decision-tape records."""
+    # Background JSONL writer for decision-tape records.
 
     def __init__(
         self,

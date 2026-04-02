@@ -1,10 +1,10 @@
-"""
-Comprehensive execution lifecycle tests.
+# Created by Oliver Meihls
 
-Tests the full order lifecycle: signal → placement → fill → settlement → PnL,
-including dry-run paper trading, risk controls, timeout/cancellation, duplicate
-prevention, and multi-asset scenarios.
-"""
+# Comprehensive execution lifecycle tests.
+#
+# Tests the full order lifecycle: signal → placement → fill → settlement → PnL,
+# including dry-run paper trading, risk controls, timeout/cancellation, duplicate
+# prevention, and multi-asset scenarios.
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def _ob(ticker: str = TICKER_BTC, yes_bid: int = 40, no_bid: int = 40,
 
 
 class MockRest:
-    """Mock REST client that records order calls."""
+    # Mock REST client that records order calls.
     def __init__(self, fail_always: bool = False):
         self.orders: List[Dict[str, Any]] = []
         self.cancels: List[str] = []
@@ -96,7 +96,7 @@ class MockRest:
 
 
 async def _seed_strategy(bus: Bus, ticker: str = TICKER_BTC, asset: str = "BTC"):
-    """Publish truth tick + metadata so strategy doesn't reject signals."""
+    # Publish truth tick + metadata so strategy doesn't reject signals.
     topic = f"{asset.lower()}.mid_price"
     await bus.publish(topic, BtcMidPrice(price=67000.0, timestamp=time.time(), asset=asset))
     await bus.publish("kalshi.market_metadata", MarketMetadata(
@@ -109,13 +109,11 @@ async def _seed_strategy(bus: Bus, ticker: str = TICKER_BTC, asset: str = "BTC")
     await asyncio.sleep(0.05)
 
 
-# ======================================================================
 #  1. DRY-RUN PAPER TRADING
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_dry_run_emits_paper_fill():
-    """In dry_run mode, execution should emit a synthetic FillEvent (no REST call)."""
+    # In dry_run mode, execution should emit a synthetic FillEvent (no REST call).
     bus = Bus()
     rest = MockRest()
     exe = ExecutionEngine(_cfg(dry_run=True, scenario_profile="best"), bus, rest)
@@ -230,13 +228,11 @@ async def test_early_exit_pnl_deducts_fees():
     tracker.stop()
 
 
-# ======================================================================
 #  2. LIVE ORDER PLACEMENT + FILL
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_live_order_placement_and_fill():
-    """Live mode: signal → create_order → fill arrives → position tracked."""
+    # Live mode: signal → create_order → fill arrives → position tracked.
     bus = Bus()
     rest = MockRest()
     exe = ExecutionEngine(_cfg(), bus, rest)
@@ -269,13 +265,11 @@ async def test_live_order_placement_and_fill():
     await exe.stop()
 
 
-# ======================================================================
 #  3. ORDER TIMEOUT → CANCEL
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_order_timeout_cancels():
-    """Unfilled order should be cancelled after timeout."""
+    # Unfilled order should be cancelled after timeout.
     bus = Bus()
     rest = MockRest()
     exe = ExecutionEngine(_cfg(order_timeout_ms=200), bus, rest)
@@ -304,13 +298,11 @@ async def test_order_timeout_cancels():
     await exe.stop()
 
 
-# ======================================================================
 #  4. DUPLICATE PREVENTION
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_duplicate_signal_for_same_market_blocked():
-    """Only one pending order per market — duplicate signals are dropped."""
+    # Only one pending order per market — duplicate signals are dropped.
     bus = Bus()
     rest = MockRest()
     exe = ExecutionEngine(_cfg(order_timeout_ms=5000), bus, rest)
@@ -333,13 +325,11 @@ async def test_duplicate_signal_for_same_market_blocked():
     await exe.stop()
 
 
-# ======================================================================
 #  5. RISK HALT
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_risk_event_halts_execution():
-    """Risk events should halt execution and cancel pending orders."""
+    # Risk events should halt execution and cancel pending orders.
     bus = Bus()
     rest = MockRest()
     exe = ExecutionEngine(_cfg(order_timeout_ms=5000), bus, rest)
@@ -380,13 +370,11 @@ async def test_risk_event_halts_execution():
     await exe.stop()
 
 
-# ======================================================================
 #  6. API ERROR HANDLING
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_api_error_publishes_error_update():
-    """REST error should publish an error OrderUpdate, not crash."""
+    # REST error should publish an error OrderUpdate, not crash.
     bus = Bus()
     rest = MockRest(fail_always=True)  # all calls fail
     exe = ExecutionEngine(_cfg(), bus, rest)
@@ -411,13 +399,11 @@ async def test_api_error_publishes_error_update():
     await exe.stop()
 
 
-# ======================================================================
 #  7. DEPTH CHECK
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_insufficient_depth_blocks_order():
-    """Order should be rejected if orderbook depth is insufficient."""
+    # Order should be rejected if orderbook depth is insufficient.
     bus = Bus()
     rest = MockRest()
     exe = ExecutionEngine(_cfg(), bus, rest)
@@ -454,16 +440,12 @@ async def test_insufficient_depth_blocks_order():
     await exe.stop()
 
 
-# ======================================================================
 #  8. FULL STRATEGY → EXECUTION PIPELINE
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_full_pipeline_strategy_to_execution():
-    """
-    Full pipeline: price tick + orderbook + probability →
-    strategy evaluates → emits signal → execution places order.
-    """
+    # Full pipeline: price tick + orderbook + probability →
+    # strategy evaluates → emits signal → execution places order.
     bus = Bus()
     rest = MockRest()
     config = _cfg()
@@ -506,13 +488,11 @@ async def test_full_pipeline_strategy_to_execution():
     assert rest.orders[0]["count"] == 1
 
 
-# ======================================================================
 #  9. PASSIVE ORDER STYLE
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_passive_order_posts_at_bid():
-    """passive order_style should post at best bid, not cross spread."""
+    # passive order_style should post at best bid, not cross spread.
     bus = Bus()
     rest = MockRest()
     config = _cfg(default_order_style="passive", passive_order_timeout_ms=500, max_contracts_per_ticker=1)
@@ -555,13 +535,11 @@ async def test_passive_order_posts_at_bid():
     assert rest.orders[0]["count"] == 1
 
 
-# ======================================================================
 #  10. MULTI-ASSET SIGNALS
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_multi_asset_independent_signals():
-    """BTC and ETH should generate independent signals."""
+    # BTC and ETH should generate independent signals.
     bus = Bus()
     rest = MockRest()
     config = _cfg()
@@ -614,13 +592,11 @@ async def test_multi_asset_independent_signals():
     assert TICKER_ETH in tickers_ordered
 
 
-# ======================================================================
 #  11. EXECUTION RESUME AFTER HALT
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_resume_after_halt():
-    """After risk halt + resume, new signals should be processed."""
+    # After risk halt + resume, new signals should be processed.
     bus = Bus()
     rest = MockRest()
     exe = ExecutionEngine(_cfg(order_timeout_ms=5000), bus, rest)
@@ -652,13 +628,11 @@ async def test_resume_after_halt():
     await exe.stop()
 
 
-# ======================================================================
 #  12. INVALID ORDERBOOK BLOCKS TRADE
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_invalid_orderbook_blocks_strategy():
-    """Strategy should not emit signals when orderbook is invalid."""
+    # Strategy should not emit signals when orderbook is invalid.
     bus = Bus()
     rest = MockRest()
     config = _cfg()
@@ -690,13 +664,11 @@ async def test_invalid_orderbook_blocks_strategy():
     assert len(rest.orders) == 0
 
 
-# ======================================================================
 #  13. PERSISTENCE FILTER
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_persistence_filter_delays_signal():
-    """Signal should only emit after edge persists for persistence_window_ms."""
+    # Signal should only emit after edge persists for persistence_window_ms.
     bus = Bus()
     rest = MockRest()
     config = _cfg(persistence_window_ms=200, max_contracts_per_ticker=1)
@@ -741,13 +713,11 @@ async def test_persistence_filter_delays_signal():
     assert len(rest.orders) == 1
 
 
-# ======================================================================
 #  14. RANGE MARKET MAX EXPIRY CAP
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_range_market_too_far_to_expiry_blocks_signal():
-    """Range markets with > range_max_entry_minutes_to_expiry should not emit signals."""
+    # Range markets with > range_max_entry_minutes_to_expiry should not emit signals.
     from datetime import datetime, timezone, timedelta
 
     bus = Bus()
@@ -815,23 +785,19 @@ async def test_range_market_too_far_to_expiry_blocks_signal():
     assert len(signals) == 0, "range_too_far_to_expiry should block any trade signal"
 
 
-# ======================================================================
 #  15. HOLD REVERSAL EXIT — COOLDOWN MUST NOT BLOCK
-# ======================================================================
 
 @pytest.mark.asyncio
 async def test_hold_reversal_exit_not_blocked_by_cooldown():
-    """
-    A protective reversal sell must fire immediately even when signal_cooldown_s
-    would ordinarily suppress a same-side signal.
-
-    Setup:
-      - Inject a hold position for the ticker.
-      - Set reversal conditions (drift and flow both reversed against position).
-      - Set a long signal_cooldown_s (30s) and seed _last_signal_time so the
-        cooldown window is still active.
-      - Expect a sell signal despite the cooldown.
-    """
+    # A protective reversal sell must fire immediately even when signal_cooldown_s
+    # would ordinarily suppress a same-side signal.
+    #
+    # Setup:
+    # - Inject a hold position for the ticker.
+    # - Set reversal conditions (drift and flow both reversed against position).
+    # - Set a long signal_cooldown_s (30s) and seed _last_signal_time so the
+    # cooldown window is still active.
+    # - Expect a sell signal despite the cooldown.
     from argus_kalshi.models import FairProbability, OrderbookState
     import time as _time
 
@@ -906,11 +872,9 @@ async def test_hold_reversal_exit_not_blocked_by_cooldown():
 
 @pytest.mark.asyncio
 async def test_hold_agreement_min_magnitude_blocks_noise():
-    """
-    When hold_momentum_agreement_min_drift > 0, a near-zero positive drift
-    should be treated as noise and block the hold entry even though its sign
-    technically 'agrees' with the forced side.
-    """
+    # When hold_momentum_agreement_min_drift > 0, a near-zero positive drift
+    # should be treated as noise and block the hold entry even though its sign
+    # technically 'agrees' with the forced side.
     bus = Bus()
     cfg = _cfg(
         hold_require_momentum_agreement=True,
@@ -965,10 +929,8 @@ async def test_hold_agreement_min_magnitude_blocks_noise():
 
 @pytest.mark.asyncio
 async def test_hold_agreement_passes_above_min_magnitude():
-    """
-    When drift is above hold_momentum_agreement_min_drift and agrees with the
-    forced side, hold entry should be allowed (no spurious block).
-    """
+    # When drift is above hold_momentum_agreement_min_drift and agrees with the
+    # forced side, hold entry should be allowed (no spurious block).
     from datetime import datetime, timezone, timedelta
 
     bus = Bus()

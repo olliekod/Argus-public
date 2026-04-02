@@ -1,9 +1,8 @@
-"""
-Volatility Regime Detector
-==========================
+# Created by Oliver Meihls
 
-Detects sudden volatility expansion or compression.
-"""
+# Volatility Regime Detector
+#
+# Detects sudden volatility expansion or compression.
 
 from typing import Any, Dict, List, Optional
 
@@ -13,16 +12,14 @@ from ..core.utils import calculate_volatility
 
 
 class VolatilityDetector(BaseDetector):
-    """
-    Detector for volatility regime changes.
-    
-    Monitors realized volatility and detects:
-    - Expansion: Vol spikes to 2x+ normal
-    - Compression: Vol drops to 0.5x normal
-    
-    Provides context for other strategies rather than
-    standalone trades.
-    """
+    # Detector for volatility regime changes.
+    #
+    # Monitors realized volatility and detects:
+    # - Expansion: Vol spikes to 2x+ normal
+    # - Compression: Vol drops to 0.5x normal
+    #
+    # Provides context for other strategies rather than
+    # standalone trades.
     
     def __init__(self, config: Dict[str, Any], db):
         super().__init__(config, db)
@@ -48,7 +45,7 @@ class VolatilityDetector(BaseDetector):
         )
     
     def update_price(self, symbol: str, price: float, timestamp: str) -> None:
-        """Add price point to history."""
+        # Add price point to history.
         if symbol not in self._price_history:
             self._price_history[symbol] = []
         
@@ -63,15 +60,13 @@ class VolatilityDetector(BaseDetector):
             self._price_history[symbol] = self._price_history[symbol][-max_entries:]
     
     async def analyze(self, market_data: Dict[str, Any]) -> Optional[Dict]:
-        """
-        Analyze for volatility regime changes.
-        
-        Args:
-            market_data: Price update data
-            
-        Returns:
-            Detection if regime change detected
-        """
+        # Analyze for volatility regime changes.
+        #
+        # Args:
+        # market_data: Price update data
+        #
+        # Returns:
+        # Detection if regime change detected
         if not self.enabled:
             return None
         
@@ -155,21 +150,21 @@ class VolatilityDetector(BaseDetector):
         return detection
     
     def calculate_edge(self, detection: Dict) -> float:
-        """Not applicable - informational detector."""
+        # Not applicable - informational detector.
         return 0
     
     def get_current_regime(self, symbol: str) -> str:
-        """Get current volatility regime for a symbol."""
+        # Get current volatility regime for a symbol.
         return self._current_regime.get(symbol, 'unknown')
     
     # ── bar-driven path (via event bus) ───────────────────
 
     def on_bar(self, event: BarEvent) -> None:
-        """Ingest a 1-minute bar as a price update for vol calculation."""
+        # Ingest a 1-minute bar as a price update for vol calculation.
         self.update_price(event.symbol, event.close, str(event.timestamp))
 
     def get_volatility(self, symbol: str) -> Dict[str, float]:
-        """Get current volatility readings."""
+        # Get current volatility readings.
         history = self._price_history.get(symbol, [])
         
         if len(history) < self.min_observations:

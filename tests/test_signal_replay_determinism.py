@@ -1,9 +1,8 @@
-"""
-Signal Replay Determinism Tests
-===============================
+# Created by Oliver Meihls
 
-Ensure signal emissions are deterministic across runs.
-"""
+# Signal Replay Determinism Tests
+#
+# Ensure signal emissions are deterministic across runs.
 
 from datetime import datetime, timezone
 

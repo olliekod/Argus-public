@@ -1,8 +1,9 @@
-"""Monte Carlo/bootstrap path stress on realized trades.
+# Created by Oliver Meihls
 
-Phase 4C: resample realized trade PnLs from a single replay run to
-estimate path sensitivity, ruin risk, and downside behavior.
-"""
+# Monte Carlo/bootstrap path stress on realized trades.
+#
+# Phase 4C: resample realized trade PnLs from a single replay run to
+# estimate path sensitivity, ruin risk, and downside behavior.
 
 from __future__ import annotations
 
@@ -80,7 +81,7 @@ def run_mc_paths(
     random_seed: Optional[int] = None,
     ruin_level: float = 0.2,
 ) -> Dict[str, Any]:
-    """Run MC/bootstrap path simulation on realized trade outcomes."""
+    # Run MC/bootstrap path simulation on realized trade outcomes.
     method_norm = (method or "bootstrap").strip().lower()
     if method_norm not in {"bootstrap", "iid"}:
         raise ValueError(f"Unsupported method: {method}")
@@ -146,7 +147,7 @@ def evaluate_mc_kill(
     mc_summary: Dict[str, Any],
     thresholds: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
-    """Apply configurable MC kill rules to path summary metrics."""
+    # Apply configurable MC kill rules to path summary metrics.
     th = thresholds or {}
     checks = [
         ("mc_median_return", mc_summary.get("median_return"), th.get("mc_median_return_min"), "min"),

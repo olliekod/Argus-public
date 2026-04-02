@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import asyncio
 import time
 import os

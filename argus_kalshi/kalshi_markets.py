@@ -1,11 +1,11 @@
-"""
-Market discovery and metadata engine for Kalshi multi-asset contracts.
+# Created by Oliver Meihls
 
-This module discovers target markets either from an explicit ticker list
-or by filtering on series/event, then fetches and publishes ``MarketMetadata``
-messages on the bus so that the strategy and probability modules have the
-strike prices, settlement times, and other contract parameters they need.
-"""
+# Market discovery and metadata engine for Kalshi multi-asset contracts.
+#
+# This module discovers target markets either from an explicit ticker list
+# or by filtering on series/event, then fetches and publishes ``MarketMetadata``
+# messages on the bus so that the strategy and probability modules have the
+# strike prices, settlement times, and other contract parameters they need.
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ _DIRECTIONAL_PHRASES = ("price up", "price down", "go up", "go down", "price hig
 
 
 def _looks_like_time_fragment(value: str) -> bool:
-    """Return True when a numeric ticker segment is really HHMM or HHMMSS."""
+    # Return True when a numeric ticker segment is really HHMM or HHMMSS.
     if len(value) == 4:
         hh = int(value[:2])
         mm = int(value[2:])
@@ -62,14 +62,13 @@ def _looks_like_time_fragment(value: str) -> bool:
 
 
 def _parse_strike_from_ticker(ticker: str, asset: Optional[str] = None) -> Optional[float]:
-    """Attempt to extract a numeric strike from a market ticker string.
-
-    Kalshi tickers often embed the strike, e.g.
-    ``KXBTCD-26FEB21-65000`` → 65000.0.
-    They also embed date/time (e.g. 08:30 → 30), which must not be used as strike.
-    When asset is provided, only numeric segments within that asset's strike range
-    are considered; otherwise the last segment is used (legacy behavior).
-    """
+    # Attempt to extract a numeric strike from a market ticker string.
+    #
+    # Kalshi tickers often embed the strike, e.g.
+    # ``KXBTCD-26FEB21-65000`` → 65000.0.
+    # They also embed date/time (e.g. 08:30 → 30), which must not be used as strike.
+    # When asset is provided, only numeric segments within that asset's strike range
+    # are considered; otherwise the last segment is used (legacy behavior).
     parts = re.findall(r"\d+(?:\.\d+)?", ticker)
     if not parts:
         return None
@@ -95,11 +94,10 @@ def _parse_strike_from_ticker(ticker: str, asset: Optional[str] = None) -> Optio
 
 
 def _parse_strike_from_text(raw: Dict, asset: str) -> Optional[float]:
-    """Best-effort strike extraction from human-readable market text.
-
-    Needed for rollover-style 15m contracts where API `strike_price` can be a
-    minute marker (e.g. 45) instead of the true strike shown in title/subtitle.
-    """
+    # Best-effort strike extraction from human-readable market text.
+    #
+    # Needed for rollover-style 15m contracts where API `strike_price` can be a
+    # minute marker (e.g. 45) instead of the true strike shown in title/subtitle.
     if asset not in _STRIKE_MIN_MAX:
         return None
     lo, hi = _STRIKE_MIN_MAX[asset]
@@ -131,7 +129,7 @@ def _parse_strike_from_text(raw: Dict, asset: str) -> Optional[float]:
 
 
 class MarketDiscovery:
-    """Fetches and tracks metadata for target Kalshi BTC/ETH/SOL markets."""
+    # Fetches and tracks metadata for target Kalshi BTC/ETH/SOL markets.
 
     def __init__(
         self,
@@ -172,12 +170,11 @@ class MarketDiscovery:
     # -- discovery -----------------------------------------------------------
 
     async def _discover(self) -> None:
-        """Fetch target markets and publish MarketMetadata messages.
-
-        Uses incremental update: newly found markets are added and stale markets
-        are pruned. This avoids the brief EMPTY flash that occurred when metadata
-        was cleared before re-population (especially near 15-minute rollovers).
-        """
+        # Fetch target markets and publish MarketMetadata messages.
+        #
+        # Uses incremental update: newly found markets are added and stale markets
+        # are pruned. This avoids the brief EMPTY flash that occurred when metadata
+        # was cleared before re-population (especially near 15-minute rollovers).
         tickers = self._cfg.target_market_tickers
         old_keys = set(self._metadata.keys())
         api_found: set = set()
@@ -206,7 +203,7 @@ class MarketDiscovery:
         )
 
     async def _fetch_by_tickers(self, tickers: List[str]) -> set:
-        """Fetch individual markets by explicit ticker. Returns set of successfully fetched tickers."""
+        # Fetch individual markets by explicit ticker. Returns set of successfully fetched tickers.
         tasks = [self._fetch_one(t) for t in tickers]
         await asyncio.gather(*tasks, return_exceptions=True)
         return {t for t in tickers if t in self._metadata}
@@ -227,14 +224,13 @@ class MarketDiscovery:
             log.error(f"Failed to fetch market {ticker}: {exc}")
 
     async def _fetch_by_filter(self) -> set:
-        """Fetch markets using series/event filter with pagination.
-
-        After collecting candidates from the API, applies BTC/ETH/SOL heuristic
-        filtering via ``market_selectors`` so only contracts in the correct
-        family are selected. Handles comma-separated series filters.
-
-        Returns the set of ticker strings that were successfully parsed and added.
-        """
+        # Fetch markets using series/event filter with pagination.
+        #
+        # After collecting candidates from the API, applies BTC/ETH/SOL heuristic
+        # filtering via ``market_selectors`` so only contracts in the correct
+        # family are selected. Handles comma-separated series filters.
+        #
+        # Returns the set of ticker strings that were successfully parsed and added.
         start_mono = time.monotonic()
         series_filters = [s.strip() for s in self._cfg.series_filter.split(",")] if self._cfg.series_filter else [None]
         event_filters = [e.strip() for e in self._cfg.event_filter.split(",")] if self._cfg.event_filter else [None]
@@ -302,7 +298,7 @@ class MarketDiscovery:
 
     @staticmethod
     def _parse_market(raw: Dict) -> Optional[MarketMetadata]:
-        """Parse a Kalshi market API response into a MarketMetadata message."""
+        # Parse a Kalshi market API response into a MarketMetadata message.
         ticker = raw.get("ticker", "")
         if not ticker:
             return None
@@ -442,12 +438,11 @@ class MarketDiscovery:
     # -- refresh loop --------------------------------------------------------
 
     async def _refresh_loop(self) -> None:
-        """Periodically re-fetch metadata to catch lifecycle changes.
-
-        Runs discovery every market_refresh_interval_s. Additionally, triggers
-        an immediate discovery when within 10s of a 15min boundary (e.g. :00, :15,
-        :30, :45) so 15min markets refresh promptly after expiry.
-        """
+        # Periodically re-fetch metadata to catch lifecycle changes.
+        #
+        # Runs discovery every market_refresh_interval_s. Additionally, triggers
+        # an immediate discovery when within 10s of a 15min boundary (e.g. :00, :15,
+        # :30, :45) so 15min markets refresh promptly after expiry.
         interval = self._cfg.market_refresh_interval_s
         _15MIN_S = 900
         while self._running:

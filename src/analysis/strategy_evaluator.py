@@ -1,37 +1,33 @@
-"""
-Strategy Evaluator
-===================
+# Created by Oliver Meihls
 
-Loads experiment JSON artifacts produced by :class:`ExperimentRunner`,
-computes standardized metrics, applies composite scoring with penalty
-factors, and outputs a deterministic ranking.
-
-Metrics
--------
-- PnL, Sharpe proxy, max drawdown, expectancy, profit factor
-- Trade counts, reject ratios
-- Regime-conditioned performance
-
-Composite scoring
------------------
-Weighted sum of normalized metrics with penalties for:
-- Drawdown severity
-- High reject rate
-- Low robustness (parameter fragility across sweeps)
-- Regime dependency (concentration in a single regime)
-- Walk-forward instability
-
-Edge-case handling
-------------------
-All metric computations are NaN-safe and handle:
-- No trades, no losses, zero variance
-- Missing or null fields in experiment JSON
-
-Output
-------
-``logs/strategy_rankings_<date>.json`` — ranked list with composite
-scores, per-metric breakdowns, and manifest references.
-"""
+# Strategy Evaluator
+#
+# Loads experiment JSON artifacts produced by :class:`ExperimentRunner`,
+# computes standardized metrics, applies composite scoring with penalty
+# factors, and outputs a deterministic ranking.
+#
+# Metrics
+# - PnL, Sharpe proxy, max drawdown, expectancy, profit factor
+# - Trade counts, reject ratios
+# - Regime-conditioned performance
+#
+# Composite scoring
+# Weighted sum of normalized metrics with penalties for:
+# - Drawdown severity
+# - High reject rate
+# - Low robustness (parameter fragility across sweeps)
+# - Regime dependency (concentration in a single regime)
+# - Walk-forward instability
+#
+# Edge-case handling
+# All metric computations are NaN-safe and handle:
+# - No trades, no losses, zero variance
+# - Missing or null fields in experiment JSON
+#
+# Output
+# ------
+# ``logs/strategy_rankings_<date>.json`` — ranked list with composite
+# scores, per-metric breakdowns, and manifest references.
 
 from __future__ import annotations
 
@@ -53,12 +49,10 @@ from .reality_check import reality_check
 logger = logging.getLogger("argus.strategy_evaluator")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Metric extraction
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _safe_float(val: Any, default: float = 0.0) -> float:
-    """Convert *val* to float, returning *default* on failure or NaN."""
+    # Convert *val* to float, returning *default* on failure or NaN.
     if val is None:
         return default
     try:
@@ -69,18 +63,15 @@ def _safe_float(val: Any, default: float = 0.0) -> float:
 
 
 def extract_metrics(experiment: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract standardized metrics from a single experiment artifact.
-
-    Parameters
-    ----------
-    experiment : dict
-        A JSON-loaded experiment artifact with ``manifest`` and ``result`` keys.
-
-    Returns
-    -------
-    dict
-        Flat dict of named metrics, all numeric or None.
-    """
+    # Extract standardized metrics from a single experiment artifact.
+    #
+    # Parameters
+    # experiment : dict
+    # A JSON-loaded experiment artifact with ``manifest`` and ``result`` keys.
+    #
+    # Returns
+    # dict
+    # Flat dict of named metrics, all numeric or None.
     result = experiment.get("result", {})
     portfolio = result.get("portfolio", {})
     execution = result.get("execution", {})
@@ -142,16 +133,13 @@ def extract_metrics(experiment: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Penalty computations
-# ═══════════════════════════════════════════════════════════════════════════
 
 def compute_reject_penalty(metrics: Dict[str, Any]) -> float:
-    """Penalty for high rejection rate. Range [0, 1].
-
-    - fill_rate >= 0.8 → 0 penalty
-    - fill_rate == 0   → 1.0 penalty
-    """
+    # Penalty for high rejection rate. Range [0, 1].
+    #
+    # - fill_rate >= 0.8 → 0 penalty
+    # - fill_rate == 0   → 1.0 penalty
     fill_rate = _safe_float(metrics.get("fill_rate"), 1.0)
     if fill_rate >= 0.8:
         return 0.0
@@ -159,12 +147,11 @@ def compute_reject_penalty(metrics: Dict[str, Any]) -> float:
 
 
 def compute_drawdown_penalty(metrics: Dict[str, Any]) -> float:
-    """Penalty for excessive drawdown relative to starting capital.
-
-    - max_dd_pct <= 5%  → 0 penalty
-    - max_dd_pct >= 50% → 1.0 penalty
-    - Linear between
-    """
+    # Penalty for excessive drawdown relative to starting capital.
+    #
+    # - max_dd_pct <= 5%  → 0 penalty
+    # - max_dd_pct >= 50% → 1.0 penalty
+    # - Linear between
     dd_pct = _safe_float(metrics.get("max_drawdown_pct"))
     if dd_pct <= 5.0:
         return 0.0
@@ -174,11 +161,10 @@ def compute_drawdown_penalty(metrics: Dict[str, Any]) -> float:
 
 
 def compute_regime_dependency_penalty(metrics: Dict[str, Any]) -> float:
-    """Penalty for regime-concentrated performance.
-
-    If >80% of PnL comes from a single regime bucket, penalty = 0.5.
-    If >90%, penalty = 0.8. Otherwise 0.
-    """
+    # Penalty for regime-concentrated performance.
+    #
+    # If >80% of PnL comes from a single regime bucket, penalty = 0.5.
+    # If >90%, penalty = 0.8. Otherwise 0.
     breakdown = metrics.get("regime_breakdown", {})
     if not breakdown:
         return 0.0
@@ -203,10 +189,9 @@ def compute_regime_dependency_penalty(metrics: Dict[str, Any]) -> float:
 
 
 def compute_regime_sensitivity_score(metrics: Dict[str, Any]) -> float:
-    """Score regime balance based on PnL-per-bar dispersion. Range [0, 1].
-
-    1.0 means stable across regimes; 0.0 means highly regime-sensitive.
-    """
+    # Score regime balance based on PnL-per-bar dispersion. Range [0, 1].
+    #
+    # 1.0 means stable across regimes; 0.0 means highly regime-sensitive.
     breakdown = metrics.get("regime_breakdown", {})
     if not breakdown:
         return 0.5
@@ -242,14 +227,13 @@ def compute_robustness_penalty(
     all_metrics: Sequence[Dict[str, Any]],
     target_run_id: str,
 ) -> float:
-    """Penalize parameter fragility across sweep results.
-
-    Groups experiments by strategy_class.  If the same strategy class
-    has multiple runs (parameter sweep), we measure the coefficient of
-    variation of PnL across runs.  High CV → fragile → penalty.
-
-    Returns penalty in [0, 1] for the target run.
-    """
+    # Penalize parameter fragility across sweep results.
+    #
+    # Groups experiments by strategy_class.  If the same strategy class
+    # has multiple runs (parameter sweep), we measure the coefficient of
+    # variation of PnL across runs.  High CV → fragile → penalty.
+    #
+    # Returns penalty in [0, 1] for the target run.
     # Find the strategy class of the target
     target = None
     for m in all_metrics:
@@ -293,14 +277,13 @@ def compute_walk_forward_penalty(
     all_metrics: Sequence[Dict[str, Any]],
     target_run_id: str,
 ) -> float:
-    """Penalize walk-forward instability.
-
-    If the strategy's performance varies wildly across different
-    time windows (detected by strategy_params containing window indices),
-    apply a stability penalty.
-
-    Returns penalty in [0, 1].
-    """
+    # Penalize walk-forward instability.
+    #
+    # If the strategy's performance varies wildly across different
+    # time windows (detected by strategy_params containing window indices),
+    # apply a stability penalty.
+    #
+    # Returns penalty in [0, 1].
     target = None
     for m in all_metrics:
         if m.get("run_id") == target_run_id:
@@ -343,15 +326,12 @@ def compute_walk_forward_penalty(
     return round((0.8 - consistency) / 0.3 * 0.8, 4)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Regime-conditioned performance
-# ═══════════════════════════════════════════════════════════════════════════
 
 def compute_regime_scores(metrics: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
-    """Compute per-regime PnL and bar counts.
-
-    Returns a dict mapping regime keys to ``{"pnl": float, "bars": int, "pnl_per_bar": float}``.
-    """
+    # Compute per-regime PnL and bar counts.
+    #
+    # Returns a dict mapping regime keys to ``{"pnl": float, "bars": int, "pnl_per_bar": float}``.
     breakdown = metrics.get("regime_breakdown", {})
     scores: Dict[str, Dict[str, float]] = {}
 
@@ -369,9 +349,7 @@ def compute_regime_scores(metrics: Dict[str, Any]) -> Dict[str, Dict[str, float]
     return scores
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Composite scoring
-# ═══════════════════════════════════════════════════════════════════════════
 
 DEFAULT_WEIGHTS = {
     "return": 0.10,            # Profitability (Requested: 10%)
@@ -388,10 +366,9 @@ def compute_composite_score(
     all_metrics: Sequence[Dict[str, Any]],
     weights: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
-    """Compute the composite score for a single experiment.
-
-    Returns a dict with the composite score (0-100), component scores, and penalties.
-    """
+    # Compute the composite score for a single experiment.
+    #
+    # Returns a dict with the composite score (0-100), component scores, and penalties.
     w = weights or DEFAULT_WEIGHTS
 
     # 1. Normalized return component [0, 1]
@@ -454,12 +431,10 @@ def compute_composite_score(
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Evaluator
-# ═══════════════════════════════════════════════════════════════════════════
 
 class StrategyEvaluator:
-    """Load experiment results, compute metrics, and rank strategies."""
+    # Load experiment results, compute metrics, and rank strategies.
 
     def __init__(
         self,
@@ -491,18 +466,15 @@ class StrategyEvaluator:
         self._killed: List[Dict[str, Any]] = []
 
     def load_experiments(self, paths: Optional[List[str]] = None) -> int:
-        """Load experiment JSON files.
-
-        Parameters
-        ----------
-        paths : list of str, optional
-            Explicit list of JSON file paths. If None, scans ``input_dir``.
-
-        Returns
-        -------
-        int
-            Number of experiments loaded.
-        """
+        # Load experiment JSON files.
+        #
+        # Parameters
+        # paths : list of str, optional
+        # Explicit list of JSON file paths. If None, scans ``input_dir``.
+        #
+        # Returns
+        # int
+        # Number of experiments loaded.
         if paths:
             files = [Path(p) for p in paths]
         else:
@@ -529,13 +501,11 @@ class StrategyEvaluator:
         return len(self._experiments)
 
     def evaluate(self) -> List[Dict[str, Any]]:
-        """Compute metrics and composite scores for all loaded experiments.
-
-        Returns
-        -------
-        list of dict
-            Ranked list (best first) of evaluation records.
-        """
+        # Compute metrics and composite scores for all loaded experiments.
+        #
+        # Returns
+        # list of dict
+        # Ranked list (best first) of evaluation records.
         # 1. Extract metrics
         self._metrics = [extract_metrics(exp) for exp in self._experiments]
 
@@ -614,13 +584,12 @@ class StrategyEvaluator:
         return scored
 
     def _compute_dsr_for_all(self) -> Dict[str, Dict[str, Any]]:
-        """Compute Deflated Sharpe Ratio for all experiments.
-
-        Uses cross-sectional Sharpe ratios across experiments and the
-        total experiment count as the number of trials (conservative).
-
-        Returns a dict mapping run_id -> DSR result dict.
-        """
+        # Compute Deflated Sharpe Ratio for all experiments.
+        #
+        # Uses cross-sectional Sharpe ratios across experiments and the
+        # total experiment count as the number of trials (conservative).
+        #
+        # Returns a dict mapping run_id -> DSR result dict.
         n_trials = len(self._metrics)
         if n_trials < 2:
             return {}
@@ -816,10 +785,9 @@ class StrategyEvaluator:
         return reasons
 
     def save_rankings(self, output_path: Optional[str] = None) -> str:
-        """Write the rankings to JSON.
-
-        Returns the output file path.
-        """
+        # Write the rankings to JSON.
+        #
+        # Returns the output file path.
         if not self._rankings:
             self.evaluate()
 
@@ -845,10 +813,9 @@ class StrategyEvaluator:
         return output_path
 
     def print_summary(self) -> str:
-        """Print a console-friendly summary table.
-
-        Returns the formatted string.
-        """
+        # Print a console-friendly summary table.
+        #
+        # Returns the formatted string.
         if not self._rankings:
             self.evaluate()
 

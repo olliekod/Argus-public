@@ -1,16 +1,15 @@
-"""
-Strategy Backtester v2
-======================
+# Created by Oliver Meihls
 
-Backtests the IBIT put spread strategy using historical data.
-Uses BITO (ProShares Bitcoin Strategy ETF) as proxy since IBIT options are newer.
-
-v2 Changes:
-- $5,000 default account size
-- Shows % returns on account (not just dollars)
-- Looser entry criteria for more trades
-- Optimizes for PROFIT, not win rate
-"""
+# Strategy Backtester v2
+#
+# Backtests the IBIT put spread strategy using historical data.
+# Uses BITO (ProShares Bitcoin Strategy ETF) as proxy since IBIT options are newer.
+#
+# v2 Changes:
+# - $5,000 default account size
+# - Shows % returns on account (not just dollars)
+# - Looser entry criteria for more trades
+# - Optimizes for PROFIT, not win rate
 
 import logging
 from datetime import datetime, timedelta
@@ -29,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BacktestTrade:
-    """A single backtested trade."""
+    # A single backtested trade.
     entry_date: str
     exit_date: str
     underlying_price: float
@@ -53,7 +52,7 @@ class BacktestTrade:
 
 @dataclass
 class BacktestResult:
-    """Complete backtest results."""
+    # Complete backtest results.
     symbol: str
     start_date: str
     end_date: str
@@ -82,11 +81,9 @@ class BacktestResult:
 
 
 class StrategyBacktester:
-    """
-    Backtests the put spread strategy on historical data.
-    
-    v2: Focused on PROFIT with percentage returns.
-    """
+    # Backtests the put spread strategy on historical data.
+    #
+    # v2: Focused on PROFIT with percentage returns.
     
     # Default account size
     DEFAULT_ACCOUNT_SIZE = 5000.0
@@ -112,14 +109,12 @@ class StrategyBacktester:
         params: Dict = None,
         account_size: float = None,
     ):
-        """
-        Initialize backtester.
-        
-        Args:
-            symbol: Ticker to backtest
-            params: Strategy parameters
-            account_size: Account size in dollars (default $5,000)
-        """
+        # Initialize backtester.
+        #
+        # Args:
+        # symbol: Ticker to backtest
+        # params: Strategy parameters
+        # account_size: Account size in dollars (default $5,000)
         self.symbol = symbol
         self.params = {**self.DEFAULT_PARAMS, **(params or {})}
         self.account_size = account_size or self.DEFAULT_ACCOUNT_SIZE
@@ -131,7 +126,7 @@ class StrategyBacktester:
         start_date: str, 
         end_date: str
     ) -> pd.DataFrame:
-        """Fetch historical price and IV data."""
+        # Fetch historical price and IV data.
         ticker = yf.Ticker(self.symbol)
         df = ticker.history(start=start_date, end=end_date)
         
@@ -155,7 +150,7 @@ class StrategyBacktester:
         return df
     
     def find_entry_signals(self, df: pd.DataFrame) -> List[Dict]:
-        """Find entry signals - LOOSER criteria for more trades."""
+        # Find entry signals - LOOSER criteria for more trades.
         signals = []
         
         iv_threshold = self.params['iv_threshold']
@@ -187,16 +182,14 @@ class StrategyBacktester:
         return signals
     
     def calculate_position_size(self, spread_width: float, price: float) -> int:
-        """
-        Calculate number of contracts based on 5% max risk.
-        
-        Args:
-            spread_width: Width of spread in dollars
-            price: Current underlying price
-            
-        Returns:
-            Number of contracts
-        """
+        # Calculate number of contracts based on 5% max risk.
+        #
+        # Args:
+        # spread_width: Width of spread in dollars
+        # price: Current underlying price
+        #
+        # Returns:
+        # Number of contracts
         max_risk = spread_width * 100  # Max risk per contract
         capital_at_risk = self.account_size * self.MAX_RISK_PER_TRADE
         
@@ -208,7 +201,7 @@ class StrategyBacktester:
         entry: Dict, 
         df: pd.DataFrame
     ) -> Optional[BacktestTrade]:
-        """Simulate a single trade from entry to exit."""
+        # Simulate a single trade from entry to exit.
         entry_dte = self.params['entry_dte']
         entry_date = entry['date']
         entry_price = entry['price']
@@ -363,7 +356,7 @@ class StrategyBacktester:
         start_date: str, 
         end_date: str
     ) -> BacktestResult:
-        """Run full backtest."""
+        # Run full backtest.
         logger.info(f"Running backtest: {start_date} to {end_date}")
         
         df = self.fetch_historical_data(start_date, end_date)
@@ -475,7 +468,7 @@ class StrategyBacktester:
         return result
     
     def format_report(self, result: BacktestResult) -> str:
-        """Format backtest results as readable report."""
+        # Format backtest results as readable report.
         lines = [
             "=" * 60,
             "📈 STRATEGY BACKTEST REPORT",
@@ -543,7 +536,7 @@ class StrategyBacktester:
 
 
 def run_backtest_cli():
-    """Run backtest from command line."""
+    # Run backtest from command line.
     print("=" * 60)
     print("📈 IBIT PUT SPREAD STRATEGY BACKTEST")
     print("    Using BITO as proxy for IBIT")

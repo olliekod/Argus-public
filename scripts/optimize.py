@@ -1,12 +1,11 @@
-"""
-Ultra Optimize Script
-=====================
+# Created by Oliver Meihls
 
-Maximum thoroughness optimization for powerful hardware.
-Uses Monte Carlo simulation and walk-forward validation.
-
-Run: python scripts/optimize.py
-"""
+# Ultra Optimize Script
+#
+# Maximum thoroughness optimization for powerful hardware.
+# Uses Monte Carlo simulation and walk-forward validation.
+#
+# Run: python scripts/optimize.py
 
 import sys
 from pathlib import Path
@@ -18,7 +17,7 @@ from src.analysis.ultra_optimizer import UltraOptimizer
 
 
 def main():
-    """Run ultra optimization."""
+    # Run ultra optimization.
     print()
     print("=" * 70)
     print("ULTRA STRATEGY OPTIMIZATION")

@@ -1,14 +1,13 @@
-"""
-Delphi-registered news & sentiment tools for Pantheon agents.
-=============================================================
+# Created by Oliver Meihls
 
-Exposes ``get_market_sentiment`` as a Delphi tool so that research
-agents (Prometheus, Ares) can query live market sentiment during
-the debate protocol.
-
-Uses the ``@tool`` decorator from :mod:`src.agent.delphi` for
-automatic discovery via ``DelphiToolRegistry.discover_tools()``.
-"""
+# Delphi-registered news & sentiment tools for Pantheon agents.
+#
+# Exposes ``get_market_sentiment`` as a Delphi tool so that research
+# agents (Prometheus, Ares) can query live market sentiment during
+# the debate protocol.
+#
+# Uses the ``@tool`` decorator from :mod:`src.agent.delphi` for
+# automatic discovery via ``DelphiToolRegistry.discover_tools()``.
 
 from __future__ import annotations
 
@@ -26,16 +25,15 @@ _config: Optional[Dict[str, Any]] = None
 
 
 def configure_sentiment_client(config: Dict[str, Any]) -> None:
-    """Set the config used to lazily initialise the sentiment client.
-
-    Call this once during application startup before any tool invocation.
-    """
+    # Set the config used to lazily initialise the sentiment client.
+    #
+    # Call this once during application startup before any tool invocation.
     global _config
     _config = config
 
 
 def _get_client() -> Any:
-    """Lazy-init the NewsSentimentClient singleton."""
+    # Lazy-init the NewsSentimentClient singleton.
     global _client
     if _client is None:
         from src.connectors.news_sentiment_client import NewsSentimentClient
@@ -70,19 +68,16 @@ def _get_client() -> Any:
     estimated_cost=0.0,
 )
 async def get_market_sentiment(ticker: str = "") -> Dict[str, Any]:
-    """Delphi tool: fetch and score market sentiment for a given ticker.
-
-    Parameters
-    ----------
-    ticker : str
-        Ticker symbol or empty string for aggregate market sentiment.
-
-    Returns
-    -------
-    dict
-        ``{"score": float, "label": str, "n_headlines": int,
-        "ticker": str, "ticker_mentions": int, "bullets": list,
-        "timestamp_utc": str}``
-    """
+    # Delphi tool: fetch and score market sentiment for a given ticker.
+    #
+    # Parameters
+    # ticker : str
+    # Ticker symbol or empty string for aggregate market sentiment.
+    #
+    # Returns
+    # dict
+    # ``{"score": float, "label": str, "n_headlines": int,
+    # "ticker": str, "ticker_mentions": int, "bullets": list,
+    # "timestamp_utc": str}``
     client = _get_client()
     return await client.get_market_sentiment(ticker=ticker)

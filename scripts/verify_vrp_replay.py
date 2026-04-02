@@ -1,18 +1,19 @@
-"""Repeatable E2E replay verifier for strategies.
+# Created by Oliver Meihls
 
-Builds a replay pack using the data-source policy (bars_primary, options_snapshots_primary),
-runs the selected strategy, and prints core counts plus diagnostics.
-
-Strategies:
-  vrp              - Sell put spreads when VRP > 0, skip VOL_SPIKE (default)
-  high_vol         - Sell premium when VOL_SPIKE or VOL_HIGH
-  overnight_session - Long momentum at session transitions
-  router           - Regime-conditional: picks vrp, high_vol, or overnight based on conditions
-
-When --provider is omitted, uses bars_primary from config (e.g. alpaca).
-Dates: use YYYY-MM-DD (e.g. 2026-02-13). If --start/--end omitted, defaults to today
-in US Eastern time (so evening ET still uses the current calendar day).
-"""
+# Repeatable E2E replay verifier for strategies.
+#
+# Builds a replay pack using the data-source policy (bars_primary, options_snapshots_primary),
+# runs the selected strategy, and prints core counts plus diagnostics.
+#
+# Strategies:
+# vrp              - Sell put spreads when VRP > 0, skip VOL_SPIKE (default)
+# high_vol         - Sell premium when VOL_SPIKE or VOL_HIGH
+# overnight_session - Long momentum at session transitions
+# router           - Regime-conditional: picks vrp, high_vol, or overnight based on conditions
+#
+# When --provider is omitted, uses bars_primary from config (e.g. alpaca).
+# Dates: use YYYY-MM-DD (e.g. 2026-02-13). If --start/--end omitted, defaults to today
+# in US Eastern time (so evening ET still uses the current calendar day).
 
 from __future__ import annotations
 
@@ -54,7 +55,7 @@ def _get_strategy_class_and_params(name: str) -> tuple:
 
 
 def _parse_date(s: str) -> str:
-    """Parse date string to YYYY-MM-DD. Accepts YYYY-MM-DD, MM-DD-YYYY, DD-MM-YYYY."""
+    # Parse date string to YYYY-MM-DD. Accepts YYYY-MM-DD, MM-DD-YYYY, DD-MM-YYYY.
     s = s.strip()
     if re.match(r"^\d{4}-\d{2}-\d{2}$", s):
         return s
@@ -71,7 +72,7 @@ def _parse_date(s: str) -> str:
 
 
 def _iv_diagnostic(snapshots: list) -> dict:
-    """Count how many snapshots have atm_iv or derivable IV from quotes; include recv_ts range."""
+    # Count how many snapshots have atm_iv or derivable IV from quotes; include recv_ts range.
     with_atm_iv = 0
     with_quotes = 0
     with_quotes_usable = 0
@@ -94,6 +95,7 @@ def _iv_diagnostic(snapshots: list) -> dict:
                         sample_ivs.append(v)
             except (TypeError, ValueError):
                 pass
+
         qj = s.get("quotes_json")
         if qj and isinstance(qj, str) and qj.strip():
             with_quotes += 1
@@ -108,6 +110,7 @@ def _iv_diagnostic(snapshots: list) -> dict:
                             break
             except Exception:
                 pass
+
         elif qj and isinstance(qj, dict):
             with_quotes += 1
             puts = qj.get("puts") or []

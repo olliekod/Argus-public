@@ -1,11 +1,11 @@
-"""
-Tests for connector source_ts population and BarBuilder acceptance.
+# Created by Oliver Meihls
 
-Verifies that all connectors (Bybit, Deribit, Yahoo) produce QuoteEvents
-with valid source_ts fields that pass BarBuilder validation.
-
-Run with:  python -m pytest tests/test_connector_source_ts.py -v
-"""
+# Tests for connector source_ts population and BarBuilder acceptance.
+#
+# Verifies that all connectors (Bybit, Deribit, Yahoo) produce QuoteEvents
+# with valid source_ts fields that pass BarBuilder validation.
+#
+# Run with:  python -m pytest tests/test_connector_source_ts.py -v
 
 import asyncio
 import time
@@ -19,7 +19,7 @@ from src.connectors.deribit_client import DeribitClient
 
 
 def _drain(bus, timeout=0.5):
-    """Wait until all bus queues are empty or timeout elapses."""
+    # Wait until all bus queues are empty or timeout elapses.
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         depths = bus.get_queue_depths()
@@ -28,16 +28,14 @@ def _drain(bus, timeout=0.5):
         time.sleep(0.01)
 
 
-# ═══════════════════════════════════════════════════════════
 #  Per-connector timestamp conversion tests
-# ═══════════════════════════════════════════════════════════
 
 
 class TestBybitTimestampConversion:
-    """Verify Bybit WebSocket 'ts' (milliseconds) is correctly converted."""
+    # Verify Bybit WebSocket 'ts' (milliseconds) is correctly converted.
 
     def test_bybit_ms_to_seconds(self):
-        """Bybit sends ts in milliseconds; source_ts must be epoch seconds."""
+        # Bybit sends ts in milliseconds; source_ts must be epoch seconds.
         raw_ms = 1_700_000_123_456  # Bybit WS 'ts' field
         source_ts = float(raw_ms) / 1000.0
         assert _ts_sane(source_ts), (
@@ -45,19 +43,19 @@ class TestBybitTimestampConversion:
         )
 
     def test_bybit_ms_unconverted_fails(self):
-        """Raw Bybit ms timestamp must NOT pass _ts_sane."""
+        # Raw Bybit ms timestamp must NOT pass _ts_sane.
         raw_ms = 1_700_000_123_456.0
         assert not _ts_sane(raw_ms), (
             "Raw Bybit ms value should be rejected as too large"
         )
 
     def test_bybit_zero_ts_fallback(self):
-        """When Bybit 'ts' is missing, fallback to time.time()."""
+        # When Bybit 'ts' is missing, fallback to time.time().
         now = time.time()
         assert _ts_sane(now), "Current time.time() should be sane"
 
     def test_bybit_quote_accepted_by_bar_builder(self):
-        """End-to-end: a Bybit-style quote with correct source_ts builds a bar."""
+        # End-to-end: a Bybit-style quote with correct source_ts builds a bar.
         bus = EventBus()
         emitted = []
         bus.subscribe(TOPIC_MARKET_BARS, lambda bar: emitted.append(bar))
@@ -115,7 +113,7 @@ class TestBybitTimestampConversion:
             bus.stop()
 
     def test_bybit_zero_quote_rejected(self):
-        """Zero bid/ask/last payloads are rejected before publishing quotes."""
+        # Zero bid/ask/last payloads are rejected before publishing quotes.
         bus = EventBus()
         published = []
         bus.subscribe(TOPIC_MARKET_QUOTES, lambda quote: published.append(quote))
@@ -156,10 +154,10 @@ class TestBybitTimestampConversion:
 
 
 class TestDeribitTimestampConversion:
-    """Verify Deribit REST timestamp handling."""
+    # Verify Deribit REST timestamp handling.
 
     def test_deribit_us_out_microseconds_converted(self):
-        """Deribit usOut microseconds should convert to sane epoch seconds."""
+        # Deribit usOut microseconds should convert to sane epoch seconds.
         data = {"usOut": 1_700_000_000_000_000}
         source_ts, reason, label, raw = DeribitClient._extract_source_ts(data)
         assert label == "usOut"
@@ -168,13 +166,13 @@ class TestDeribitTimestampConversion:
         assert _ts_sane(source_ts)
 
     def test_deribit_ms_api_timestamp_converted(self):
-        """Deribit API returns timestamps in ms; conversion to seconds is sane."""
+        # Deribit API returns timestamps in ms; conversion to seconds is sane.
         api_ts_ms = 1_700_000_000_000  # Deribit API timestamp
         source_ts = api_ts_ms / 1000.0
         assert _ts_sane(source_ts)
 
     def test_deribit_quote_accepted_by_bar_builder(self):
-        """End-to-end: Deribit-style quote with source_ts builds a bar."""
+        # End-to-end: Deribit-style quote with source_ts builds a bar.
         bus = EventBus()
         emitted = []
         bus.subscribe(TOPIC_MARKET_BARS, lambda bar: emitted.append(bar))
@@ -221,24 +219,24 @@ class TestDeribitTimestampConversion:
 
 
 class TestYahooTimestampConversion:
-    """Verify Yahoo Finance timestamp handling."""
+    # Verify Yahoo Finance timestamp handling.
 
     def test_yahoo_regular_market_time_seconds(self):
-        """Yahoo regularMarketTime should parse as epoch seconds."""
+        # Yahoo regularMarketTime should parse as epoch seconds.
         source_ts, reason, raw = _parse_yahoo_source_ts({"regularMarketTime": 1_700_000_123})
         assert raw == 1_700_000_123
         assert reason is None
         assert _ts_sane(source_ts)
 
     def test_yahoo_regular_market_time_ms_converted(self):
-        """Yahoo regularMarketTime in ms should be converted to seconds."""
+        # Yahoo regularMarketTime in ms should be converted to seconds.
         source_ts, reason, raw = _parse_yahoo_source_ts({"regularMarketTime": 1_700_000_123_000})
         assert raw == 1_700_000_123_000
         assert reason == "converted_ms"
         assert _ts_sane(source_ts)
 
     def test_yahoo_quote_accepted_by_bar_builder(self):
-        """End-to-end: Yahoo-style quote with source_ts builds a bar."""
+        # End-to-end: Yahoo-style quote with source_ts builds a bar.
         bus = EventBus()
         emitted = []
         bus.subscribe(TOPIC_MARKET_BARS, lambda bar: emitted.append(bar))
@@ -286,16 +284,14 @@ class TestYahooTimestampConversion:
             bus.stop()
 
 
-# ═══════════════════════════════════════════════════════════
 #  BarBuilder acceptance: valid quotes accumulate into bars
-# ═══════════════════════════════════════════════════════════
 
 
 class TestBarBuilderAcceptance:
-    """Confirm valid quotes accumulate into bars with correct provenance."""
+    # Confirm valid quotes accumulate into bars with correct provenance.
 
     def test_multiple_ticks_build_bar(self):
-        """Multiple valid ticks in the same minute produce one bar on close."""
+        # Multiple valid ticks in the same minute produce one bar on close.
         bus = EventBus()
         emitted = []
         bus.subscribe(TOPIC_MARKET_BARS, lambda bar: emitted.append(bar))
@@ -349,7 +345,7 @@ class TestBarBuilderAcceptance:
             bus.stop()
 
     def test_source_ts_provenance_tracked(self):
-        """Bar carries first/last source_ts from the ingested quotes."""
+        # Bar carries first/last source_ts from the ingested quotes.
         bus = EventBus()
         emitted = []
         bus.subscribe(TOPIC_MARKET_BARS, lambda bar: emitted.append(bar))
@@ -388,16 +384,14 @@ class TestBarBuilderAcceptance:
             bus.stop()
 
 
-# ═══════════════════════════════════════════════════════════
 #  BarBuilder rejection: invalid timestamps are rejected
-# ═══════════════════════════════════════════════════════════
 
 
 class TestBarBuilderRejection:
-    """Confirm invalid timestamps are properly rejected."""
+    # Confirm invalid timestamps are properly rejected.
 
     def test_zero_source_ts_rejected(self):
-        """source_ts=0.0 (the default) must be rejected."""
+        # source_ts=0.0 (the default) must be rejected.
         bus = EventBus()
         bb = BarBuilder(bus)
 
@@ -413,7 +407,7 @@ class TestBarBuilderRejection:
         assert status["extras"]["quotes_rejected_total"] == 1
 
     def test_millisecond_source_ts_rejected(self):
-        """source_ts in milliseconds must be rejected."""
+        # source_ts in milliseconds must be rejected.
         bus = EventBus()
         bb = BarBuilder(bus)
 
@@ -429,7 +423,7 @@ class TestBarBuilderRejection:
         assert status["extras"]["quotes_rejected_total"] == 1
 
     def test_negative_source_ts_rejected(self):
-        """Negative source_ts must be rejected."""
+        # Negative source_ts must be rejected.
         bus = EventBus()
         bb = BarBuilder(bus)
 
@@ -445,7 +439,7 @@ class TestBarBuilderRejection:
         assert status["extras"]["quotes_rejected_total"] == 1
 
     def test_missing_timestamp_rejected(self):
-        """timestamp=0 must be rejected."""
+        # timestamp=0 must be rejected.
         bus = EventBus()
         bb = BarBuilder(bus)
 

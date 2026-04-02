@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from argus_kalshi.runner import (
     _infer_asset_from_ticker,
     _standalone_classify_liq,

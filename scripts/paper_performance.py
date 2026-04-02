@@ -1,10 +1,9 @@
-"""
-Paper Trading Performance Report
-================================
+# Created by Oliver Meihls
 
-Shows complete performance of paper trading since inception.
-Run: python scripts/paper_performance.py
-"""
+# Paper Trading Performance Report
+#
+# Shows complete performance of paper trading since inception.
+# Run: python scripts/paper_performance.py
 
 import sys
 import asyncio
@@ -22,7 +21,7 @@ DB_PATH = "data/argus.db"
 
 
 async def run_report():
-    """Generate full paper trading performance report."""
+    # Generate full paper trading performance report.
     print()
     print("=" * 70)
     print("PAPER TRADING PERFORMANCE REPORT")
@@ -137,7 +136,7 @@ async def run_report():
 
 
 def main():
-    """Entry point."""
+    # Entry point.
     asyncio.run(run_report())
 
 

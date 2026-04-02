@@ -1,10 +1,9 @@
-"""
-Gap Risk Tracker
-================
+# Created by Oliver Meihls
 
-Tracks BTC price gaps during market-closed hours (nights, weekends, holidays).
-Alerts when significant moves occur that could impact IBIT/BITO at market open.
-"""
+# Gap Risk Tracker
+#
+# Tracks BTC price gaps during market-closed hours (nights, weekends, holidays).
+# Alerts when significant moves occur that could impact IBIT/BITO at market open.
 
 import asyncio
 import logging
@@ -21,7 +20,7 @@ ET = ZoneInfo("America/New_York")
 
 @dataclass
 class GapSnapshot:
-    """Market close snapshot."""
+    # Market close snapshot.
     timestamp: str
     btc_price: float
     ibit_price: Optional[float]
@@ -31,7 +30,7 @@ class GapSnapshot:
 
 @dataclass
 class GapRiskStatus:
-    """Current gap risk assessment."""
+    # Current gap risk assessment.
     btc_close_price: float
     btc_current_price: float
     gap_percent: float
@@ -42,27 +41,23 @@ class GapRiskStatus:
 
 
 class GapRiskTracker:
-    """
-    Tracks BTC price gaps during off-market hours.
-    
-    Market hours: 9:30 AM - 4:00 PM ET, Monday-Friday
-    Off-hours: 4:00 PM - 9:30 AM ET weekdays, all weekend
-    
-    Thresholds (higher risk tolerance):
-    - 5%:  Info (log only)
-    - 8%:  Elevated (Telegram FYI)
-    - 12%: High (immediate alert)
-    - 15%: Extreme (circuit breaker suggested)
-    """
+    # Tracks BTC price gaps during off-market hours.
+    #
+    # Market hours: 9:30 AM - 4:00 PM ET, Monday-Friday
+    # Off-hours: 4:00 PM - 9:30 AM ET weekdays, all weekend
+    #
+    # Thresholds (higher risk tolerance):
+    # - 5%:  Info (log only)
+    # - 8%:  Elevated (Telegram FYI)
+    # - 12%: High (immediate alert)
+    # - 15%: Extreme (circuit breaker suggested)
     
     def __init__(self, db, config: Dict = None):
-        """
-        Initialize gap risk tracker.
-        
-        Args:
-            db: Database instance
-            config: Gap risk configuration from thresholds.yaml
-        """
+        # Initialize gap risk tracker.
+        #
+        # Args:
+        # db: Database instance
+        # config: Gap risk configuration from thresholds.yaml
         self.db = db
         config = config or {}
         
@@ -89,12 +84,12 @@ class GapRiskTracker:
         )
     
     async def initialize(self) -> None:
-        """Create database table and load last snapshot."""
+        # Create database table and load last snapshot.
         await self._create_table()
         await self._load_last_snapshot()
 
     async def get_status(self) -> Dict:
-        """Get current gap risk status for reporting."""
+        # Get current gap risk status for reporting.
         current_price = await self._get_latest_btc_price()
         if current_price is None:
             return {
@@ -116,7 +111,7 @@ class GapRiskTracker:
         }
     
     async def _create_table(self) -> None:
-        """Create market_close_snapshots table if not exists."""
+        # Create market_close_snapshots table if not exists.
         await self.db.execute("""
             CREATE TABLE IF NOT EXISTS market_close_snapshots (
                 id INTEGER PRIMARY KEY,
@@ -136,7 +131,7 @@ class GapRiskTracker:
         """)
 
     async def _get_latest_btc_price(self) -> Optional[float]:
-        """Fetch the latest BTC price snapshot from the database."""
+        # Fetch the latest BTC price snapshot from the database.
         row = await self.db.fetch_one("""
             SELECT price
             FROM price_snapshots
@@ -147,7 +142,7 @@ class GapRiskTracker:
         return row[0] if row else None
     
     async def _load_last_snapshot(self) -> None:
-        """Load most recent market close snapshot from database."""
+        # Load most recent market close snapshot from database.
         result = await self.db.fetch_one("""
             SELECT timestamp, btc_price, ibit_price, bito_price, market_date
             FROM market_close_snapshots
@@ -170,7 +165,7 @@ class GapRiskTracker:
             )
     
     def is_market_open(self) -> bool:
-        """Check if US stock market is currently open."""
+        # Check if US stock market is currently open.
         now = datetime.now(ET)
         
         # Weekend check
@@ -184,7 +179,7 @@ class GapRiskTracker:
         return market_open <= now <= market_close
     
     def get_market_status(self) -> Dict:
-        """Get current market status with next open/close times."""
+        # Get current market status with next open/close times.
         now = datetime.now(ET)
         is_open = self.is_market_open()
         
@@ -229,19 +224,17 @@ class GapRiskTracker:
         ibit_price: Optional[float] = None,
         bito_price: Optional[float] = None,
     ) -> GapSnapshot:
-        """
-        Take a snapshot at market close (4:00 PM ET).
-        
-        Should be called automatically by orchestrator at 4 PM ET on weekdays.
-        
-        Args:
-            btc_price: Current BTC price
-            ibit_price: IBIT closing price (if available)
-            bito_price: BITO closing price (if available)
-            
-        Returns:
-            Created snapshot
-        """
+        # Take a snapshot at market close (4:00 PM ET).
+        #
+        # Should be called automatically by orchestrator at 4 PM ET on weekdays.
+        #
+        # Args:
+        # btc_price: Current BTC price
+        # ibit_price: IBIT closing price (if available)
+        # bito_price: BITO closing price (if available)
+        #
+        # Returns:
+        # Created snapshot
         now = datetime.now(ET)
         market_date = now.strftime('%Y-%m-%d')
         
@@ -276,15 +269,13 @@ class GapRiskTracker:
         return snapshot
     
     def calculate_gap(self, current_btc_price: float) -> Optional[GapRiskStatus]:
-        """
-        Calculate the current gap from last market close.
-        
-        Args:
-            current_btc_price: Current BTC price
-            
-        Returns:
-            GapRiskStatus with gap analysis, or None if no snapshot exists
-        """
+        # Calculate the current gap from last market close.
+        #
+        # Args:
+        # current_btc_price: Current BTC price
+        #
+        # Returns:
+        # GapRiskStatus with gap analysis, or None if no snapshot exists
         if not self._last_close_snapshot:
             logger.warning("No market close snapshot available")
             return None
@@ -342,7 +333,7 @@ class GapRiskTracker:
         risk_level: str,
         hours: float
     ) -> str:
-        """Build human-readable gap message."""
+        # Build human-readable gap message.
         arrow = "📈" if direction == 'up' else "📉" if direction == 'down' else "➡️"
         
         if risk_level == 'extreme':
@@ -373,12 +364,10 @@ class GapRiskTracker:
 💡 {advice}"""
     
     def should_alert(self, status: GapRiskStatus) -> Tuple[bool, str]:
-        """
-        Determine if an alert should be sent.
-        
-        Returns:
-            (should_alert, alert_tier) where tier is 'info', 'warning', 'high', 'extreme'
-        """
+        # Determine if an alert should be sent.
+        #
+        # Returns:
+        # (should_alert, alert_tier) where tier is 'info', 'warning', 'high', 'extreme'
         if status.risk_level == 'minimal':
             return False, ''
         
@@ -388,15 +377,15 @@ class GapRiskTracker:
         return True, status.risk_level
     
     def should_reduce_size(self, status: GapRiskStatus) -> bool:
-        """Check if position size should be reduced based on gap."""
+        # Check if position size should be reduced based on gap.
         return abs(status.gap_percent) >= self.reduce_size_above
     
     def should_skip_trades(self, status: GapRiskStatus) -> bool:
-        """Check if trades should be skipped based on gap."""
+        # Check if trades should be skipped based on gap.
         return abs(status.gap_percent) >= self.skip_trades_above
     
     def get_position_adjustment(self, status: GapRiskStatus) -> Dict:
-        """Get recommended position adjustment based on gap."""
+        # Get recommended position adjustment based on gap.
         if self.should_skip_trades(status):
             return {
                 'action': 'skip',
@@ -417,11 +406,11 @@ class GapRiskTracker:
             }
     
     def format_telegram_alert(self, status: GapRiskStatus) -> str:
-        """Format gap status for Telegram."""
+        # Format gap status for Telegram.
         return status.message
     
     async def get_gap_history(self, days: int = 30) -> list:
-        """Get historical gap data for analysis."""
+        # Get historical gap data for analysis.
         results = await self.db.fetch_all("""
             SELECT timestamp, btc_price, market_date
             FROM market_close_snapshots
@@ -441,7 +430,7 @@ class GapRiskTracker:
 
 
 async def test_gap_tracker():
-    """Test the gap risk tracker."""
+    # Test the gap risk tracker.
     print("Gap Risk Tracker Test")
     print("=" * 40)
     

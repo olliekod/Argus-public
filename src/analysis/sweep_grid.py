@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_FLOOR
@@ -5,13 +7,12 @@ from typing import Any
 
 
 def expand_sweep_grid(raw: dict | None) -> dict[str, list[Any]]:
-    """Normalize sweep YAML values into lists for parameter-grid expansion.
-
-    Each key supports:
-    - list: used as-is
-    - dict range spec: {min,max,step?,num_steps?,round?}
-    - scalar: wrapped as [value]
-    """
+    # Normalize sweep YAML values into lists for parameter-grid expansion.
+    #
+    # Each key supports:
+    # - list: used as-is
+    # - dict range spec: {min,max,step?,num_steps?,round?}
+    # - scalar: wrapped as [value]
     if raw is None:
         return {}
     if not isinstance(raw, dict):

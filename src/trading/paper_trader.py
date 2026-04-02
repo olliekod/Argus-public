@@ -1,10 +1,9 @@
-"""
-Paper Trader
-============
+# Created by Oliver Meihls
 
-A single paper trading instance with specific parameters.
-Evaluates signals and logs trades to database.
-"""
+# Paper Trader
+#
+# A single paper trading instance with specific parameters.
+# Evaluates signals and logs trades to database.
 
 import logging
 from dataclasses import dataclass, field
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class StrategyType(Enum):
-    """Supported strategy types."""
+    # Supported strategy types.
     BULL_PUT = "bull_put"           # Bullish/sideways
     BEAR_CALL = "bear_call"         # Bearish/sideways
     IRON_CONDOR = "iron_condor"     # Sideways/neutral
@@ -30,7 +29,7 @@ class StrategyType(Enum):
 
 @dataclass
 class TraderConfig:
-    """Configuration for a single paper trader."""
+    # Configuration for a single paper trader.
     trader_id: str
     strategy_type: StrategyType
     
@@ -68,7 +67,7 @@ class TraderConfig:
     max_risk_dollars: float = 1000.0   # Hard dollar limit
     
     def to_dict(self) -> Dict:
-        """Convert to dictionary for JSON storage."""
+        # Convert to dictionary for JSON storage.
         return {
             'trader_id': self.trader_id,
             'strategy_type': self.strategy_type.value,
@@ -91,7 +90,7 @@ class TraderConfig:
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'TraderConfig':
-        """Create from dictionary."""
+        # Create from dictionary.
         data = data.copy()
         data['strategy_type'] = StrategyType(data['strategy_type'])
         return cls(**data)
@@ -99,7 +98,7 @@ class TraderConfig:
 
 @dataclass
 class PaperTrade:
-    """A single paper trade."""
+    # A single paper trade.
     id: str
     trader_id: str
     strategy_type: str
@@ -124,7 +123,7 @@ class PaperTrade:
     case_id: Optional[str] = None       # Pantheon research case ID for return attribution
     
     def to_dict(self) -> Dict:
-        """Convert to dictionary."""
+        # Convert to dictionary.
         return {
             'id': self.id,
             'trader_id': self.trader_id,
@@ -146,21 +145,17 @@ class PaperTrade:
 
 
 class PaperTrader:
-    """
-    A single paper trading instance.
-    
-    Evaluates market conditions against its parameters and
-    logs trades when conditions match.
-    """
+    # A single paper trading instance.
+    #
+    # Evaluates market conditions against its parameters and
+    # logs trades when conditions match.
     
     def __init__(self, config: TraderConfig, db=None):
-        """
-        Initialize paper trader.
-        
-        Args:
-            config: Trader configuration
-            db: Database instance for logging trades
-        """
+        # Initialize paper trader.
+        #
+        # Args:
+        # config: Trader configuration
+        # db: Database instance for logging trades
         self.config = config
         self.db = db
         self.open_positions: List[PaperTrade] = []
@@ -184,22 +179,20 @@ class PaperTrader:
         market_direction: str,  # 'bullish', 'bearish', 'neutral'
         current_time: Optional[datetime] = None,
     ) -> bool:
-        """
-        Evaluate whether to enter a trade.
-        
-        Args:
-            symbol: Ticker symbol
-            current_iv: Current implied volatility
-            warmth_score: Conditions warmth (1-10)
-            dte: Days to expiration
-            pop: Probability of profit
-            gap_risk_pct: Current gap risk percentage
-            market_direction: Market bias
-            current_time: Current time (UTC or Eastern)
-            
-        Returns:
-            True if should enter trade
-        """
+        # Evaluate whether to enter a trade.
+        #
+        # Args:
+        # symbol: Ticker symbol
+        # current_iv: Current implied volatility
+        # warmth_score: Conditions warmth (1-10)
+        # dte: Days to expiration
+        # pop: Probability of profit
+        # gap_risk_pct: Current gap risk percentage
+        # market_direction: Market bias
+        # current_time: Current time (UTC or Eastern)
+        #
+        # Returns:
+        # True if should enter trade
         # 1. Check session filter (time-of-day) using Eastern Time
         session = self.config.session_filter
         if session != 'any':
@@ -287,25 +280,23 @@ class PaperTrader:
         strategy_id: Optional[str] = None,
         case_id: Optional[str] = None,
     ) -> Optional[PaperTrade]:
-        """
-        Execute a paper trade entry.
-
-        Returns None (instead of raising) if the trade fails final validation,
-        so the farm loop can skip it gracefully.
-
-        Args:
-            symbol: Ticker symbol
-            strikes: Strike prices (e.g., "$48/$44")
-            expiry: Expiration date
-            entry_credit: Credit received per contract
-            contracts: Number of contracts
-            market_conditions: Snapshot of conditions at entry
-            strategy_id: Research strategy identifier for return attribution
-            case_id: Pantheon research case ID for return attribution
-
-        Returns:
-            Created paper trade, or None if invalid
-        """
+        # Execute a paper trade entry.
+        #
+        # Returns None (instead of raising) if the trade fails final validation,
+        # so the farm loop can skip it gracefully.
+        #
+        # Args:
+        # symbol: Ticker symbol
+        # strikes: Strike prices (e.g., "$48/$44")
+        # expiry: Expiration date
+        # entry_credit: Credit received per contract
+        # contracts: Number of contracts
+        # market_conditions: Snapshot of conditions at entry
+        # strategy_id: Research strategy identifier for return attribution
+        # case_id: Pantheon research case ID for return attribution
+        #
+        # Returns:
+        # Created paper trade, or None if invalid
         guard_collector_mode()
 
         # ── Final entry-point validation ──────────────────────────────
@@ -365,7 +356,7 @@ class PaperTrader:
 
     @staticmethod
     def _normalize_expiry(expiry: Optional[str]) -> Optional[str]:
-        """Normalize expiry to YYYY-MM-DD or return None if unparseable/past."""
+        # Normalize expiry to YYYY-MM-DD or return None if unparseable/past.
         if expiry is None:
             return None
         normalized = str(expiry).strip()
@@ -386,25 +377,23 @@ class PaperTrader:
         current_iv: Optional[float] = None,
         current_date: Optional[datetime] = None,
     ) -> List[PaperTrade]:
-        """
-        Check open positions for exit conditions.
-        
-        Supports multiple exit strategies:
-        - Profit target: Close when profit reaches X%
-        - Stop loss: Close when loss reaches X%
-        - Trailing stop: Lock in profits when position was up X%
-        - DTE exit: Force close at X days to expiration
-        - Time exit: Force close after X days in trade
-        - IV exit: Close if IV drops by X%
-        
-        Args:
-            current_prices: Dict mapping trade_id to current spread price
-            current_iv: Current IV (for IV exit strategy)
-            current_date: Current date (for DTE/time exits, default: now)
-            
-        Returns:
-            List of trades that were closed
-        """
+        # Check open positions for exit conditions.
+        #
+        # Supports multiple exit strategies:
+        # - Profit target: Close when profit reaches X%
+        # - Stop loss: Close when loss reaches X%
+        # - Trailing stop: Lock in profits when position was up X%
+        # - DTE exit: Force close at X days to expiration
+        # - Time exit: Force close after X days in trade
+        # - IV exit: Close if IV drops by X%
+        #
+        # Args:
+        # current_prices: Dict mapping trade_id to current spread price
+        # current_iv: Current IV (for IV exit strategy)
+        # current_date: Current date (for DTE/time exits, default: now)
+        #
+        # Returns:
+        # List of trades that were closed
         closed = []
         now = current_date or datetime.now(timezone.utc)
         
@@ -528,16 +517,14 @@ class PaperTrader:
         return closed
     
     def expire_positions(self, expiry_date: str, final_prices: Dict[str, float]) -> List[PaperTrade]:
-        """
-        Handle position expiration.
-        
-        Args:
-            expiry_date: Date to check for expiration
-            final_prices: Final prices for expired trades
-            
-        Returns:
-            List of expired trades
-        """
+        # Handle position expiration.
+        #
+        # Args:
+        # expiry_date: Date to check for expiration
+        # final_prices: Final prices for expired trades
+        #
+        # Returns:
+        # List of expired trades
         expired = []
         
         for trade in self.open_positions[:]:
@@ -568,16 +555,15 @@ class PaperTrader:
         return expired
     
     def get_positions_summary(self) -> List[Dict]:
-        """Get summary of open positions."""
+        # Get summary of open positions.
         return [t.to_dict() for t in self.open_positions]
     
     def get_pnl_summary(self, current_prices: Optional[Dict[str, float]] = None) -> Dict:
-        """Get P&L summary.
-
-        Args:
-            current_prices: Optional dict mapping trade_id to current spread price
-                           for mark-to-market open P&L calculation.
-        """
+        # Get P&L summary.
+        #
+        # Args:
+        # current_prices: Optional dict mapping trade_id to current spread price
+        # for mark-to-market open P&L calculation.
         if current_prices:
             open_pnl = sum(
                 (t.entry_credit - current_prices.get(t.id, t.entry_credit)) * 100 * t.contracts
@@ -604,7 +590,7 @@ class PaperTrader:
 
 # Test function
 async def test_paper_trader():
-    """Test paper trader functionality."""
+    # Test paper trader functionality.
     print("Paper Trader Test")
     print("=" * 40)
     

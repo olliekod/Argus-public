@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""
-Analyze a Polymarket wallet's behavior from ingested data.
+# Created by Oliver Meihls
 
-Usage:
-  python scripts/polymarket_wallet_analyze.py --wallet 0xabc...
-  python scripts/polymarket_wallet_analyze.py --wallet 0xabc --hours 168 --out logs/analysis/poly
-"""
+# Analyze a Polymarket wallet's behavior from ingested data.
+#
+# Usage:
+# python scripts/polymarket_wallet_analyze.py --wallet 0xabc...
+# python scripts/polymarket_wallet_analyze.py --wallet 0xabc --hours 168 --out logs/analysis/poly
 
 from __future__ import annotations
 

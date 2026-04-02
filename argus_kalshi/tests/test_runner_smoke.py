@@ -1,9 +1,9 @@
-"""
-Smoke tests for the Argus Kalshi runner.
+# Created by Oliver Meihls
 
-Tests exercise the startup / discovery / wiring / shutdown path with
-mocked REST responses — no real network calls are made.
-"""
+# Smoke tests for the Argus Kalshi runner.
+#
+# Tests exercise the startup / discovery / wiring / shutdown path with
+# mocked REST responses — no real network calls are made.
 
 from __future__ import annotations
 
@@ -30,9 +30,7 @@ from argus_kalshi.models import BtcMidPrice, SelectedMarkets
 from argus_kalshi.runner import MockBtcFeed, _build_configs, _rank_active_near_money
 from argus_kalshi.models import MarketMetadata
 
-# ---------------------------------------------------------------------------
 #  _build_configs tests
-# ---------------------------------------------------------------------------
 
 def test_build_config_merges_secrets():
     settings = {"argus_kalshi": {"bankroll_usd": 1234.0}}
@@ -53,16 +51,14 @@ def test_build_config_enforces_safe_defaults():
 
 
 def test_build_config_does_not_override_explicit_dry_run_false():
-    """If the user explicitly sets dry_run: false, _build_configs uses it."""
+    # If the user explicitly sets dry_run: false, _build_configs uses it.
     settings = {"argus_kalshi": {"dry_run": False}}
     configs = _build_configs(settings, {})
     cfg = configs[0]
     assert cfg.dry_run is False
 
 
-# ---------------------------------------------------------------------------
 #  Test market data — deterministic fixtures
-# ---------------------------------------------------------------------------
 
 # 15m BTC uses KXBTCM (M = minute); KXBTCD is hourly (D = daily).
 MOCK_MARKETS = [
@@ -105,12 +101,10 @@ MOCK_MARKETS = [
 ]
 
 
-# ---------------------------------------------------------------------------
 #  Helpers
-# ---------------------------------------------------------------------------
 
 def _make_config(**overrides: object) -> KalshiConfig:
-    """Build a KalshiConfig suitable for testing (no real credentials)."""
+    # Build a KalshiConfig suitable for testing (no real credentials).
     defaults = dict(
         kalshi_key_id="test-key",
         kalshi_private_key_path="/dev/null",
@@ -125,7 +119,7 @@ def _make_config(**overrides: object) -> KalshiConfig:
 
 
 def _mock_rest() -> AsyncMock:
-    """Return a mocked KalshiRestClient."""
+    # Return a mocked KalshiRestClient.
     rest = AsyncMock()
     rest.start = AsyncMock()
     rest.close = AsyncMock()
@@ -145,9 +139,7 @@ def _mock_rest() -> AsyncMock:
     return rest
 
 
-# ---------------------------------------------------------------------------
 #  market_selectors unit tests
-# ---------------------------------------------------------------------------
 
 def test_is_btc_related_positive():
     assert is_btc_related(MOCK_MARKETS[0]) is True
@@ -220,13 +212,11 @@ def test_rank_active_near_money_excludes_far_expiry_markets():
 
 
 
-# ---------------------------------------------------------------------------
 #  MarketDiscovery integration (mocked REST)
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_discovery_selects_btc_15min_tickers():
-    """MarketDiscovery filters to only BTC 15-min markets via series filter."""
+    # MarketDiscovery filters to only BTC 15-min markets via series filter.
     cfg = _make_config()
     bus = Bus()
     rest = _mock_rest()
@@ -257,7 +247,7 @@ async def test_discovery_selects_btc_15min_tickers():
 
 @pytest.mark.asyncio
 async def test_discovery_with_explicit_tickers():
-    """When target_market_tickers is set, discovery fetches them directly."""
+    # When target_market_tickers is set, discovery fetches them directly.
     cfg = _make_config(
         target_market_tickers=["KXBTCM-26FEB25-B65000"],
         series_filter=None,
@@ -274,9 +264,7 @@ async def test_discovery_with_explicit_tickers():
     await discovery.stop()
 
 
-# ---------------------------------------------------------------------------
 #  MockBtcFeed
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_mock_btc_feed_publishes():
@@ -294,20 +282,17 @@ async def test_mock_btc_feed_publishes():
     assert msg.price == 42000.0
 
 
-# ---------------------------------------------------------------------------
 #  Full wiring smoke test (dry-run, short-lived)
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_full_wiring_smoke():
-    """Start all engines in dry_run mode for a brief period, then shut down.
-
-    Confirms:
-    - Tickers are selected deterministically from mocked response.
-    - kalshi.selected_markets is published.
-    - Window engine initialises from mock feed ticks.
-    - Everything cancels cleanly without exceptions.
-    """
+    # Start all engines in dry_run mode for a brief period, then shut down.
+    #
+    # Confirms:
+    # - Tickers are selected deterministically from mocked response.
+    # - kalshi.selected_markets is published.
+    # - Window engine initialises from mock feed ticks.
+    # - Everything cancels cleanly without exceptions.
     cfg = _make_config()
     bus = Bus()
     rest = _mock_rest()
@@ -360,16 +345,13 @@ async def test_full_wiring_smoke():
     # If we got here without an unhandled exception, the test passes.
 
 
-# ---------------------------------------------------------------------------
 #  Per-asset sigma isolation regression test
-# ---------------------------------------------------------------------------
 
 def test_per_asset_sigma_not_contaminated():
-    """Mixed asset prices must NOT contaminate each other's sigma.
-
-    When BTC prices ($67k) and ETH prices ($2k) are received,
-    the BTC sigma must be consistent with BTC-scale prices only.
-    """
+    # Mixed asset prices must NOT contaminate each other's sigma.
+    #
+    # When BTC prices ($67k) and ETH prices ($2k) are received,
+    # the BTC sigma must be consistent with BTC-scale prices only.
     from argus_kalshi.bus import Bus
     from argus_kalshi.kalshi_probability import ProbabilityEngine
 
@@ -411,14 +393,12 @@ def test_per_asset_sigma_not_contaminated():
     )
 
 
-# ---------------------------------------------------------------------------
 #  Signal cooldown test
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_signal_cooldown_suppresses_duplicates():
-    """After a signal fires for (ticker, side), the same side should not
-    fire again within signal_cooldown_s."""
+    # After a signal fires for (ticker, side), the same side should not
+    # fire again within signal_cooldown_s.
     import time as _time
     from argus_kalshi.models import FairProbability, OrderbookState
 
@@ -490,9 +470,9 @@ async def test_signal_cooldown_suppresses_duplicates():
 
 @pytest.mark.asyncio
 async def test_signal_cooldown_not_reset_by_metadata_refresh():
-    """Metadata republication for an already-known live contract must NOT
-    reset the signal cooldown (discovery refreshes every 15s, which is
-    shorter than the 30s default cooldown)."""
+    # Metadata republication for an already-known live contract must NOT
+    # reset the signal cooldown (discovery refreshes every 15s, which is
+    # shorter than the 30s default cooldown).
     import time as _time
     from argus_kalshi.models import FairProbability, OrderbookState, MarketMetadata
 
@@ -576,13 +556,11 @@ async def test_signal_cooldown_not_reset_by_metadata_refresh():
     await strategy.stop()
 
 
-# ---------------------------------------------------------------------------
 #  Strike misparse regression tests (ETH, BTC)
-# ---------------------------------------------------------------------------
 
 def test_btc_15m_wrong_strike_corrected_from_ticker():
-    """BTC 15m market with API strike_price=30 (e.g. time segment) is corrected
-    using ticker-derived strike when in range."""
+    # BTC 15m market with API strike_price=30 (e.g. time segment) is corrected
+    # using ticker-derived strike when in range.
     from argus_kalshi.kalshi_markets import MarketDiscovery
     raw = {
         "ticker": "KXBTC15M-02MAR0815-69550",
@@ -603,7 +581,7 @@ def test_btc_15m_wrong_strike_corrected_from_ticker():
 
 
 def test_btc_15m_wrong_strike_corrected_from_floor_strike():
-    """When strike_price is wrong and ticker has no valid number, use floor_strike."""
+    # When strike_price is wrong and ticker has no valid number, use floor_strike.
     from argus_kalshi.kalshi_markets import MarketDiscovery
     raw = {
         "ticker": "KXBTC15M-02MAR0830",
@@ -624,8 +602,8 @@ def test_btc_15m_wrong_strike_corrected_from_floor_strike():
 
 
 def test_eth_market_strike_uses_api_field_not_ticker_date():
-    """ETH market with API-provided strike_price must use that value, not
-    a date component extracted from the ticker string."""
+    # ETH market with API-provided strike_price must use that value, not
+    # a date component extracted from the ticker string.
     from argus_kalshi.kalshi_markets import MarketDiscovery
     raw = {
         "ticker": "KXETH15M-26MAR25-2030",
@@ -645,7 +623,7 @@ def test_eth_market_strike_uses_api_field_not_ticker_date():
 
 
 def test_eth_15m_rollover_ticker_does_not_parse_time_as_strike():
-    """ETH 15m rollover-style tickers with invalid strike are skipped."""
+    # ETH 15m rollover-style tickers with invalid strike are skipped.
     from argus_kalshi.kalshi_markets import MarketDiscovery
 
     raw = {
@@ -664,7 +642,7 @@ def test_eth_15m_rollover_ticker_does_not_parse_time_as_strike():
 
 
 def test_eth_15m_rollover_recovers_strike_from_title_text():
-    """If API strike is a rollover fragment, recover true strike from title/subtitle."""
+    # If API strike is a rollover fragment, recover true strike from title/subtitle.
     from argus_kalshi.kalshi_markets import MarketDiscovery
 
     raw = {
@@ -687,7 +665,7 @@ def test_eth_15m_rollover_recovers_strike_from_title_text():
 
 
 def test_eth_15m_rollover_does_not_use_year_token_as_strike():
-    """If title text has no valid strike, invalid market is skipped."""
+    # If title text has no valid strike, invalid market is skipped.
     from argus_kalshi.kalshi_markets import MarketDiscovery
 
     raw = {
@@ -708,7 +686,7 @@ def test_eth_15m_rollover_does_not_use_year_token_as_strike():
 
 
 def test_sol_15m_rollover_ticker_does_not_parse_time_as_strike():
-    """SOL 15m rollover-style tickers with invalid strike are skipped."""
+    # SOL 15m rollover-style tickers with invalid strike are skipped.
     from argus_kalshi.kalshi_markets import MarketDiscovery
 
     raw = {
@@ -727,8 +705,8 @@ def test_sol_15m_rollover_ticker_does_not_parse_time_as_strike():
 
 
 def test_eth_market_fallback_asset_when_series_unknown():
-    """When series_ticker is not in _SERIES_MAP, asset must be inferred from
-    the ticker string rather than defaulting to BTC."""
+    # When series_ticker is not in _SERIES_MAP, asset must be inferred from
+    # the ticker string rather than defaulting to BTC.
     from argus_kalshi.kalshi_markets import MarketDiscovery
     raw = {
         "ticker": "KXETH-CUSTOM-2030",
@@ -747,14 +725,12 @@ def test_eth_market_fallback_asset_when_series_unknown():
     )
 
 
-# ---------------------------------------------------------------------------
 #  Execution engine: dry_run fills bypass halt
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_dry_run_paper_fills_bypass_execution_halt():
-    """In dry_run mode, paper fills must be published even when the
-    execution engine is halted (e.g. due to WS disconnect)."""
+    # In dry_run mode, paper fills must be published even when the
+    # execution engine is halted (e.g. due to WS disconnect).
     import time as _time
     from argus_kalshi.models import TradeSignal, FillEvent
     from argus_kalshi.kalshi_execution import ExecutionEngine
@@ -794,14 +770,12 @@ async def test_dry_run_paper_fills_bypass_execution_halt():
     await execution.stop()
 
 
-# ---------------------------------------------------------------------------
 #  Drawdown halt persistence: must NOT be cleared by WS reconnect
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_drawdown_halt_not_cleared_by_ws_reconnect():
-    """A drawdown_breach halt must NOT be cleared when the WebSocket reconnects.
-    Only disconnect_halt type halts auto-resume on reconnect."""
+    # A drawdown_breach halt must NOT be cleared when the WebSocket reconnects.
+    # Only disconnect_halt type halts auto-resume on reconnect.
     from argus_kalshi.kalshi_execution import ExecutionEngine
     from argus_kalshi.models import TradeSignal, FillEvent
     import time as _time

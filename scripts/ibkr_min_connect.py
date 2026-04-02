@@ -1,4 +1,6 @@
-"""Minimal ib_insync connection test (Python 3.14+ event loop safe)."""
+# Created by Oliver Meihls
+
+# Minimal ib_insync connection test (Python 3.14+ event loop safe).
 
 from ib_insync import IB, util
 

@@ -1,4 +1,6 @@
-"""Debug Alpaca options: expirations + snapshot build. Run from repo root: python scripts/debug_alpaca_options.py"""
+# Created by Oliver Meihls
+
+# Debug Alpaca options: expirations + snapshot build. Run from repo root: python scripts/debug_alpaca_options.py
 
 import asyncio
 import logging

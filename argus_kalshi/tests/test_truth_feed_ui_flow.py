@@ -1,22 +1,22 @@
-"""
-Hypothesis test: under event-loop load, StateAggregator (or UI consumer) is starved
-and does not receive btc/eth/sol price updates in time.
+# Created by Oliver Meihls
 
-Problem: User reports BTC/ETH/SOL header prices update "once every three minutes"
-despite fast Coinbase/OKX feed. Probs 0, OB 0, Ask/Edge stale.
-
-Hypothesis: The consumer (StateAggregator when UI is separate) competes with many
-other tasks on the same event loop; it gets too few time slices to drain the
-price queues, so _prices lag.
-
-Test design:
-- Publish a sequence of BtcMidPrice messages at ~5 Hz with known prices (last = 2400).
-- Run StateAggregator in the same loop.
-- (A) Without load: assert aggregator._prices["BTC"] == 2400 after run → baseline.
-- (B) With load: many tasks simulating farm activity; assert aggregator._prices["BTC"] == 2400.
-  If (B) fails (aggregator has 0 or old value), hypothesis is confirmed (consumer starved).
-  After fix (drain prices first / give aggregator priority), (B) should pass.
-"""
+# Hypothesis test: under event-loop load, StateAggregator (or UI consumer) is starved
+# and does not receive btc/eth/sol price updates in time.
+#
+# Problem: User reports BTC/ETH/SOL header prices update "once every three minutes"
+# despite fast Coinbase/OKX feed. Probs 0, OB 0, Ask/Edge stale.
+#
+# Hypothesis: The consumer (StateAggregator when UI is separate) competes with many
+# other tasks on the same event loop; it gets too few time slices to drain the
+# price queues, so _prices lag.
+#
+# Test design:
+# - Publish a sequence of BtcMidPrice messages at ~5 Hz with known prices (last = 2400).
+# - Run StateAggregator in the same loop.
+# - (A) Without load: assert aggregator._prices["BTC"] == 2400 after run → baseline.
+# - (B) With load: many tasks simulating farm activity; assert aggregator._prices["BTC"] == 2400.
+# If (B) fails (aggregator has 0 or old value), hypothesis is confirmed (consumer starved).
+# After fix (drain prices first / give aggregator priority), (B) should pass.
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ _LOAD_TASK_COUNT = 400
 
 
 async def _truth_feed_task(bus: Bus, stop_evt: asyncio.Event) -> float:
-    """Publish BtcMidPrice to btc.mid_price every _TICK_INTERVAL; return last price published."""
+    # Publish BtcMidPrice to btc.mid_price every _TICK_INTERVAL; return last price published.
     price = 1000.0
     last_published = price
     while not stop_evt.is_set():
@@ -60,7 +60,7 @@ async def _truth_feed_task(bus: Bus, stop_evt: asyncio.Event) -> float:
 
 
 async def _load_task(stop_evt: asyncio.Event) -> None:
-    """Simulate work competing for the event loop (like many farm bots / dispatcher)."""
+    # Simulate work competing for the event loop (like many farm bots / dispatcher).
     n = 0
     while not stop_evt.is_set():
         for _ in range(50):
@@ -72,10 +72,8 @@ async def _load_task(stop_evt: asyncio.Event) -> None:
 
 @pytest.mark.asyncio
 async def test_truth_feed_to_aggregator_baseline_no_load():
-    """
-    Baseline: with no competing load, StateAggregator should receive every price tick
-    and end with _prices["BTC"] == last published value.
-    """
+    # Baseline: with no competing load, StateAggregator should receive every price tick
+    # and end with _prices["BTC"] == last published value.
     bus = Bus()
     agg = StateAggregator(bus, primary_bot_id=None)
     await agg.start()
@@ -99,14 +97,12 @@ async def test_truth_feed_to_aggregator_baseline_no_load():
 
 @pytest.mark.asyncio
 async def test_truth_feed_to_aggregator_under_load_starved():
-    """
-    Hypothesis test: under event-loop load (many competing tasks), StateAggregator
-    may be starved and not receive the latest price.
-
-    If this test FAILS (aggregator has old or zero price), the hypothesis is
-    confirmed: consumer is starved. A fix (drain prices first, or give aggregator
-    more priority) should make this test PASS (aggregator gets _LAST_PRICE).
-    """
+    # Hypothesis test: under event-loop load (many competing tasks), StateAggregator
+    # may be starved and not receive the latest price.
+    #
+    # If this test FAILS (aggregator has old or zero price), the hypothesis is
+    # confirmed: consumer is starved. A fix (drain prices first, or give aggregator
+    # more priority) should make this test PASS (aggregator gets _LAST_PRICE).
     bus = Bus()
     agg = StateAggregator(bus, primary_bot_id=None)
     await agg.start()
@@ -136,15 +132,13 @@ async def test_truth_feed_to_aggregator_under_load_starved():
 
 @pytest.mark.asyncio
 async def test_truth_feed_to_aggregator_flooded_ob_prob_starves_prices():
-    """
-    Hypothesis: when OB and prob queues are flooded (many tickers, like production),
-    the aggregator drains ob/prob/meta/outcomes/fills/orders before prices in each
-    iteration and may not drain btc.mid_price often enough, so _prices["BTC"] lags.
-
-    We flood kalshi.orderbook and kalshi.fair_prob with many messages, then publish
-    a short sequence of prices. If aggregator ends with old or zero BTC price,
-    hypothesis confirmed.
-    """
+    # Hypothesis: when OB and prob queues are flooded (many tickers, like production),
+    # the aggregator drains ob/prob/meta/outcomes/fills/orders before prices in each
+    # iteration and may not drain btc.mid_price often enough, so _prices["BTC"] lags.
+    #
+    # We flood kalshi.orderbook and kalshi.fair_prob with many messages, then publish
+    # a short sequence of prices. If aggregator ends with old or zero BTC price,
+    # hypothesis confirmed.
     bus = Bus()
     agg = StateAggregator(bus, primary_bot_id=None)
     await agg.start()
@@ -185,7 +179,7 @@ async def test_truth_feed_to_aggregator_flooded_ob_prob_starves_prices():
 
 
 def _sync_work_chunk(n: int) -> None:
-    """Simulate dispatcher doing N sync evaluations (no I/O)."""
+    # Simulate dispatcher doing N sync evaluations (no I/O).
     x = 0
     for _ in range(n):
         x += 1
@@ -194,15 +188,13 @@ def _sync_work_chunk(n: int) -> None:
 
 @pytest.mark.asyncio
 async def test_truth_feed_to_aggregator_dispatcher_style_load():
-    """
-    Hypothesis: one task that does large chunks of sync work (like FarmDispatcher
-    calling evaluate_sync on 64 bots) then yields once — so the event loop is
-    blocked for a few ms and the aggregator runs rarely. Under that load, price
-    updates may not be consumed in time.
-
-    Simulate: one "dispatcher" task that in a loop does 5000 sync steps then
-    await asyncio.sleep(0), for the whole run. Plus truth feed publishing.
-    """
+    # Hypothesis: one task that does large chunks of sync work (like FarmDispatcher
+    # calling evaluate_sync on 64 bots) then yields once — so the event loop is
+    # blocked for a few ms and the aggregator runs rarely. Under that load, price
+    # updates may not be consumed in time.
+    #
+    # Simulate: one "dispatcher" task that in a loop does 5000 sync steps then
+    # await asyncio.sleep(0), for the whole run. Plus truth feed publishing.
     bus = Bus()
     agg = StateAggregator(bus, primary_bot_id=None)
     await agg.start()
@@ -235,15 +227,13 @@ async def test_truth_feed_to_aggregator_dispatcher_style_load():
 
 @pytest.mark.asyncio
 async def test_drain_order_matters_prices_before_ob_prob():
-    """
-    Prove that drain order matters: if we have limited iterations per cycle and
-    we drain ob/prob first, we may never reach the price queue when those are flooded.
-
-    This test uses the real bus and a minimal "consumer" that drains in BAD order
-    (ob/prob first, then price) with a cap of 10 iterations. We flood ob, then
-    publish one price. After one cycle, bad-order consumer has not seen the price;
-    good-order (price first) would have seen it.
-    """
+    # Prove that drain order matters: if we have limited iterations per cycle and
+    # we drain ob/prob first, we may never reach the price queue when those are flooded.
+    #
+    # This test uses the real bus and a minimal "consumer" that drains in BAD order
+    # (ob/prob first, then price) with a cap of 10 iterations. We flood ob, then
+    # publish one price. After one cycle, bad-order consumer has not seen the price;
+    # good-order (price first) would have seen it.
     bus = Bus()
     # Subscribe and flood ob
     q_ob = await bus.subscribe("kalshi.orderbook")
@@ -300,7 +290,7 @@ async def test_drain_order_matters_prices_before_ob_prob():
 
 @pytest.mark.asyncio
 async def test_aggregator_prob_and_ob_populate_states_and_snapshot():
-    """After publishing FairProbability and OrderbookState, aggregator _states and get_snapshot() have them."""
+    # After publishing FairProbability and OrderbookState, aggregator _states and get_snapshot() have them.
     bus = Bus()
     agg = StateAggregator(bus, primary_bot_id=None)
     await agg.start()
@@ -342,7 +332,7 @@ async def test_aggregator_prob_and_ob_populate_states_and_snapshot():
 
 @pytest.mark.asyncio
 async def test_remote_ui_counts_derived_from_snapshot():
-    """Snapshot with prob/ob data yields non-zero Probs and OB counts when applied to UI."""
+    # Snapshot with prob/ob data yields non-zero Probs and OB counts when applied to UI.
     bus = Bus()
     agg = StateAggregator(bus, primary_bot_id=None)
     await agg.start()
@@ -378,7 +368,7 @@ async def test_remote_ui_counts_derived_from_snapshot():
 
 @pytest.mark.asyncio
 async def test_aggregator_ask_edge_from_orderbook_and_fair_prob():
-    """OrderbookState + FairProbability → state has yes_ask, no_ask, p_yes; Ask/Edge derivable."""
+    # OrderbookState + FairProbability → state has yes_ask, no_ask, p_yes; Ask/Edge derivable.
     bus = Bus()
     agg = StateAggregator(bus, primary_bot_id=None)
     await agg.start()
@@ -434,7 +424,7 @@ def _make_meta_15m(ticker: str, asset: str = "BTC", exp_seconds_from_now: float 
 
 @pytest.mark.asyncio
 async def test_aggregator_metadata_15min_populates_state_and_best_per_type():
-    """MarketMetadata for 15min BTC ticker → aggregator state has window_min 15; UI _best_per_type would have entry."""
+    # MarketMetadata for 15min BTC ticker → aggregator state has window_min 15; UI _best_per_type would have entry.
     bus = Bus()
     agg = StateAggregator(bus, primary_bot_id=None)
     await agg.start()
@@ -456,7 +446,7 @@ async def test_aggregator_metadata_15min_populates_state_and_best_per_type():
 
 @pytest.mark.asyncio
 async def test_snapshot_with_15min_market_makes_row_not_empty():
-    """Apply snapshot with 15min BTC ticker to TerminalVisualizer; _best_per_type has BTC 15min."""
+    # Apply snapshot with 15min BTC ticker to TerminalVisualizer; _best_per_type has BTC 15min.
     from argus_kalshi.terminal_ui import TerminalVisualizer
 
     bus = Bus()
@@ -522,7 +512,7 @@ _LIVE_N_TICKERS = 80         # flood ob/prob
 
 
 async def _live_feed_prices(bus: Bus, stop: asyncio.Event) -> float:
-    """Publish btc/eth/sol at 20 Hz; return last BTC price published."""
+    # Publish btc/eth/sol at 20 Hz; return last BTC price published.
     price = 1000.0
     last = price
     while not stop.is_set():
@@ -547,7 +537,7 @@ async def _live_feed_prices(bus: Bus, stop: asyncio.Event) -> float:
 
 
 async def _live_feed_ob_prob(bus: Bus, stop: asyncio.Event) -> None:
-    """Flood ob + prob for many tickers so aggregator task would be busy draining them."""
+    # Flood ob + prob for many tickers so aggregator task would be busy draining them.
     i = 0
     while not stop.is_set():
         for j in range(_LIVE_N_TICKERS):
@@ -570,7 +560,7 @@ async def _live_feed_ob_prob(bus: Bus, stop: asyncio.Event) -> None:
 
 
 def _sync_work_chunk_live(n: int) -> None:
-    """Heavy sync work to starve aggregator (simulate farm dispatcher)."""
+    # Heavy sync work to starve aggregator (simulate farm dispatcher).
     x = 0
     for _ in range(n):
         x += 1
@@ -579,17 +569,15 @@ def _sync_work_chunk_live(n: int) -> None:
 
 @pytest.mark.asyncio
 async def test_ipc_drain_under_live_feed_snapshots_fresh_and_fast() -> None:
-    """
-    Simulate separate UI: live feed (prices 20 Hz + ob/prob flood), heavy dispatcher load,
-    and only the IPC send loop running every 0.2s calling drain_for_snapshot() then get_snapshot().
-
-    Asserts:
-    - At least one snapshot has the latest published BTC price (drain_for_snapshot works).
-    - We get at least 5 snapshots in 2s (IPC loop runs ~every 0.2s).
-    - Snapshots see non-zero ob/prob counts (drain_for_snapshot pulls ob/prob too).
-
-    With -s, prints timing and counts so you can see "speed of literally everything".
-    """
+    # Simulate separate UI: live feed (prices 20 Hz + ob/prob flood), heavy dispatcher load,
+    # and only the IPC send loop running every 0.2s calling drain_for_snapshot() then get_snapshot().
+    #
+    # Asserts:
+    # - At least one snapshot has the latest published BTC price (drain_for_snapshot works).
+    # - We get at least 5 snapshots in 2s (IPC loop runs ~every 0.2s).
+    # - Snapshots see non-zero ob/prob counts (drain_for_snapshot pulls ob/prob too).
+    #
+    # With -s, prints timing and counts so you can see "speed of literally everything".
     bus = Bus()
     agg = StateAggregator(bus, primary_bot_id=None)
     await agg.start()
@@ -600,6 +588,7 @@ async def test_ipc_drain_under_live_feed_snapshots_fresh_and_fast() -> None:
             await agg._task
         except asyncio.CancelledError:
             pass
+
     agg._task = None
 
     stop = asyncio.Event()
@@ -607,7 +596,7 @@ async def test_ipc_drain_under_live_feed_snapshots_fresh_and_fast() -> None:
     snapshot_times: list[float] = []
 
     async def ipc_loop_sim() -> None:
-        """Simulate ipc_server_loop: every 0.2s drain then snapshot."""
+        # Simulate ipc_server_loop: every 0.2s drain then snapshot.
         while not stop.is_set():
             agg.drain_for_snapshot(max_ob=40, max_prob=40)
             snap = agg.get_snapshot()

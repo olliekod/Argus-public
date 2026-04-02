@@ -1,9 +1,9 @@
-"""
-Tests for session_regime on OutcomeResult.
+# Created by Oliver Meihls
 
-Validates that the OutcomeEngine populates session_regime deterministically
-and that session grouping works for analytics.
-"""
+# Tests for session_regime on OutcomeResult.
+#
+# Validates that the OutcomeEngine populates session_regime deterministically
+# and that session grouping works for analytics.
 
 from __future__ import annotations
 
@@ -12,15 +12,12 @@ import pytest
 from src.core.outcome_engine import BarData, OutcomeEngine, OutcomeResult
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _ts_for_hour_et(hour: int, minute: int = 0) -> int:
-    """Build a UTC epoch-ms for a given Eastern Time hour (EST, no DST).
-
-    In EST (UTC-5): hour 9 ET → 14 UTC.
-    """
+    # Build a UTC epoch-ms for a given Eastern Time hour (EST, no DST).
+    #
+    # In EST (UTC-5): hour 9 ET → 14 UTC.
     from datetime import datetime, timezone
     from zoneinfo import ZoneInfo
 
@@ -41,13 +38,11 @@ def _make_bar(ts_ms: int, close: float = 100.0) -> BarData:
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestOutcomeSessionRegime:
     def test_rth_bar_gets_rth_session(self):
-        """Bar at 10:00 ET should be RTH."""
+        # Bar at 10:00 ET should be RTH.
         ts = _ts_for_hour_et(10, 0)
         bar = _make_bar(ts)
         engine = OutcomeEngine(db=None, config={
@@ -69,7 +64,7 @@ class TestOutcomeSessionRegime:
         assert first.session_regime == "RTH"
 
     def test_pre_market_bar_gets_pre_session(self):
-        """Bar at 7:00 ET should be PRE."""
+        # Bar at 7:00 ET should be PRE.
         ts = _ts_for_hour_et(7, 0)
         bar = _make_bar(ts)
         engine = OutcomeEngine(db=None, config={
@@ -83,7 +78,7 @@ class TestOutcomeSessionRegime:
         assert results[0].session_regime == "PRE"
 
     def test_post_market_bar_gets_post_session(self):
-        """Bar at 17:00 ET should be POST."""
+        # Bar at 17:00 ET should be POST.
         ts = _ts_for_hour_et(17, 0)
         bar = _make_bar(ts)
         engine = OutcomeEngine(db=None, config={
@@ -97,7 +92,7 @@ class TestOutcomeSessionRegime:
         assert results[0].session_regime == "POST"
 
     def test_closed_session(self):
-        """Bar at 2:00 ET should be CLOSED."""
+        # Bar at 2:00 ET should be CLOSED.
         ts = _ts_for_hour_et(2, 0)
         bar = _make_bar(ts)
         engine = OutcomeEngine(db=None, config={
@@ -111,7 +106,7 @@ class TestOutcomeSessionRegime:
         assert results[0].session_regime == "CLOSED"
 
     def test_session_regime_deterministic(self):
-        """Same bar → same session_regime every time."""
+        # Same bar → same session_regime every time.
         ts = _ts_for_hour_et(10, 30)
         bar = _make_bar(ts)
         engine = OutcomeEngine(db=None, config={
@@ -126,7 +121,7 @@ class TestOutcomeSessionRegime:
             assert results[0].session_regime == "RTH"
 
     def test_session_not_in_to_tuple(self):
-        """session_regime should NOT appear in to_tuple (not persisted to DB)."""
+        # session_regime should NOT appear in to_tuple (not persisted to DB).
         ts = _ts_for_hour_et(10, 0)
         bar = _make_bar(ts)
         engine = OutcomeEngine(db=None, config={
@@ -144,7 +139,7 @@ class TestOutcomeSessionRegime:
         assert "RTH" not in t
 
     def test_grouping_by_session(self):
-        """Analytics pattern: group outcomes by session_regime."""
+        # Analytics pattern: group outcomes by session_regime.
         engine = OutcomeEngine(db=None, config={
             "horizons_seconds_by_bar": {60: [300]},
         })

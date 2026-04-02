@@ -1,29 +1,27 @@
-"""
-Trade signal generation for Kalshi BTC strike contracts.
+# Created by Oliver Meihls
 
-Strategy logic
---------------
-1. For each market, compare model fair probability ``p_yes`` to the
-   orderbook-implied prices.
-2. Compute expected value (EV) for both sides:
-       EV_yes = p_yes - yes_ask_prob
-       EV_no  = (1 - p_yes) - no_ask_prob
-3. If either EV exceeds ``min_edge_threshold`` **and** risk limits allow,
-   publish a ``TradeSignal``.
-
-Risk limits / kill switches
----------------------------
-* **Per-market exposure**: capped at ``max_fraction_per_market`` of bankroll.
-* **Daily drawdown**: halts all trading for the rest of the day.
-* **WS disconnect**: halts until reconnected.
-* **Orderbook invalid**: halts trading for that market until a fresh
-  snapshot re-validates the book.
-* **Truth feed stale**: halts if no BTC tick arrives within
-  ``truth_feed_stale_timeout_s``.
-* **ws_trading_enabled=False**: signals are computed and logged but never
-  published (pre-production verification mode).
-* **dry_run=True**: same as above — compute and log only.
-"""
+# Trade signal generation for Kalshi BTC strike contracts.
+#
+# Strategy logic
+# 1. For each market, compare model fair probability ``p_yes`` to the
+# orderbook-implied prices.
+# 2. Compute expected value (EV) for both sides:
+# EV_yes = p_yes - yes_ask_prob
+# EV_no  = (1 - p_yes) - no_ask_prob
+# 3. If either EV exceeds ``min_edge_threshold`` **and** risk limits allow,
+# publish a ``TradeSignal``.
+#
+# Risk limits / kill switches
+# * **Per-market exposure**: capped at ``max_fraction_per_market`` of bankroll.
+# * **Daily drawdown**: halts all trading for the rest of the day.
+# * **WS disconnect**: halts until reconnected.
+# * **Orderbook invalid**: halts trading for that market until a fresh
+# snapshot re-validates the book.
+# * **Truth feed stale**: halts if no BTC tick arrives within
+# ``truth_feed_stale_timeout_s``.
+# * **ws_trading_enabled=False**: signals are computed and logged but never
+# published (pre-production verification mode).
+# * **dry_run=True**: same as above — compute and log only.
 
 from __future__ import annotations
 
@@ -55,12 +53,11 @@ log = ComponentLogger("strategy")
 
 
 def _session_mult(now_wall: float, sleeve: str = "hold") -> float:
-    """UTC-hour-based sizing multiplier derived from top-wallet activity patterns.
-
-    0xd0d6 concentrates scalp in 15-21 UTC; 0x1979 concentrates holds in 11-15 UTC.
-    Overnight (00-09 UTC) reduces sizing to filter noise from thin books.
-    sleeve: "scalp" | "hold"
-    """
+    # UTC-hour-based sizing multiplier derived from top-wallet activity patterns.
+    #
+    # 0xd0d6 concentrates scalp in 15-21 UTC; 0x1979 concentrates holds in 11-15 UTC.
+    # Overnight (00-09 UTC) reduces sizing to filter noise from thin books.
+    # sleeve: "scalp" | "hold"
     utc_hour = datetime.fromtimestamp(now_wall, tz=timezone.utc).hour
     if 15 <= utc_hour < 21:
         return 1.20
@@ -81,12 +78,11 @@ def _hold_tail_penalty(limit_cents: int, side: str, start_cents: int, per_10c: f
 
 
 def _hold_family_allowed(asset: str, window_minutes: int, is_range: bool) -> bool:
-    """Keep hold exploration in the families that still show signal quality.
-
-    Current paper results show SOL is broadly toxic, hourly hold contracts are
-    poor across assets, and ETH range holds are particularly weak.  We keep the
-    more promising BTC/ETH 15m region and BTC range exploration active.
-    """
+    # Keep hold exploration in the families that still show signal quality.
+    #
+    # Current paper results show SOL is broadly toxic, hourly hold contracts are
+    # poor across assets, and ETH range holds are particularly weak.  We keep the
+    # more promising BTC/ETH 15m region and BTC range exploration active.
     if asset == "SOL":
         return False
     if is_range and asset != "BTC":
@@ -99,18 +95,16 @@ def _hold_family_allowed(asset: str, window_minutes: int, is_range: bool) -> boo
 
 
 class StrategyEngine:
-    """Subscribes to fair-probability and orderbook, emits TradeSignals.
-
-    Farm mode
-    ---------
-    Pass ``shared=<SharedFarmState>`` to run in farm mode.  In farm mode
-    the engine does NOT subscribe to high-frequency bus topics (orderbook,
-    fair_prob, truth prices, market_metadata).  Instead it shares state
-    dicts with all other farm bots via ``SharedFarmState``, and the single
-    ``FarmDispatcher`` calls ``evaluate_sync()`` on every OB/prob update.
-    Only low-frequency topics (fills, ws.status, account_balance) retain
-    per-bot subscriptions because they carry bot-specific data.
-    """
+    # Subscribes to fair-probability and orderbook, emits TradeSignals.
+    #
+    # Farm mode
+    # Pass ``shared=<SharedFarmState>`` to run in farm mode.  In farm mode
+    # the engine does NOT subscribe to high-frequency bus topics (orderbook,
+    # fair_prob, truth prices, market_metadata).  Instead it shares state
+    # dicts with all other farm bots via ``SharedFarmState``, and the single
+    # ``FarmDispatcher`` calls ``evaluate_sync()`` on every OB/prob update.
+    # Only low-frequency topics (fills, ws.status, account_balance) retain
+    # per-bot subscriptions because they carry bot-specific data.
 
     def __init__(
         self,
@@ -278,7 +272,7 @@ class StrategyEngine:
         log.debug(f"Updated current balance: ${self._current_balance:.2f}")
 
     async def _consume_fills(self, q: asyncio.Queue) -> None:
-        """Track fills for P&L / position tracking."""
+        # Track fills for P&L / position tracking.
         try:
             while self._running:
                 fill = await q.get()
@@ -315,7 +309,7 @@ class StrategyEngine:
                     self._hold_position_qty[ticker] = remaining
 
     async def _consume_trades(self, q: asyncio.Queue) -> None:
-        """Maintain per-ticker trade-flow imbalance in non-farm mode."""
+        # Maintain per-ticker trade-flow imbalance in non-farm mode.
         try:
             while self._running:
                 ev = await q.get()
@@ -341,7 +335,7 @@ class StrategyEngine:
             pass
 
     async def _consume_orderbook_delta_flow(self, q: asyncio.Queue) -> None:
-        """Maintain per-ticker YES/NO add-vs-cancel flow in non-farm mode."""
+        # Maintain per-ticker YES/NO add-vs-cancel flow in non-farm mode.
         try:
             while self._running:
                 ev = await q.get()
@@ -392,7 +386,7 @@ class StrategyEngine:
             pass
 
     async def _consume_balance(self, q: asyncio.Queue) -> None:
-        """Update current balance from account balance messages."""
+        # Update current balance from account balance messages.
         try:
             while self._running:
                 msg: AccountBalance = await q.get()
@@ -423,11 +417,12 @@ class StrategyEngine:
                     self._market_settlement[ticker] = settle_dt.timestamp()
                 except Exception:
                     pass
+
         except asyncio.CancelledError:
             pass
 
     async def _consume_truth(self, q: asyncio.Queue, asset: str) -> None:
-        """Track truth feed liveness."""
+        # Track truth feed liveness.
         try:
             while self._running:
                 msg = await q.get()
@@ -462,7 +457,7 @@ class StrategyEngine:
             pass
 
     async def _truth_staleness_watchdog(self) -> None:
-        """Periodically check if truth feed has gone stale."""
+        # Periodically check if truth feed has gone stale.
         try:
             while self._running:
                 await asyncio.sleep(5.0)
@@ -494,7 +489,7 @@ class StrategyEngine:
     # -- evaluation ----------------------------------------------------------
 
     async def _evaluate(self, ticker: str) -> None:
-        """Check if a trade signal should be emitted for *ticker*."""
+        # Check if a trade signal should be emitted for *ticker*.
         if self._halted:
             return
 
@@ -898,7 +893,7 @@ class StrategyEngine:
             await _log_decision(f"buy_{side}", "executed")
 
     async def _strategy_diagnostics(self, interval_s: float = 30.0) -> None:
-        """Periodic strategy health log for stale-signal investigation."""
+        # Periodic strategy health log for stale-signal investigation.
         try:
             while self._running:
                 await asyncio.sleep(interval_s)
@@ -942,12 +937,11 @@ class StrategyEngine:
     # -- farm mode: synchronous evaluation -----------------------------------
 
     def evaluate_sync(self, ticker: str, truth_stale: bool = False) -> Optional[TradeSignal]:
-        """Farm-mode synchronous evaluation — no bus I/O.
-
-        Called by FarmDispatcher on every OB/prob update.
-        Returns a TradeSignal to publish, or None to pass.
-        All state reads are from shared dicts (zero fan-out overhead).
-        """
+        # Farm-mode synchronous evaluation — no bus I/O.
+        #
+        # Called by FarmDispatcher on every OB/prob update.
+        # Returns a TradeSignal to publish, or None to pass.
+        # All state reads are from shared dicts (zero fan-out overhead).
         if self._halted:
             return None
         if truth_stale:
@@ -1225,11 +1219,11 @@ class StrategyEngine:
     # -- external updates ----------------------------------------------------
 
     def update_pnl(self, delta: float) -> None:
-        """Called by execution layer to update cumulative daily P&L."""
+        # Called by execution layer to update cumulative daily P&L.
         self._daily_pnl += delta
 
     async def update_tickers(self, added: List[str], removed: List[str]) -> None:
-        """Dynamically update the set of markets this strategy watches."""
+        # Dynamically update the set of markets this strategy watches.
         if not self._running:
             return
 
@@ -1266,5 +1260,5 @@ class StrategyEngine:
                 )
 
     def _prune_tasks(self) -> None:
-        """Drop completed tasks so the task registry remains bounded."""
+        # Drop completed tasks so the task registry remains bounded.
         self._tasks = [t for t in self._tasks if not t.done()]

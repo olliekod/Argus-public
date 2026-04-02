@@ -1,18 +1,19 @@
-"""Kalshi Paper Farm runner.
+# Created by Oliver Meihls
 
-Runs multiple isolated bot instances (strategy/scalper/execution) on a shared
-Kalshi bus/connectors. Each bot routes events using bot_id.
-
-Note: All bots receive the same market feed (orderbook, fair prob) and the same
-ticker set. If strategy config (min_edge_threshold, signal_cooldown_s, sizing,
-etc.) is identical or very similar across configs, they will fire on the same
-signals and take the same trades, so leaderboard PnL and win rate will look
-nearly identical. To get meaningfully different results, vary those params
-per bot (e.g. different min_edge_threshold, persistence_window_ms, bankroll).
-
-Farm config can be a compact "farm" block so params are generated once and
-never drift (see farm_grid.py and load_farm_configs).
-"""
+# Kalshi Paper Farm runner.
+#
+# Runs multiple isolated bot instances (strategy/scalper/execution) on a shared
+# Kalshi bus/connectors. Each bot routes events using bot_id.
+#
+# Note: All bots receive the same market feed (orderbook, fair prob) and the same
+# ticker set. If strategy config (min_edge_threshold, signal_cooldown_s, sizing,
+# etc.) is identical or very similar across configs, they will fire on the same
+# signals and take the same trades, so leaderboard PnL and win rate will look
+# nearly identical. To get meaningfully different results, vary those params
+# per bot (e.g. different min_edge_threshold, persistence_window_ms, bankroll).
+#
+# Farm config can be a compact "farm" block so params are generated once and
+# never drift (see farm_grid.py and load_farm_configs).
 
 from __future__ import annotations
 
@@ -298,12 +299,11 @@ def _tts_bucket(tts_s: float) -> str:
 
 
 def _session_mult(now_wall: float, sleeve: str = "scalp") -> float:
-    """UTC-hour-based sizing multiplier derived from top-wallet activity patterns.
-
-    0xd0d6 concentrates scalp in 15-21 UTC; 0x1979 concentrates holds in 11-15 UTC.
-    Overnight (00-09 UTC) reduces sizing to filter noise from thin books.
-    sleeve: "scalp" | "hold"
-    """
+    # UTC-hour-based sizing multiplier derived from top-wallet activity patterns.
+    #
+    # 0xd0d6 concentrates scalp in 15-21 UTC; 0x1979 concentrates holds in 11-15 UTC.
+    # Overnight (00-09 UTC) reduces sizing to filter noise from thin books.
+    # sleeve: "scalp" | "hold"
     from datetime import timezone as _tz
     utc_hour = datetime.fromtimestamp(now_wall, tz=_tz.utc).hour
     if 15 <= utc_hour < 21:
@@ -325,7 +325,7 @@ class _RegionAdjustment:
 
 
 class _ParamRegionPenaltyEngine:
-    """Rolling scorecard for repeatedly losing parameter regions."""
+    # Rolling scorecard for repeatedly losing parameter regions.
 
     def __init__(self, cfg0: KalshiConfig) -> None:
         self._enabled = bool(getattr(cfg0, "enable_param_region_penalties", False))
@@ -495,7 +495,7 @@ class _ParamRegionPenaltyEngine:
 
 
 class _StrategyBatchEvaluator:
-    """Evaluate hold-to-expiry strategies using shared per-ticker features."""
+    # Evaluate hold-to-expiry strategies using shared per-ticker features.
 
     def __init__(
         self,
@@ -574,7 +574,7 @@ class _StrategyBatchEvaluator:
         requested_qty: int,
         planned_contracts_for_side: int,
     ) -> Tuple[int, str]:
-        """Return (final_qty, reason) where reason in {"none","scaled","blocked"}."""
+        # Return (final_qty, reason) where reason in {"none","scaled","blocked"}.
         if requested_qty <= 0 or not cap_enabled:
             return requested_qty, "none"
         max_allowed = _StrategyBatchEvaluator._market_side_cap_max_contracts(
@@ -710,13 +710,12 @@ class _StrategyBatchEvaluator:
         return cohorts
 
     def _prune_ghost_hold_positions(self, now_wall: float) -> None:
-        """Clear _hold_position_qty/_hold_position_side for expired contracts.
-
-        Hold exits depend on reversal signals which only fire on active OB updates.
-        Once a contract expires and is unsubscribed, no more dispatches arrive,
-        so hold positions get permanently stuck without this sweep.
-        Rate-limited to once per 30s. Uses shared.market_settlement to detect expiry.
-        """
+        # Clear _hold_position_qty/_hold_position_side for expired contracts.
+        #
+        # Hold exits depend on reversal signals which only fire on active OB updates.
+        # Once a contract expires and is unsubscribed, no more dispatches arrive,
+        # so hold positions get permanently stuck without this sweep.
+        # Rate-limited to once per 30s. Uses shared.market_settlement to detect expiry.
         if now_wall - self._last_hold_prune_ts < 30.0:
             return
         self._last_hold_prune_ts = now_wall
@@ -1338,7 +1337,7 @@ class _StrategyBatchEvaluator:
 
 
 class _ScalperBatchEvaluator:
-    """Evaluate scalper entry/exit with shared per-ticker features."""
+    # Evaluate scalper entry/exit with shared per-ticker features.
 
     def __init__(
         self,
@@ -1418,7 +1417,7 @@ class _ScalperBatchEvaluator:
         requested_qty: int,
         planned_contracts_for_side: int,
     ) -> Tuple[int, str]:
-        """Return (final_qty, reason) where reason in {"none","scaled","blocked"}."""
+        # Return (final_qty, reason) where reason in {"none","scaled","blocked"}.
         if requested_qty <= 0 or not cap_enabled:
             return requested_qty, "none"
         max_allowed = _ScalperBatchEvaluator._market_side_cap_max_contracts(
@@ -1544,21 +1543,20 @@ class _ScalperBatchEvaluator:
         return cohorts
 
     def _prune_ghost_positions(self, now_wall: float) -> None:
-        """Clear open positions for expired contracts (no more OB updates → exit never fires).
-
-        Rate-limited to once per 30s since it scans all bots.
-
-        Two expiry conditions are checked:
-        1. settlement_time_epoch[ticker] <= now  — normal case, metadata known.
-        2. position age > 45 minutes             — fallback for tickers whose metadata
-           never arrived (settlement_ts is None), which would otherwise never expire.
-           45 min covers the longest live contract window (60m) plus a margin.
-
-        NOTE: scalp_settlement_epoch entries are intentionally NOT cleaned in
-        _prune_stale_tickers when a ticker goes stale. Cleaning them would break
-        this method — the old settlement time is exactly what lets us detect that
-        a ghost position is on an expired contract.
-        """
+        # Clear open positions for expired contracts (no more OB updates → exit never fires).
+        #
+        # Rate-limited to once per 30s since it scans all bots.
+        #
+        # Two expiry conditions are checked:
+        # 1. settlement_time_epoch[ticker] <= now  — normal case, metadata known.
+        # 2. position age > 45 minutes             — fallback for tickers whose metadata
+        # never arrived (settlement_ts is None), which would otherwise never expire.
+        # 45 min covers the longest live contract window (60m) plus a margin.
+        #
+        # NOTE: scalp_settlement_epoch entries are intentionally NOT cleaned in
+        # _prune_stale_tickers when a ticker goes stale. Cleaning them would break
+        # this method — the old settlement time is exactly what lets us detect that
+        # a ghost position is on an expired contract.
         if now_wall - self._last_prune_ts < 30.0:
             return
         self._last_prune_ts = now_wall
@@ -1981,7 +1979,7 @@ class _ScalperBatchEvaluator:
 
 
 class _ArbBatchEvaluator:
-    """Evaluate paired YES+NO entry opportunities (sum-ask arbitrage)."""
+    # Evaluate paired YES+NO entry opportunities (sum-ask arbitrage).
 
     def __init__(self, scalpers: List[MispricingScalper]) -> None:
         self._scalpers = scalpers
@@ -2217,27 +2215,24 @@ class _ArbBatchEvaluator:
         return signals
 
 
-# ---------------------------------------------------------------------------
 #  FarmDispatcher — single bus consumer for all high-frequency topics
-# ---------------------------------------------------------------------------
 
 class FarmDispatcher:
-    """Subscribes ONCE per high-frequency topic and evaluates all bots.
-
-    Replaces the O(N_bots) fan-out model where each bot had its own asyncio
-    queue per topic.  Instead:
-      - One queue per topic, managed here.
-      - Shared state dicts injected into all bots at construction time.
-      - ``evaluate_sync`` / ``scalp_sync`` / ``exit_sync`` are called in a
-        tight loop with periodic ``asyncio.sleep(0)`` yields so the event
-        loop can still drain WS I/O between batches of bots. When using
-        separate UI, heavy work runs in a thread pool so the loop stays free
-        for IPC and StateAggregator.
-
-    Truth-feed staleness and WS disconnect are managed centrally here;
-    per-bot halt flags (drawdown) are still set by the bot itself inside
-    ``evaluate_sync``.
-    """
+    # Subscribes ONCE per high-frequency topic and evaluates all bots.
+    #
+    # Replaces the O(N_bots) fan-out model where each bot had its own asyncio
+    # queue per topic.  Instead:
+    # - One queue per topic, managed here.
+    # - Shared state dicts injected into all bots at construction time.
+    # - ``evaluate_sync`` / ``scalp_sync`` / ``exit_sync`` are called in a
+    # tight loop with periodic ``asyncio.sleep(0)`` yields so the event
+    # loop can still drain WS I/O between batches of bots. When using
+    # separate UI, heavy work runs in a thread pool so the loop stays free
+    # for IPC and StateAggregator.
+    #
+    # Truth-feed staleness and WS disconnect are managed centrally here;
+    # per-bot halt flags (drawdown) are still set by the bot itself inside
+    # ``evaluate_sync``.
 
     # Yield to the event loop after processing this many bots per tick.
     # Lower = more responsive I/O but more scheduling overhead.
@@ -2391,7 +2386,7 @@ class FarmDispatcher:
             self._executor = None
 
     def register_bot(self, strategy: StrategyEngine, scalper: MispricingScalper) -> None:
-        """Hot-add a new bot to the running dispatcher (thread-safe rebuild of cohorts)."""
+        # Hot-add a new bot to the running dispatcher (thread-safe rebuild of cohorts).
         self._strategies.append(strategy)
         self._scalpers.append(scalper)
         # Rebuild the evaluator cohort lists atomically, preserving all engines.
@@ -2416,7 +2411,7 @@ class FarmDispatcher:
         self._arb_evaluator = _ArbBatchEvaluator(self._scalpers)
 
     def deregister_bot(self, bot_id: str) -> None:
-        """Hot-remove a bot from the running dispatcher by bot_id."""
+        # Hot-remove a bot from the running dispatcher by bot_id.
         self._strategies = [s for s in self._strategies if s._cfg.bot_id != bot_id]
         self._scalpers = [s for s in self._scalpers if s._cfg.bot_id != bot_id]
         self._strategy_evaluator = _StrategyBatchEvaluator(
@@ -2497,6 +2492,7 @@ class FarmDispatcher:
                     self._shared.scalp_settlement_epoch[ticker] = settle_dt.timestamp()
                 except Exception:
                     pass
+
                 time_to_settle_s = self._shared.market_settlement.get(ticker, 0.0) - time.time()
                 eligible = (
                     _scalp_family_allowed(
@@ -2514,7 +2510,7 @@ class FarmDispatcher:
             pass
 
     async def _consume_selected_markets(self, q: asyncio.Queue) -> None:
-        """Track active ticker set and prune stale diagnostic/tracking maps."""
+        # Track active ticker set and prune stale diagnostic/tracking maps.
         try:
             while self._running:
                 msg = await q.get()
@@ -2600,7 +2596,7 @@ class FarmDispatcher:
             pass
 
     async def _consume_trades(self, q: asyncio.Queue) -> None:
-        """Consume KalshiTradeEvent messages and maintain rolling flow imbalance."""
+        # Consume KalshiTradeEvent messages and maintain rolling flow imbalance.
         import time as _time
         try:
             while self._running:
@@ -2621,7 +2617,7 @@ class FarmDispatcher:
             pass
 
     async def _consume_orderbook_delta_flow(self, q: asyncio.Queue) -> None:
-        """Consume KalshiOrderDeltaEvent and maintain rolling add/cancel imbalance."""
+        # Consume KalshiOrderDeltaEvent and maintain rolling add/cancel imbalance.
         import time as _time
         try:
             while self._running:
@@ -2654,12 +2650,11 @@ class FarmDispatcher:
             pass
 
     async def _consume_regime(self, q: asyncio.Queue) -> None:
-        """Consume regime events bridged from core EventBus into SharedFarmState cache.
-
-        Expected payload shape (from bus bridge):
-            {"asset": "BTC", "vol_regime": "VOL_NORMAL", "liq_regime": "LIQ_NORMAL",
-             "risk_regime": "NEUTRAL", "session_regime": "US", "market": "CRYPTO"}
-        """
+        # Consume regime events bridged from core EventBus into SharedFarmState cache.
+        #
+        # Expected payload shape (from bus bridge):
+        # {"asset": "BTC", "vol_regime": "VOL_NORMAL", "liq_regime": "LIQ_NORMAL",
+        # "risk_regime": "NEUTRAL", "session_regime": "US", "market": "CRYPTO"}
         try:
             while self._running:
                 event = await q.get()
@@ -2688,7 +2683,7 @@ class FarmDispatcher:
             pass
 
     async def _truth_watchdog(self) -> None:
-        """Periodically check truth feed staleness and update the shared flag."""
+        # Periodically check truth feed staleness and update the shared flag.
         try:
             while self._running:
                 await asyncio.sleep(5.0)
@@ -2712,7 +2707,7 @@ class FarmDispatcher:
     # ── dispatch ─────────────────────────────────────────────────────────────
 
     def _dispatch_ticker_sync(self, ticker: str) -> List[TradeSignal]:
-        """Evaluate all farm bots for *ticker* in a thread. Returns signals to publish."""
+        # Evaluate all farm bots for *ticker* in a thread. Returns signals to publish.
         truth_stale = self._shared.truth_stale or self._shared.ws_halted
 
         # Live-mode data quality circuit breaker: drop all signals when market
@@ -2864,7 +2859,7 @@ class FarmDispatcher:
         )
 
     def _mark_ticker_dirty(self, ticker: str) -> None:
-        """Queue ticker for dispatch once; collapse bursts into one latest-state evaluation."""
+        # Queue ticker for dispatch once; collapse bursts into one latest-state evaluation.
         if ticker in self._dispatching_tickers:
             self._redispatch_tickers.add(ticker)
             return
@@ -2894,11 +2889,12 @@ class FarmDispatcher:
                         self._mark_ticker_dirty(ticker)
         except asyncio.CancelledError:
             pass
+
         except Exception as exc:
             log.error("Dispatch worker crashed", data={"error": str(exc)})
 
     async def _dispatch_ticker(self, ticker: str) -> None:
-        """Run heavy dispatch in executor so event loop stays free for IPC/aggregator."""
+        # Run heavy dispatch in executor so event loop stays free for IPC/aggregator.
         t0 = time.monotonic()
         if self._executor is None:
             signals = self._dispatch_ticker_sync(ticker)
@@ -2959,19 +2955,18 @@ class FarmDispatcher:
             )
 
     async def _data_quality_monitor(self, check_interval_s: float = 60.0, halt_threshold_minutes: float = 10.0) -> None:
-        """Live-mode circuit breaker: halt execution when configured families have no valid markets.
-
-        In dry-run / paper mode this only logs a warning — no real money is at risk.
-        In live mode (ws_trading_enabled=True, dry_run=False) it sets
-        SharedFarmState.data_quality_halted, which blocks all signal generation
-        until markets recover.
-
-        Why: Kalshi occasionally returns bad market metadata (e.g. strike_price = time
-        fragments after DST transitions). When that happens, our parser correctly skips
-        the market and returns None, but the UI shows EMPTY and no signals are generated.
-        In live mode, silently having zero valid markets for >10 minutes is dangerous —
-        this guard makes the outage explicit and stops order placement.
-        """
+        # Live-mode circuit breaker: halt execution when configured families have no valid markets.
+        #
+        # In dry-run / paper mode this only logs a warning — no real money is at risk.
+        # In live mode (ws_trading_enabled=True, dry_run=False) it sets
+        # SharedFarmState.data_quality_halted, which blocks all signal generation
+        # until markets recover.
+        #
+        # Why: Kalshi occasionally returns bad market metadata (e.g. strike_price = time
+        # fragments after DST transitions). When that happens, our parser correctly skips
+        # the market and returns None, but the UI shows EMPTY and no signals are generated.
+        # In live mode, silently having zero valid markets for >10 minutes is dangerous —
+        # this guard makes the outage explicit and stops order placement.
         cfg = self._base_cfg0
         if cfg is None:
             return
@@ -3043,7 +3038,7 @@ class FarmDispatcher:
             pass
 
     async def _pipeline_diagnostics(self, interval_s: float = 30.0) -> None:
-        """Periodic pipeline health logs for stale-feed debugging."""
+        # Periodic pipeline health logs for stale-feed debugging.
         try:
             while self._running:
                 await asyncio.sleep(interval_s)
@@ -3256,16 +3251,15 @@ class FarmDispatcher:
                         )
         except asyncio.CancelledError:
             pass
+
         except Exception as exc:
             log.error("Farm pipeline diagnostics loop crashed", data={"error": str(exc)})
 
 
-# ---------------------------------------------------------------------------
 #  FarmExecutionCoordinator
-# ---------------------------------------------------------------------------
 
 class FarmExecutionCoordinator:
-    """Single bus router for all farm execution engines."""
+    # Single bus router for all farm execution engines.
 
     def __init__(
         self,
@@ -3334,7 +3328,7 @@ class FarmExecutionCoordinator:
         strategy: StrategyEngine,
         scalper: MispricingScalper,
     ) -> None:
-        """Hot-add an execution engine and its associated strategy/scalper."""
+        # Hot-add an execution engine and its associated strategy/scalper.
         self._executions.append(execution)
         self._strategies.append(strategy)
         self._scalpers.append(scalper)
@@ -3345,7 +3339,7 @@ class FarmExecutionCoordinator:
             self._scalper_by_bot_id[bot_id] = scalper
 
     def deregister_execution(self, bot_id: str) -> None:
-        """Hot-remove an execution engine and its associated strategy/scalper by bot_id."""
+        # Hot-remove an execution engine and its associated strategy/scalper by bot_id.
         self._executions = [e for e in self._executions if e._cfg.bot_id != bot_id]
         self._strategies = [s for s in self._strategies if s._cfg.bot_id != bot_id]
         self._scalpers = [s for s in self._scalpers if s._cfg.bot_id != bot_id]
@@ -3530,9 +3524,7 @@ class FarmExecutionCoordinator:
             pass
 
 
-# ---------------------------------------------------------------------------
 #  KalshiPaperFarm
-# ---------------------------------------------------------------------------
 
 class KalshiPaperFarm:
     def __init__(
@@ -3967,7 +3959,7 @@ class KalshiPaperFarm:
     # --- Population management background tasks ---
 
     async def _drawdown_monitor_loop(self, interval_s: float = 30.0) -> None:
-        """Periodic check: retire and reseed any bot whose drawdown breaches the hard-stop."""
+        # Periodic check: retire and reseed any bot whose drawdown breaches the hard-stop.
         try:
             while True:
                 await asyncio.sleep(interval_s)
@@ -3999,7 +3991,7 @@ class KalshiPaperFarm:
             pass
 
     async def _consume_settlement_outcomes(self, q: asyncio.Queue) -> None:
-        """Update per-bot equity ledgers and family pnl from realized outcomes."""
+        # Update per-bot equity ledgers and family pnl from realized outcomes.
         try:
             while True:
                 out = await q.get()
@@ -4115,11 +4107,10 @@ class KalshiPaperFarm:
             pass
 
     async def _epoch_loop(self, epoch_minutes: float) -> None:
-        """Periodic epoch evaluation: rank bots, retire+reseed bottom cohort.
-
-        When family_population_enabled, ranking is done per-family bucket.
-        Otherwise falls back to global ranking.
-        """
+        # Periodic epoch evaluation: rank bots, retire+reseed bottom cohort.
+        #
+        # When family_population_enabled, ranking is done per-family bucket.
+        # Otherwise falls back to global ranking.
         try:
             while True:
                 await asyncio.sleep(epoch_minutes * 60)
@@ -4284,7 +4275,7 @@ class KalshiPaperFarm:
             pass
 
     async def _family_rebalance_loop(self, interval_s: float = 60.0) -> None:
-        """Periodically rebalance family weights based on performance EMA."""
+        # Periodically rebalance family weights based on performance EMA.
         try:
             while True:
                 await asyncio.sleep(interval_s)
@@ -4309,18 +4300,17 @@ class KalshiPaperFarm:
         is_exploit: bool = True,
         family_hint: str = "",
     ) -> None:
-        """Full retire-and-reseed: stop old bot, start fresh bot with new params/run_id.
-
-        Args:
-            family_hint: When non-empty, scope survivor pool and param domains
-                         to this family (Phase 2 per-family reseed).
-
-        Guarantees:
-        - Old bot's params are never mutated.
-        - New bot gets a new run_id, incrementing generation, and lineage link.
-        - New strategy/scalper/execution instances are hot-registered with the
-          running FarmDispatcher and FarmExecutionCoordinator.
-        """
+        # Full retire-and-reseed: stop old bot, start fresh bot with new params/run_id.
+        #
+        # Args:
+        # family_hint: When non-empty, scope survivor pool and param domains
+        # to this family (Phase 2 per-family reseed).
+        #
+        # Guarantees:
+        # - Old bot's params are never mutated.
+        # - New bot gets a new run_id, incrementing generation, and lineage link.
+        # - New strategy/scalper/execution instances are hot-registered with the
+        # running FarmDispatcher and FarmExecutionCoordinator.
         # 1. Finalize the existing run record.
         record = self._run_records.get(bot_id)
         if record is None:
@@ -4492,7 +4482,7 @@ class KalshiPaperFarm:
         exclude_bot_id: Optional[str] = None,
         family_hint: str = "",
     ) -> Tuple[List[Dict[str, Any]], List[str]]:
-        """Return top surviving configs and their run_ids ranked by robustness."""
+        # Return top surviving configs and their run_ids ranked by robustness.
         ranked: List[Tuple[float, str]] = []
         for bot_id, cfg in self._configs_by_bot_id.items():
             if exclude_bot_id and bot_id == exclude_bot_id:
@@ -4539,12 +4529,11 @@ class KalshiPaperFarm:
         is_exploit: bool,
         parent_scenario: str = "base",
     ) -> str:
-        """Choose scenario profile for a replacement bot.
-
-        Exploit bots bias toward their parent's scenario while keeping global
-        population close to target mix. Explore bots are assigned to the most
-        underrepresented scenario.
-        """
+        # Choose scenario profile for a replacement bot.
+        #
+        # Exploit bots bias toward their parent's scenario while keeping global
+        # population close to target mix. Explore bots are assigned to the most
+        # underrepresented scenario.
         valid = ("best", "base", "stress")
         current_counts = {k: 0 for k in valid}
         for cfg in self._configs_by_bot_id.values():
@@ -4567,11 +4556,10 @@ class KalshiPaperFarm:
 
 
     def get_bot_stats_overlay(self) -> Dict[str, Dict[str, Any]]:
-        """Return population manager data for IPC snapshot overlay.
-
-        The returned dict maps bot_id -> {generation, run_id, parent_run_id, ...}
-        which the IPC aggregator can merge into its bot_stats.
-        """
+        # Return population manager data for IPC snapshot overlay.
+        #
+        # The returned dict maps bot_id -> {generation, run_id, parent_run_id, ...}
+        # which the IPC aggregator can merge into its bot_stats.
         overlay: Dict[str, Dict[str, Any]] = {}
         for bot_id, record in self._run_records.items():
             ledger = self._equity_ledgers.get(bot_id)
@@ -4593,7 +4581,7 @@ class KalshiPaperFarm:
         return overlay
 
     def get_population_diagnostics(self) -> Dict[str, Any]:
-        """Runtime population-manager stats for IPC/dashboard visibility."""
+        # Runtime population-manager stats for IPC/dashboard visibility.
         active_runs = sum(1 for r in self._run_records.values() if not r.reason_ended)
         ended_runs = sum(1 for r in self._run_records.values() if r.reason_ended)
         result: Dict[str, Any] = {
@@ -4646,7 +4634,7 @@ class KalshiPaperFarm:
 
 
 def _load_farm_base(farm: Dict[str, Any], settings_dir: Optional[Path] = None) -> Dict[str, Any]:
-    """Load base config for farm: from base_path (YAML) merged with farm.base."""
+    # Load base config for farm: from base_path (YAML) merged with farm.base.
     base: Dict[str, Any] = {}
     base_path = farm.get("base_path")
     if base_path:
@@ -4668,21 +4656,20 @@ def _load_farm_base(farm: Dict[str, Any], settings_dir: Optional[Path] = None) -
 
 
 def load_farm_configs(raw: Dict[str, Any], settings_path: Optional[str] = None) -> List[KalshiConfig]:
-    """Load one or many configs for farm mode.
-
-    Accepts:
-    - {"argus_kalshi": {...single config...}}  → one bot
-    - {"argus_kalshi": [{...}, {...}]}         → list of full configs (legacy, e.g. 21k line file)
-    - {"argus_kalshi": {"farm": {...}}}         → compact farm: params generated once, no drift.
-        farm.base_path: path to YAML for shared defaults (argus_kalshi block).
-        farm.base: optional inline overrides.
-        farm.dwarf_names_file: path to file with one bot_id per line (e.g. 468 names).
-        farm.bot_count: optional; if set and no dwarf_names_file, use farm_001, farm_002, ...
-        farm.seed: optional; for future range-based sampling.
-        farm.farm_cycle_offset: optional; rotates candidate/explore pool starting
-            positions between runs. If unset or 0, defaults to the current UTC hour.
-    Same (farm block + dwarf list) → same configs every run. Params stick unless you reset.
-    """
+    # Load one or many configs for farm mode.
+    #
+    # Accepts:
+    # - {"argus_kalshi": {...single config...}}  → one bot
+    # - {"argus_kalshi": [{...}, {...}]}         → list of full configs (legacy, e.g. 21k line file)
+    # - {"argus_kalshi": {"farm": {...}}}         → compact farm: params generated once, no drift.
+    # farm.base_path: path to YAML for shared defaults (argus_kalshi block).
+    # farm.base: optional inline overrides.
+    # farm.dwarf_names_file: path to file with one bot_id per line (e.g. 468 names).
+    # farm.bot_count: optional; if set and no dwarf_names_file, use farm_001, farm_002, ...
+    # farm.seed: optional; for future range-based sampling.
+    # farm.farm_cycle_offset: optional; rotates candidate/explore pool starting
+    # positions between runs. If unset or 0, defaults to the current UTC hour.
+    # Same (farm block + dwarf list) → same configs every run. Params stick unless you reset.
     block = raw.get("argus_kalshi", {})
     if isinstance(block, list):
         return [load_config(item) for item in block if isinstance(item, dict)]

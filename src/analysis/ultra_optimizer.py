@@ -1,19 +1,18 @@
-"""
-Ultra Optimizer
-===============
+# Created by Oliver Meihls
 
-Maximum thoroughness for powerful systems.
-
-Features:
-1. Full date range (BITO inception 2021 → yesterday)
-2. Walk-forward validation (70/30 split)
-3. Monte Carlo simulation (1000+ randomized runs)
-4. Multi-factor recommendation with proper scoring
-5. Conservative confidence thresholds
-6. Paper trading integration
-
-Designed for: i7-13700K, RTX 4080, 64GB RAM
-"""
+# Ultra Optimizer
+#
+# Maximum thoroughness for powerful systems.
+#
+# Features:
+# 1. Full date range (BITO inception 2021 → yesterday)
+# 2. Walk-forward validation (70/30 split)
+# 3. Monte Carlo simulation (1000+ randomized runs)
+# 4. Multi-factor recommendation with proper scoring
+# 5. Conservative confidence thresholds
+# 6. Paper trading integration
+#
+# Designed for: i7-13700K, RTX 4080, 64GB RAM
 
 import logging
 from datetime import datetime, timedelta
@@ -38,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ValidationResult:
-    """Walk-forward validation result."""
+    # Walk-forward validation result.
     in_sample_return: float
     out_of_sample_return: float
     degradation_pct: float
@@ -47,7 +46,7 @@ class ValidationResult:
 
 @dataclass
 class MonteCarloResult:
-    """Monte Carlo simulation results."""
+    # Monte Carlo simulation results.
     runs: int
     mean_return: float
     median_return: float
@@ -61,7 +60,7 @@ class MonteCarloResult:
 
 @dataclass
 class RecommendationScore:
-    """Multi-factor recommendation score (capped at 100)."""
+    # Multi-factor recommendation score (capped at 100).
     total_score: float
     
     profitability_score: float
@@ -78,7 +77,7 @@ class RecommendationScore:
 
 @dataclass
 class UltraOptimizationReport:
-    """Complete optimization report."""
+    # Complete optimization report.
     timestamp: str
     duration_seconds: float
     
@@ -96,14 +95,12 @@ class UltraOptimizationReport:
 
 
 class UltraOptimizer:
-    """
-    Ultra-thorough optimizer built for powerful hardware.
-    
-    Uses your full CPU (multithreaded) for:
-    - 6000+ parameter combinations
-    - Monte Carlo simulation (1000 runs)
-    - Walk-forward validation
-    """
+    # Ultra-thorough optimizer built for powerful hardware.
+    #
+    # Uses your full CPU (multithreaded) for:
+    # - 6000+ parameter combinations
+    # - Monte Carlo simulation (1000 runs)
+    # - Walk-forward validation
     
     BITO_INCEPTION = "2021-10-19"
     ACCOUNT_SIZE = 5000.0
@@ -128,28 +125,28 @@ class UltraOptimizer:
     }
     
     def __init__(self, symbol: str = "BITO", num_threads: int = 8):
-        """Initialize ultra optimizer."""
+        # Initialize ultra optimizer.
         self.symbol = symbol
         self.num_threads = num_threads
         self._data_cache = None
         logger.info(f"Ultra Optimizer initialized: {symbol}, {num_threads} threads")
     
     def _count_combinations(self) -> int:
-        """Count total parameter combinations."""
+        # Count total parameter combinations.
         total = 1
         for values in self.PARAM_GRID.values():
             total *= len(values)
         return total
     
     def _prefetch_data(self) -> None:
-        """Prefetch and cache historical data for speed."""
+        # Prefetch and cache historical data for speed.
         if self._data_cache is None:
             end = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
             backtester = StrategyBacktester(self.symbol, account_size=self.ACCOUNT_SIZE)
             self._data_cache = backtester.fetch_historical_data(self.BITO_INCEPTION, end)
     
     def run_backtest_cached(self, params: Dict) -> BacktestResult:
-        """Run backtest using cached data (fast)."""
+        # Run backtest using cached data (fast).
         self._prefetch_data()
         
         full_params = {**self.CURRENT_PARAMS, **params}
@@ -171,16 +168,14 @@ class UltraOptimizer:
         num_runs: int = 1000,
         sample_pct: float = 0.8,
     ) -> MonteCarloResult:
-        """
-        Monte Carlo simulation with random data sampling.
-        
-        For each run:
-        1. Randomly sample 80% of trading days
-        2. Run backtest
-        3. Record return
-        
-        This tests robustness to different market sequences.
-        """
+        # Monte Carlo simulation with random data sampling.
+        #
+        # For each run:
+        # 1. Randomly sample 80% of trading days
+        # 2. Run backtest
+        # 3. Record return
+        #
+        # This tests robustness to different market sequences.
         self._prefetch_data()
         df = self._data_cache.copy()
         
@@ -225,7 +220,7 @@ class UltraOptimizer:
         )
     
     def run_walk_forward(self, params: Dict) -> ValidationResult:
-        """Walk-forward validation: 70% train, 30% test."""
+        # Walk-forward validation: 70% train, 30% test.
         self._prefetch_data()
         df = self._data_cache.copy()
         
@@ -279,7 +274,7 @@ class UltraOptimizer:
         monte_carlo: MonteCarloResult,
         current_result: BacktestResult,
     ) -> RecommendationScore:
-        """Calculate recommendation with proper 0-100 capping."""
+        # Calculate recommendation with proper 0-100 capping.
         reasoning = []
         
         # 1. Profitability (capped at 100)
@@ -390,15 +385,13 @@ class UltraOptimizer:
         monte_carlo_runs: int = 500,
         show_progress: bool = True,
     ) -> UltraOptimizationReport:
-        """
-        Run ultra optimization.
-        
-        1. Prefetch data for speed
-        2. Test all combinations
-        3. Monte Carlo on best
-        4. Walk-forward validation
-        5. Generate recommendation
-        """
+        # Run ultra optimization.
+        #
+        # 1. Prefetch data for speed
+        # 2. Test all combinations
+        # 3. Monte Carlo on best
+        # 4. Walk-forward validation
+        # 5. Generate recommendation
         start_time = time.time()
         
         # Prefetch data
@@ -498,7 +491,7 @@ class UltraOptimizer:
         )
     
     def format_report(self, report: UltraOptimizationReport) -> str:
-        """Format report (ASCII only for Windows compatibility)."""
+        # Format report (ASCII only for Windows compatibility).
         rec = report.recommendation
         
         badge = {
@@ -594,7 +587,7 @@ class UltraOptimizer:
         return "\n".join(lines)
     
     def save_params(self, params: Dict, target: str = 'paper') -> Path:
-        """Save parameters to config file."""
+        # Save parameters to config file.
         config_path = Path("config/strategy_params.json")
         config_path.parent.mkdir(parents=True, exist_ok=True)
         
@@ -623,7 +616,7 @@ class UltraOptimizer:
 
 
 def run_ultra_optimization():
-    """Run ultra optimization from CLI."""
+    # Run ultra optimization from CLI.
     optimizer = UltraOptimizer(symbol="BITO", num_threads=8)
     
     print("=" * 70)

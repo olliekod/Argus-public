@@ -1,17 +1,16 @@
-"""
-Directional scalper for Kalshi contracts.
+# Created by Oliver Meihls
 
-Entry model
------------
-Uses a directional composite score from:
-- drift (FairProbability.drift)
-- orderbook imbalance (obi)
-- depth pressure (multi-level imbalance)
-- trade flow imbalance
-- order-delta flow (YES adds vs cancels and NO adds vs cancels)
-
-No GBM fair-vs-ask edge is used for scalp entry direction.
-"""
+# Directional scalper for Kalshi contracts.
+#
+# Entry model
+# Uses a directional composite score from:
+# - drift (FairProbability.drift)
+# - orderbook imbalance (obi)
+# - depth pressure (multi-level imbalance)
+# - trade flow imbalance
+# - order-delta flow (YES adds vs cancels and NO adds vs cancels)
+#
+# No GBM fair-vs-ask edge is used for scalp entry direction.
 
 from __future__ import annotations
 
@@ -40,7 +39,7 @@ log = ComponentLogger("mispricing_scalper")
 
 
 def _session_mult(now_wall: float, sleeve: str = "scalp") -> float:
-    """UTC-hour-based sizing multiplier derived from top-wallet activity patterns."""
+    # UTC-hour-based sizing multiplier derived from top-wallet activity patterns.
     utc_hour = datetime.fromtimestamp(now_wall, tz=timezone.utc).hour
     if 15 <= utc_hour < 21:
         return 1.20
@@ -52,7 +51,7 @@ def _session_mult(now_wall: float, sleeve: str = "scalp") -> float:
 
 
 def _scalp_family_allowed(asset: str, window_minutes: int, is_range: bool) -> bool:
-    """Restrict scalping to families with plausible short-horizon edge."""
+    # Restrict scalping to families with plausible short-horizon edge.
     if asset == "SOL":
         return False
     if is_range:
@@ -75,14 +74,12 @@ class _ScalpPosition:
 
 
 class MispricingScalper:
-    """Directional scalp entry + early-exit manager.
-
-    Farm mode
-    ---------
-    Pass ``shared=<SharedFarmState>`` to run in farm mode. In farm mode,
-    high-frequency state is read from shared dicts and dispatcher calls
-    ``scalp_sync`` / ``exit_sync`` directly.
-    """
+    # Directional scalp entry + early-exit manager.
+    #
+    # Farm mode
+    # Pass ``shared=<SharedFarmState>`` to run in farm mode. In farm mode,
+    # high-frequency state is read from shared dicts and dispatcher calls
+    # ``scalp_sync`` / ``exit_sync`` directly.
 
     def __init__(self, config: KalshiConfig, bus: Bus, shared: Optional[SharedFarmState] = None) -> None:
         self._cfg = config
@@ -288,6 +285,7 @@ class MispricingScalper:
                     self._settlement_time_epoch[meta.market_ticker] = settlement_epoch
                 except (ValueError, TypeError):
                     pass
+
                 time_to_settle_s = (settlement_epoch - time.time()) if settlement_epoch else None
                 eligible = (
                     meta.window_minutes is not None

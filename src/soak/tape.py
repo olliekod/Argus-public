@@ -1,48 +1,43 @@
-"""
-Tape Recorder — Deterministic Event Capture & Replay
-=====================================================
+# Created by Oliver Meihls
 
-Captures a bounded rolling window of QuoteEvents, BarEvents, and MinuteTickEvents
-for a configurable subset of symbols. The tape is replayable for determinism proof.
-
-REPLAY MODES
-------------
-Two distinct replay modes with clear semantics:
-
-**Faithful Mode (DEFAULT)**:
-  - Append-only with monotonic `sequence_id` at record time.
-  - Replay outputs events in EXACT recorded order (by sequence_id).
-  - REQUIRED for deterministic strategy evaluation.
-
-**Canonical Mode (OPTIONAL)**:
-  - Produces stable order independent of arrival timing.
-  - Sort key: (event_ts, provider_priority, event_type_priority, symbol, sequence_id)
-  - Logs warning that it is NOT faithful to arrival order.
-  - Use only for analysis/comparison, NOT primary evaluation.
-
-TIMESTAMP CONVENTION
---------------------
-All timestamps are stored as **int milliseconds** (UTC epoch ms).
-This is enforced at record time and validated at replay.
-
-ENVELOPE SCHEMA
----------------
-Every taped record includes:
-  - sequence_id: int (monotonic, assigned at record time)
-  - event_ts: int (ms, arrival time)
-  - provider: str
-  - event_type: str ("bar" | "quote" | "minute_tick")
-  - symbol: str
-  - timeframe: int (bar_duration in seconds, for bars)
-
-PRIORITY TABLES
----------------
-Provider Priority (lower = higher priority):
-  alpaca=1, yahoo=2, bybit=3, binance=4, deribit=5, polymarket=6, unknown=99
-
-Event Type Priority (lower = higher priority):
-  bar=1, quote=2, metric=3, minute_tick=4, signal=5, heartbeat=6
-"""
+# Tape Recorder — Deterministic Event Capture & Replay
+#
+# Captures a bounded rolling window of QuoteEvents, BarEvents, and MinuteTickEvents
+# for a configurable subset of symbols. The tape is replayable for determinism proof.
+#
+# REPLAY MODES
+# Two distinct replay modes with clear semantics:
+#
+# **Faithful Mode (DEFAULT)**:
+# - Append-only with monotonic `sequence_id` at record time.
+# - Replay outputs events in EXACT recorded order (by sequence_id).
+# - REQUIRED for deterministic strategy evaluation.
+#
+# **Canonical Mode (OPTIONAL)**:
+# - Produces stable order independent of arrival timing.
+# - Sort key: (event_ts, provider_priority, event_type_priority, symbol, sequence_id)
+# - Logs warning that it is NOT faithful to arrival order.
+# - Use only for analysis/comparison, NOT primary evaluation.
+#
+# TIMESTAMP CONVENTION
+# All timestamps are stored as **int milliseconds** (UTC epoch ms).
+# This is enforced at record time and validated at replay.
+#
+# ENVELOPE SCHEMA
+# Every taped record includes:
+# - sequence_id: int (monotonic, assigned at record time)
+# - event_ts: int (ms, arrival time)
+# - provider: str
+# - event_type: str ("bar" | "quote" | "minute_tick")
+# - symbol: str
+# - timeframe: int (bar_duration in seconds, for bars)
+#
+# PRIORITY TABLES
+# Provider Priority (lower = higher priority):
+# alpaca=1, yahoo=2, bybit=3, binance=4, deribit=5, polymarket=6, unknown=99
+#
+# Event Type Priority (lower = higher priority):
+# bar=1, quote=2, metric=3, minute_tick=4, signal=5, heartbeat=6
 
 from __future__ import annotations
 
@@ -99,9 +94,7 @@ from ..core.signals import (
 
 logger = logging.getLogger("argus.soak.tape")
 
-# ══════════════════════════════════════════════════════════════
 # PRIORITY TABLES
-# ══════════════════════════════════════════════════════════════
 
 # Provider priority for canonical tape ordering (lower = higher priority)
 PROVIDER_PRIORITY: Dict[str, int] = {
@@ -145,13 +138,12 @@ EVENT_TYPE_PRIORITY: Dict[str, int] = {
 
 
 def _to_ms(ts: Union[int, float]) -> int:
-    """Convert timestamp to int milliseconds.
-    
-    Handles:
-      - Already int ms: return as-is
-      - Float seconds (epoch < 2e10): convert to ms
-      - Float ms: round to int
-    """
+    # Convert timestamp to int milliseconds.
+    #
+    # Handles:
+    # - Already int ms: return as-is
+    # - Float seconds (epoch < 2e10): convert to ms
+    # - Float ms: round to int
     if isinstance(ts, int):
         return ts
     # Heuristic: if ts < 2e10, it's seconds; convert to ms
@@ -161,7 +153,7 @@ def _to_ms(ts: Union[int, float]) -> int:
 
 
 def _validate_ms(ts: int, field_name: str) -> None:
-    """Validate timestamp is a sane int milliseconds value."""
+    # Validate timestamp is a sane int milliseconds value.
     if not isinstance(ts, int):
         raise ValueError(f"{field_name} must be int milliseconds, got {type(ts)}")
     # Sanity bounds: 2020-01-01 to 2035-01-01 in ms
@@ -169,17 +161,14 @@ def _validate_ms(ts: int, field_name: str) -> None:
         raise ValueError(f"{field_name}={ts} outside sane range [2020, 2035] in ms")
 
 
-# ══════════════════════════════════════════════════════════════
 # SERIALIZATION
-# ══════════════════════════════════════════════════════════════
 
 def _quote_to_dict(q: QuoteEvent, sequence_id: int = 0) -> Dict[str, Any]:
-    """Serialize a QuoteEvent to a tape envelope.
-    
-    Args:
-        q: QuoteEvent to serialize
-        sequence_id: Monotonic sequence ID (default 0 for backward compat)
-    """
+    # Serialize a QuoteEvent to a tape envelope.
+    #
+    # Args:
+    # q: QuoteEvent to serialize
+    # sequence_id: Monotonic sequence ID (default 0 for backward compat)
     event_ts_ms = _to_ms(getattr(q, 'event_ts', 0) or q.timestamp)
     return {
         # Envelope fields (required for all events)
@@ -204,12 +193,11 @@ def _quote_to_dict(q: QuoteEvent, sequence_id: int = 0) -> Dict[str, Any]:
 
 
 def _tick_to_dict(t: MinuteTickEvent, sequence_id: int = 0) -> Dict[str, Any]:
-    """Serialize a MinuteTickEvent to a tape envelope.
-    
-    Args:
-        t: MinuteTickEvent to serialize
-        sequence_id: Monotonic sequence ID (default 0 for backward compat)
-    """
+    # Serialize a MinuteTickEvent to a tape envelope.
+    #
+    # Args:
+    # t: MinuteTickEvent to serialize
+    # sequence_id: Monotonic sequence ID (default 0 for backward compat)
     return {
         # Envelope fields
         "sequence_id": sequence_id,
@@ -225,12 +213,11 @@ def _tick_to_dict(t: MinuteTickEvent, sequence_id: int = 0) -> Dict[str, Any]:
 
 
 def _bar_to_dict(b: BarEvent, sequence_id: int = 0) -> Dict[str, Any]:
-    """Serialize a BarEvent to a tape envelope.
-    
-    Args:
-        b: BarEvent to serialize
-        sequence_id: Monotonic sequence ID (default 0 for backward compat)
-    """
+    # Serialize a BarEvent to a tape envelope.
+    #
+    # Args:
+    # b: BarEvent to serialize
+    # sequence_id: Monotonic sequence ID (default 0 for backward compat)
     event_ts_ms = _to_ms(getattr(b, 'event_ts', 0) or b.timestamp)
     return {
         # Envelope fields (required for all events)
@@ -258,21 +245,19 @@ def _bar_to_dict(b: BarEvent, sequence_id: int = 0) -> Dict[str, Any]:
 
 
 def _from_tape_ts(ts: float) -> float:
-    """Convert tape timestamp to float seconds.
-    
-    Handles both legacy tapes (seconds) and new tapes (ms).
-    Same heuristic as _to_ms: if ts < 2e10, it's seconds.
-    """
+    # Convert tape timestamp to float seconds.
+    #
+    # Handles both legacy tapes (seconds) and new tapes (ms).
+    # Same heuristic as _to_ms: if ts < 2e10, it's seconds.
     if ts < 2e10:
         return ts  # Already seconds
     return ts / 1000.0  # Convert ms to seconds
 
 
 def _dict_to_quote(d: Dict[str, Any]) -> QuoteEvent:
-    """Deserialize a dict back to a QuoteEvent.
-    
-    Handles both legacy tapes (seconds) and new tapes (ms).
-    """
+    # Deserialize a dict back to a QuoteEvent.
+    #
+    # Handles both legacy tapes (seconds) and new tapes (ms).
     ts = d["timestamp"]
     return QuoteEvent(
         symbol=d["symbol"],
@@ -291,10 +276,9 @@ def _dict_to_quote(d: Dict[str, Any]) -> QuoteEvent:
 
 
 def _dict_to_bar(d: Dict[str, Any]) -> BarEvent:
-    """Deserialize a dict back to a BarEvent.
-    
-    Handles both legacy tapes (seconds) and new tapes (ms).
-    """
+    # Deserialize a dict back to a BarEvent.
+    #
+    # Handles both legacy tapes (seconds) and new tapes (ms).
     ts = d["timestamp"]
     return BarEvent(
         symbol=d["symbol"],
@@ -315,10 +299,9 @@ def _dict_to_bar(d: Dict[str, Any]) -> BarEvent:
 
 
 def _dict_to_event(d: Dict[str, Any]):
-    """Deserialize a dict to the appropriate event type.
-    
-    Handles both legacy tapes (seconds) and new tapes (ms).
-    """
+    # Deserialize a dict to the appropriate event type.
+    #
+    # Handles both legacy tapes (seconds) and new tapes (ms).
     event_type = d.get("event_type") or d.get("type")
     if event_type == "quote":
         return _dict_to_quote(d)
@@ -336,24 +319,20 @@ def _dict_to_event(d: Dict[str, Any]):
     raise ValueError(f"Unknown event type: {event_type}")
 
 
-# ══════════════════════════════════════════════════════════════
 # SORT KEYS
-# ══════════════════════════════════════════════════════════════
 
 def _faithful_sort_key(entry: Dict[str, Any]) -> int:
-    """Sort key for faithful replay: sequence_id only."""
+    # Sort key for faithful replay: sequence_id only.
     return entry.get("sequence_id", 0)
 
 
 def _canonical_sort_key(entry: Dict[str, Any]) -> Tuple[int, int, int, str, int]:
-    """
-    Sort key for canonical ordering.
-    
-    Key: (event_ts, provider_priority, event_type_priority, symbol, sequence_id)
-    
-    This produces a stable order independent of arrival timing.
-    sequence_id is the final tiebreaker for determinism.
-    """
+    # Sort key for canonical ordering.
+    #
+    # Key: (event_ts, provider_priority, event_type_priority, symbol, sequence_id)
+    #
+    # This produces a stable order independent of arrival timing.
+    # sequence_id is the final tiebreaker for determinism.
     event_ts = entry.get("event_ts", 0)
     provider = entry.get("provider", "unknown")
     event_type = entry.get("event_type") or entry.get("type", "unknown")
@@ -367,7 +346,7 @@ def _canonical_sort_key(entry: Dict[str, Any]) -> Tuple[int, int, int, str, int]
 
 
 def _bar_sort_key(bar: BarEvent) -> Tuple[int, str, str, int]:
-    """Deterministic sort key for emitted bars."""
+    # Deterministic sort key for emitted bars.
     return (
         _to_ms(bar.timestamp),
         bar.symbol,
@@ -377,7 +356,7 @@ def _bar_sort_key(bar: BarEvent) -> Tuple[int, str, str, int]:
 
 
 class _ReplayBus:
-    """Synchronous event bus for deterministic tape replay."""
+    # Synchronous event bus for deterministic tape replay.
 
     def __init__(self) -> None:
         self._subscribers: Dict[str, List] = {}
@@ -399,22 +378,18 @@ class _ReplayBus:
         return {topic: 0 for topic in self._subscribers}
 
 
-# ══════════════════════════════════════════════════════════════
 # TAPE RECORDER
-# ══════════════════════════════════════════════════════════════
 
 class TapeRecorder:
-    """Bounded rolling tape capture for determinism proof.
-
-    Parameters
-    ----------
-    enabled : bool
-        If False, all operations are no-ops.
-    symbols : set of str or None
-        Symbols to capture.  None = capture all.
-    maxlen : int
-        Maximum events in the rolling buffer.
-    """
+    # Bounded rolling tape capture for determinism proof.
+    #
+    # Parameters
+    # enabled : bool
+    # If False, all operations are no-ops.
+    # symbols : set of str or None
+    # Symbols to capture.  None = capture all.
+    # maxlen : int
+    # Maximum events in the rolling buffer.
 
     def __init__(
         self,
@@ -437,13 +412,13 @@ class TapeRecorder:
         return self._enabled
 
     def _get_next_sequence_id(self) -> int:
-        """Get next monotonic sequence ID (must hold lock)."""
+        # Get next monotonic sequence ID (must hold lock).
         seq_id = self._next_sequence_id
         self._next_sequence_id += 1
         return seq_id
 
     def attach(self, bus) -> None:
-        """Subscribe to event bus topics if enabled."""
+        # Subscribe to event bus topics if enabled.
         if not self._enabled:
             logger.info("TapeRecorder disabled — not subscribing")
             return
@@ -538,7 +513,7 @@ class TapeRecorder:
                 self._events_evicted += 1
 
     def _on_option_chain(self, event: OptionChainSnapshotEvent) -> None:
-        """Record option chain snapshot to tape."""
+        # Record option chain snapshot to tape.
         if not self._enabled:
             return
         if self._symbols and event.symbol not in self._symbols:
@@ -595,7 +570,7 @@ class TapeRecorder:
     def get_status(self) -> Dict[str, Any]:
 
 
-        """Status snapshot for soak summary."""
+        # Status snapshot for soak summary.
         with self._lock:
             size = len(self._tape)
             next_seq = self._next_sequence_id
@@ -610,20 +585,17 @@ class TapeRecorder:
         }
 
     def export_jsonl(self, path: str, last_n_minutes: Optional[int] = None) -> int:
-        """Export tape to a JSONL file.
-
-        Parameters
-        ----------
-        path : str
-            Output file path.
-        last_n_minutes : int or None
-            If set, only export events from the last N minutes.
-
-        Returns
-        -------
-        int
-            Number of events written.
-        """
+        # Export tape to a JSONL file.
+        #
+        # Parameters
+        # path : str
+        # Output file path.
+        # last_n_minutes : int or None
+        # If set, only export events from the last N minutes.
+        #
+        # Returns
+        # int
+        # Number of events written.
         if not self._enabled:
             logger.warning("TapeRecorder is disabled — nothing to export")
             return 0
@@ -648,7 +620,7 @@ class TapeRecorder:
 
     @staticmethod
     def load_tape(path: str) -> List[Dict[str, Any]]:
-        """Load a JSONL tape file."""
+        # Load a JSONL tape file.
         entries = []
         with open(path) as f:
             for line in f:
@@ -662,24 +634,21 @@ class TapeRecorder:
         tape: List[Dict[str, Any]],
         mode: str = "faithful",
     ) -> List:
-        """Replay a tape through a fresh BarBuilder and return emitted bars.
-
-        Parameters
-        ----------
-        tape : list of dict
-            Tape entries (quote, bar, minute_tick events).
-        mode : str
-            Replay mode:
-              - "faithful" (DEFAULT): replay in exact recorded order (sequence_id).
-                Required for deterministic strategy evaluation.
-              - "canonical": replay in stable sorted order independent of arrival.
-                NOT faithful to live arrival order. Use only for analysis.
-
-        Returns
-        -------
-        list
-            Emitted BarEvents from replay.
-        """
+        # Replay a tape through a fresh BarBuilder and return emitted bars.
+        #
+        # Parameters
+        # tape : list of dict
+        # Tape entries (quote, bar, minute_tick events).
+        # mode : str
+        # Replay mode:
+        # - "faithful" (DEFAULT): replay in exact recorded order (sequence_id).
+        # Required for deterministic strategy evaluation.
+        # - "canonical": replay in stable sorted order independent of arrival.
+        # NOT faithful to live arrival order. Use only for analysis.
+        #
+        # Returns
+        # list
+        # Emitted BarEvents from replay.
         if mode not in ("faithful", "canonical"):
             raise ValueError(f"mode must be 'faithful' or 'canonical', got {mode!r}")
         
@@ -724,22 +693,20 @@ class TapeRecorder:
         tape: List[Dict[str, Any]],
         mode: str = "faithful",
     ) -> Iterator[Tuple[int, Any]]:
-        """Iterate tape events in replay order without processing.
-        
-        Yields (sequence_id, event) tuples for testing/inspection.
-        
-        Parameters
-        ----------
-        tape : list of dict
-            Tape entries.
-        mode : str
-            "faithful" or "canonical".
-            
-        Yields
-        ------
-        tuple of (int, event)
-            Sequence ID and deserialized event.
-        """
+        # Iterate tape events in replay order without processing.
+        #
+        # Yields (sequence_id, event) tuples for testing/inspection.
+        #
+        # Parameters
+        # tape : list of dict
+        # Tape entries.
+        # mode : str
+        # "faithful" or "canonical".
+        #
+        # Yields
+        # ------
+        # tuple of (int, event)
+        # Sequence ID and deserialized event.
         if mode not in ("faithful", "canonical"):
             raise ValueError(f"mode must be 'faithful' or 'canonical', got {mode!r}")
         

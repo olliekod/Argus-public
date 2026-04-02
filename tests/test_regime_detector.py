@@ -1,9 +1,8 @@
-"""
-Regime Detector Tests
-=====================
+# Created by Oliver Meihls
 
-Tests for Phase 2 deterministic regime detection.
-"""
+# Regime Detector Tests
+#
+# Tests for Phase 2 deterministic regime detection.
 
 import json
 import math
@@ -32,15 +31,13 @@ from src.core.regimes import (
 from src.core.events import BarEvent
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Round-Trip Tests (Event → Dict → Event)
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRoundTrip:
-    """Test event serialization round-trips."""
+    # Test event serialization round-trips.
 
     def test_symbol_regime_round_trip(self):
-        """SymbolRegimeEvent → dict → SymbolRegimeEvent preserves all fields."""
+        # SymbolRegimeEvent → dict → SymbolRegimeEvent preserves all fields.
         event = SymbolRegimeEvent(
             symbol="BTC",
             timeframe=60,
@@ -89,7 +86,7 @@ class TestRoundTrip:
         assert restored.v == event.v
 
     def test_market_regime_round_trip(self):
-        """MarketRegimeEvent → dict → MarketRegimeEvent preserves all fields."""
+        # MarketRegimeEvent → dict → MarketRegimeEvent preserves all fields.
         event = MarketRegimeEvent(
             market="CRYPTO",
             timeframe=60,
@@ -115,7 +112,7 @@ class TestRoundTrip:
         assert restored.v == event.v
 
     def test_json_round_trip(self):
-        """Verify JSON serialization is stable."""
+        # Verify JSON serialization is stable.
         event = SymbolRegimeEvent(
             symbol="ETH",
             timeframe=60,
@@ -147,71 +144,65 @@ class TestRoundTrip:
         assert restored.timestamp_ms == event.timestamp_ms
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Config Hash Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestConfigHash:
-    """Test config hash determinism."""
+    # Test config hash determinism.
 
     def test_same_config_same_hash(self):
-        """Same thresholds produce same hash."""
+        # Same thresholds produce same hash.
         config1 = {"vol_spike_z": 2.5, "vol_high_z": 1.0}
         config2 = {"vol_spike_z": 2.5, "vol_high_z": 1.0}
         
         assert compute_config_hash(config1) == compute_config_hash(config2)
 
     def test_different_config_different_hash(self):
-        """Different thresholds produce different hash."""
+        # Different thresholds produce different hash.
         config1 = {"vol_spike_z": 2.5}
         config2 = {"vol_spike_z": 3.0}
         
         assert compute_config_hash(config1) != compute_config_hash(config2)
 
     def test_order_independent(self):
-        """Key order doesn't affect hash."""
+        # Key order doesn't affect hash.
         config1 = {"a": 1, "b": 2}
         config2 = {"b": 2, "a": 1}
         
         assert compute_config_hash(config1) == compute_config_hash(config2)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Market Classification Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestMarketClassification:
-    """Test symbol → market mapping."""
+    # Test symbol → market mapping.
 
     def test_equities_classification(self):
-        """Equities symbols are correctly classified."""
+        # Equities symbols are correctly classified.
         assert get_market_for_symbol("IBIT") == "EQUITIES"
         assert get_market_for_symbol("BITO") == "EQUITIES"
         assert get_market_for_symbol("SPY") == "EQUITIES"
 
     def test_crypto_classification(self):
-        """Crypto symbols are correctly classified."""
+        # Crypto symbols are correctly classified.
         assert get_market_for_symbol("BTC") == "CRYPTO"
         assert get_market_for_symbol("ETH") == "CRYPTO"
         assert get_market_for_symbol("DOGE") == "CRYPTO"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Data Quality Flag Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestDataQualityFlags:
-    """Test data quality flag handling."""
+    # Test data quality flag handling.
 
     def test_flag_values(self):
-        """Verify flag values are correct powers of 2."""
+        # Verify flag values are correct powers of 2.
         assert DQ_NONE == 0
         assert DQ_REPAIRED_INPUT == 1
         assert DQ_GAP_WINDOW == 2
         assert DQ_STALE_INPUT == 4
 
     def test_flag_combination(self):
-        """Flags can be combined with OR."""
+        # Flags can be combined with OR.
         combined = DQ_REPAIRED_INPUT | DQ_GAP_WINDOW
         assert combined == 3
         assert combined & DQ_REPAIRED_INPUT
@@ -219,15 +210,13 @@ class TestDataQualityFlags:
         assert not (combined & DQ_STALE_INPUT)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Regime Detector Integration Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestRegimeDetectorDeterminism:
-    """Test regime detector produces deterministic output."""
+    # Test regime detector produces deterministic output.
 
     def _create_mock_bus(self):
-        """Create a mock event bus that captures published events."""
+        # Create a mock event bus that captures published events.
         bus = MagicMock()
         bus.published = []
         
@@ -238,7 +227,7 @@ class TestRegimeDetectorDeterminism:
         return bus
 
     def _create_bars(self, symbol: str, n: int, base_ts: int = 1700000000) -> List[BarEvent]:
-        """Create a sequence of bars with deterministic values."""
+        # Create a sequence of bars with deterministic values.
         bars = []
         for i in range(n):
             # Create deterministic price movement
@@ -258,7 +247,7 @@ class TestRegimeDetectorDeterminism:
         return bars
 
     def test_same_bars_same_regimes(self):
-        """Same bar sequence produces identical regime events."""
+        # Same bar sequence produces identical regime events.
         from src.core.regime_detector import RegimeDetector
         
         # Run 1
@@ -294,7 +283,7 @@ class TestRegimeDetectorDeterminism:
             assert e1.config_hash == e2.config_hash
 
     def test_mixed_symbol_order_stability(self):
-        """Different symbol interleaving produces consistent per-symbol regimes."""
+        # Different symbol interleaving produces consistent per-symbol regimes.
         from src.core.regime_detector import RegimeDetector
         
         base_ts = 1700000000
@@ -333,15 +322,13 @@ class TestRegimeDetectorDeterminism:
             assert e.config_hash == config_hash
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Session Regime Tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestSessionRegime:
-    """Test session regime classification from timestamp."""
+    # Test session regime classification from timestamp.
 
     def test_equities_sessions(self):
-        """Equities session detection works correctly."""
+        # Equities session detection works correctly.
         from src.core.regime_detector import RegimeDetector
         
         bus = MagicMock()
@@ -364,7 +351,7 @@ class TestSessionRegime:
 
 
     def test_crypto_sessions(self):
-        """Crypto session detection works correctly."""
+        # Crypto session detection works correctly.
         from src.core.regime_detector import RegimeDetector
         
         bus = MagicMock()
@@ -389,15 +376,13 @@ class TestSessionRegime:
         assert session == "US"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Timestamp Correctness Tests (ISSUE 1)
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestTimestampCorrectness:
-    """Test that timestamps are always int milliseconds."""
+    # Test that timestamps are always int milliseconds.
 
     def test_timestamp_is_int_ms(self):
-        """SymbolRegimeEvent.timestamp_ms must be int."""
+        # SymbolRegimeEvent.timestamp_ms must be int.
         event = SymbolRegimeEvent(
             symbol="BTC",
             timeframe=60,
@@ -422,7 +407,7 @@ class TestTimestampCorrectness:
         assert isinstance(event.timestamp_ms, int)
 
     def test_serialized_timestamp_is_int(self):
-        """Serialized timestamp_ms must be int."""
+        # Serialized timestamp_ms must be int.
         event = SymbolRegimeEvent(
             symbol="ETH",
             timeframe=60,
@@ -449,35 +434,33 @@ class TestTimestampCorrectness:
         assert d["timestamp_ms"] == 1700000000123
 
     def test_backwards_compat_float_seconds(self):
-        """Float seconds are converted to int ms on load."""
+        # Float seconds are converted to int ms on load.
         ts_float = 1700000000.5  # seconds
         ts_int = _to_int_ms(ts_float)
         assert isinstance(ts_int, int)
         assert ts_int == 1700000000500
 
     def test_backwards_compat_float_ms(self):
-        """Float ms are converted to int ms on load."""
+        # Float ms are converted to int ms on load.
         ts_float = 1700000000123.0  # ms as float
         ts_int = _to_int_ms(ts_float)
         assert isinstance(ts_int, int)
         assert ts_int == 1700000000123
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # JSON Determinism Tests (ISSUE 3)
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestJSONDeterminism:
-    """Test that metrics_json is deterministic."""
+    # Test that metrics_json is deterministic.
 
     def test_canonical_json_sorted_keys(self):
-        """Keys are sorted in canonical JSON."""
+        # Keys are sorted in canonical JSON.
         metrics = {"z": 1, "a": 2, "m": 3}
         json_str = canonical_metrics_json(metrics)
         assert json_str == '{"a":2,"m":3,"z":1}'
 
     def test_canonical_json_rounded_floats(self):
-        """Floats are rounded in canonical JSON."""
+        # Floats are rounded in canonical JSON.
         metrics = {"value": 1.123456789012345}
         json_str = canonical_metrics_json(metrics)
         # Should be rounded to 8 decimals
@@ -485,7 +468,7 @@ class TestJSONDeterminism:
         assert parsed["value"] == 1.12345679  # rounded
 
     def test_canonical_json_identical_across_runs(self):
-        """Same metrics produce identical JSON across runs."""
+        # Same metrics produce identical JSON across runs.
         metrics1 = {"atr": 100.5, "vol_z": 1.5, "rsi": 65.0}
         metrics2 = {"rsi": 65.0, "atr": 100.5, "vol_z": 1.5}  # different order
         
@@ -495,15 +478,13 @@ class TestJSONDeterminism:
         assert json1 == json2
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # ATR Edge Case Tests (ISSUE 4)
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestATREdgeCase:
-    """Test ATR near-zero handling."""
+    # Test ATR near-zero handling.
 
     def test_zero_atr_produces_range_regime(self):
-        """When ATR is near-zero, trend regime should be RANGE."""
+        # When ATR is near-zero, trend regime should be RANGE.
         from src.core.regime_detector import RegimeDetector
         
         bus = MagicMock()

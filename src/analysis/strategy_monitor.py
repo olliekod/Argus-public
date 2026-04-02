@@ -1,13 +1,12 @@
-"""
-Strategy Monitor
-================
+# Created by Oliver Meihls
 
-Intelligent strategy monitoring with:
-1. Risk-adjusted optimization (Sharpe ratio, not just P&L)
-2. Regime detection (high vol vs low vol periods)
-3. Quarterly health checks
-4. Automatic parameter recommendations
-"""
+# Strategy Monitor
+#
+# Intelligent strategy monitoring with:
+# 1. Risk-adjusted optimization (Sharpe ratio, not just P&L)
+# 2. Regime detection (high vol vs low vol periods)
+# 3. Quarterly health checks
+# 4. Automatic parameter recommendations
 
 import logging
 from datetime import datetime, timedelta
@@ -27,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ParameterRecommendation:
-    """Recommendation for strategy parameters."""
+    # Recommendation for strategy parameters.
     iv_threshold: float
     target_delta: float
     profit_target: float
@@ -43,7 +42,7 @@ class ParameterRecommendation:
 
 @dataclass
 class MarketRegime:
-    """Current market regime classification."""
+    # Current market regime classification.
     regime: str  # 'low_vol', 'normal', 'high_vol', 'crisis'
     avg_iv: float
     iv_percentile: float
@@ -51,15 +50,13 @@ class MarketRegime:
 
 
 class StrategyMonitor:
-    """
-    Monitors strategy performance and adapts parameters intelligently.
-    
-    Key principles:
-    1. Optimize for RISK-ADJUSTED returns (Sharpe), not just P&L
-    2. Prefer FEWER high-edge trades over MANY low-edge trades
-    3. Adapt to market regimes (be more aggressive in high IV)
-    4. Run quarterly health checks
-    """
+    # Monitors strategy performance and adapts parameters intelligently.
+    #
+    # Key principles:
+    # 1. Optimize for RISK-ADJUSTED returns (Sharpe), not just P&L
+    # 2. Prefer FEWER high-edge trades over MANY low-edge trades
+    # 3. Adapt to market regimes (be more aggressive in high IV)
+    # 4. Run quarterly health checks
     
     # Conservative parameter bounds (don't over-optimize)
     CONSERVATIVE_BOUNDS = {
@@ -78,7 +75,7 @@ class StrategyMonitor:
     }
     
     def __init__(self, symbol: str = "BITO"):
-        """Initialize strategy monitor."""
+        # Initialize strategy monitor.
         self.symbol = symbol
         self.last_check: Optional[datetime] = None
         self.current_params: Dict = {}
@@ -86,16 +83,14 @@ class StrategyMonitor:
         logger.info(f"Strategy Monitor initialized for {symbol}")
     
     def calculate_sharpe(self, trades: List, risk_free_rate: float = 0.04) -> float:
-        """
-        Calculate Sharpe ratio from trade results.
-        
-        Args:
-            trades: List of BacktestTrade objects
-            risk_free_rate: Annual risk-free rate (default 4%)
-            
-        Returns:
-            Annualized Sharpe ratio
-        """
+        # Calculate Sharpe ratio from trade results.
+        #
+        # Args:
+        # trades: List of BacktestTrade objects
+        # risk_free_rate: Annual risk-free rate (default 4%)
+        #
+        # Returns:
+        # Annualized Sharpe ratio
         if not trades or len(trades) < 2:
             return 0.0
         
@@ -117,7 +112,7 @@ class StrategyMonitor:
         return round(sharpe, 2)
     
     def calculate_edge_per_trade(self, result: BacktestResult) -> float:
-        """Calculate average edge (profit / risk) per trade."""
+        # Calculate average edge (profit / risk) per trade.
         if not result.trades:
             return 0.0
         
@@ -134,15 +129,13 @@ class StrategyMonitor:
         start_date: str,
         end_date: str,
     ) -> ParameterRecommendation:
-        """
-        Run optimization focused on RISK-ADJUSTED returns.
-        
-        Unlike simple optimizer, this:
-        1. Uses Sharpe ratio as primary metric
-        2. Penalizes low trade counts (need statistical significance)
-        3. Stays within conservative bounds
-        4. Explains the recommendation
-        """
+        # Run optimization focused on RISK-ADJUSTED returns.
+        #
+        # Unlike simple optimizer, this:
+        # 1. Uses Sharpe ratio as primary metric
+        # 2. Penalizes low trade counts (need statistical significance)
+        # 3. Stays within conservative bounds
+        # 4. Explains the recommendation
         logger.info("Running smart optimization...")
         
         # Define parameter grid within conservative bounds
@@ -248,12 +241,10 @@ class StrategyMonitor:
         )
     
     def detect_regime(self, df=None) -> MarketRegime:
-        """
-        Detect current market regime based on IV levels.
-        
-        Returns:
-            MarketRegime with recommendations
-        """
+        # Detect current market regime based on IV levels.
+        #
+        # Returns:
+        # MarketRegime with recommendations
         # Fetch recent data if not provided
         if df is None:
             backtester = StrategyBacktester(symbol=self.symbol)
@@ -293,12 +284,10 @@ class StrategyMonitor:
         self,
         lookback_days: int = 180,
     ) -> str:
-        """
-        Generate quarterly health check report.
-        
-        Returns:
-            Formatted report string
-        """
+        # Generate quarterly health check report.
+        #
+        # Returns:
+        # Formatted report string
         end = datetime.now().strftime("%Y-%m-%d")
         start = (datetime.now() - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
         
@@ -361,7 +350,7 @@ class StrategyMonitor:
         return "\n".join(lines)
     
     def should_run_check(self, days_between: int = 90) -> bool:
-        """Check if it's time for a quarterly health check."""
+        # Check if it's time for a quarterly health check.
         if self.last_check is None:
             return True
         
@@ -370,7 +359,7 @@ class StrategyMonitor:
 
 
 def run_health_check():
-    """Run strategy health check from command line."""
+    # Run strategy health check from command line.
     monitor = StrategyMonitor(symbol="BITO")
     print(monitor.generate_health_report())
 

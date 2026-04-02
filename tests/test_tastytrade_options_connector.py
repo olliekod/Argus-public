@@ -1,10 +1,9 @@
-"""
-Tests for Tastytrade Options Snapshot Connector
-================================================
+# Created by Oliver Meihls
 
-Unit tests for TastytradeOptionsConnector snapshot building.
-Uses mock data to avoid network calls.
-"""
+# Tests for Tastytrade Options Snapshot Connector
+#
+# Unit tests for TastytradeOptionsConnector snapshot building.
+# Uses mock data to avoid network calls.
 
 import pytest
 import time
@@ -139,7 +138,7 @@ class TestConnectorInit:
         assert health["health"] == "ok"
 
     def test_close_without_client(self):
-        """close() should not fail if client was never created."""
+        # close() should not fail if client was never created.
         conn = TastytradeOptionsConnector(config=_make_config())
         conn.close()  # Should not raise
 
@@ -151,7 +150,7 @@ class TestBuildChainSnapshot:
         self.conn = TastytradeOptionsConnector(config=_make_config())
 
     def test_build_snapshot_basic(self):
-        """Build a snapshot from pre-normalized data."""
+        # Build a snapshot from pre-normalized data.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
 
         normalized = normalize_tastytrade_nested_chain(SAMPLE_NESTED_CHAIN)
@@ -177,7 +176,7 @@ class TestBuildChainSnapshot:
         assert snapshot.snapshot_id != ""
 
     def test_build_snapshot_strike_ordering(self):
-        """Puts and calls should be sorted by strike ascending."""
+        # Puts and calls should be sorted by strike ascending.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
 
         normalized = normalize_tastytrade_nested_chain(SAMPLE_NESTED_CHAIN)
@@ -195,7 +194,7 @@ class TestBuildChainSnapshot:
         assert call_strikes == sorted(call_strikes)
 
     def test_build_snapshot_empty_expiration(self):
-        """Return None for non-existent expiration."""
+        # Return None for non-existent expiration.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
 
         normalized = normalize_tastytrade_nested_chain(SAMPLE_NESTED_CHAIN)
@@ -208,7 +207,7 @@ class TestBuildChainSnapshot:
         assert snapshot is None
 
     def test_build_snapshot_provider_field(self):
-        """Snapshot and all quotes should have provider='tastytrade'."""
+        # Snapshot and all quotes should have provider='tastytrade'.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
 
         normalized = normalize_tastytrade_nested_chain(SAMPLE_NESTED_CHAIN)
@@ -225,7 +224,7 @@ class TestBuildChainSnapshot:
             assert q.provider == "tastytrade"
 
     def test_build_snapshot_round_trip(self):
-        """Snapshot should survive serialization round-trip."""
+        # Snapshot should survive serialization round-trip.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
 
         normalized = normalize_tastytrade_nested_chain(SAMPLE_NESTED_CHAIN)
@@ -247,7 +246,7 @@ class TestBuildChainSnapshot:
         assert restored.n_strikes == snapshot.n_strikes
 
     def test_build_snapshot_zero_underlying_price(self):
-        """Snapshot should work with zero underlying price."""
+        # Snapshot should work with zero underlying price.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
 
         normalized = normalize_tastytrade_nested_chain(SAMPLE_NESTED_CHAIN)
@@ -264,7 +263,7 @@ class TestBuildChainSnapshot:
         assert snapshot.atm_iv is None
 
     def test_sequence_ids_are_monotonic(self):
-        """Each quote should get a unique, increasing sequence_id."""
+        # Each quote should get a unique, increasing sequence_id.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
 
         normalized = normalize_tastytrade_nested_chain(SAMPLE_NESTED_CHAIN)
@@ -285,7 +284,7 @@ class TestBuildChainSnapshot:
 
 class TestExpirationFiltering:
     def test_get_expirations_in_range(self):
-        """Expirations outside DTE range should be excluded."""
+        # Expirations outside DTE range should be excluded.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
 
         conn = TastytradeOptionsConnector(config=_make_config())
@@ -305,7 +304,7 @@ class TestExpirationFiltering:
 
 class TestBuildSnapshotsForSymbol:
     def test_empty_chain_returns_empty_list(self):
-        """If fetch returns empty, build_snapshots_for_symbol returns []."""
+        # If fetch returns empty, build_snapshots_for_symbol returns [].
         conn = TastytradeOptionsConnector(config=_make_config())
 
         with patch.object(conn, 'fetch_nested_chain', return_value={}):
@@ -313,7 +312,7 @@ class TestBuildSnapshotsForSymbol:
             assert results == []
 
     def test_normalization_failure_returns_empty(self):
-        """If normalization returns [], build_snapshots_for_symbol returns []."""
+        # If normalization returns [], build_snapshots_for_symbol returns [].
         conn = TastytradeOptionsConnector(config=_make_config())
 
         with patch.object(conn, 'fetch_nested_chain', return_value={"invalid": "data"}):
@@ -325,7 +324,7 @@ class TestBuildSnapshotsForSymbol:
 
 class TestMultiProviderCompatibility:
     def test_tastytrade_snapshot_matches_alpaca_schema(self):
-        """Tastytrade snapshots should have same fields as Alpaca snapshots."""
+        # Tastytrade snapshots should have same fields as Alpaca snapshots.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
 
         conn = TastytradeOptionsConnector(config=_make_config())
@@ -357,7 +356,7 @@ class TestMultiProviderCompatibility:
         assert hasattr(snapshot, 'v')
 
     def test_serialized_snapshot_has_quotes_json_fields(self):
-        """Serialized snapshot should be DB-compatible for persistence."""
+        # Serialized snapshot should be DB-compatible for persistence.
         from src.core.options_normalize import normalize_tastytrade_nested_chain
         import json
 

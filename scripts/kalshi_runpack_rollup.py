@@ -1,14 +1,14 @@
-"""
-Cross-runpack rollup: aggregate and rank multiple runpack outputs.
+# Created by Oliver Meihls
 
-Reads metrics_summary.json from each runpack directory, compares runs side-by-side,
-and ranks them by a robust score (PnL quality adjusted for drawdown and concentration).
-
-Usage:
-    python scripts/kalshi_runpack_rollup.py
-    python scripts/kalshi_runpack_rollup.py --dir logs/analysis --hours 8
-    python scripts/kalshi_runpack_rollup.py logs/analysis/runpack_20260308_1600_abc12345 logs/analysis/runpack_...
-"""
+# Cross-runpack rollup: aggregate and rank multiple runpack outputs.
+#
+# Reads metrics_summary.json from each runpack directory, compares runs side-by-side,
+# and ranks them by a robust score (PnL quality adjusted for drawdown and concentration).
+#
+# Usage:
+# python scripts/kalshi_runpack_rollup.py
+# python scripts/kalshi_runpack_rollup.py --dir logs/analysis --hours 8
+# python scripts/kalshi_runpack_rollup.py logs/analysis/runpack_20260308_1600_abc12345 logs/analysis/runpack_...
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional
 
 
 def _load_metrics(runpack_dir: Path) -> Optional[Dict[str, Any]]:
-    """Load metrics_summary.json from a runpack dir. Falls back to manifest for older packs."""
+    # Load metrics_summary.json from a runpack dir. Falls back to manifest for older packs.
     ms_path = runpack_dir / "metrics_summary.json"
     if ms_path.exists():
         try:
@@ -62,15 +62,13 @@ def _load_metrics(runpack_dir: Path) -> Optional[Dict[str, Any]]:
 
 
 def _robust_score(w: Dict[str, Any]) -> float:
-    """
-    Robust score: avg PnL quality penalized for drawdown and concentration.
-
-    Formula:
-      robust = avg_pnl * (1 - dd_penalty) * (1 - conc_penalty)
-
-    dd_penalty  = min(1, drawdown / max(0.01, |total_pnl|))   — how much DD relative to gains
-    conc_penalty = max(0, top_conc - 0.30)                    — penalty above 30% concentration
-    """
+    # Robust score: avg PnL quality penalized for drawdown and concentration.
+    #
+    # Formula:
+    # robust = avg_pnl * (1 - dd_penalty) * (1 - conc_penalty)
+    #
+    # dd_penalty  = min(1, drawdown / max(0.01, |total_pnl|))   — how much DD relative to gains
+    # conc_penalty = max(0, top_conc - 0.30)                    — penalty above 30% concentration
     avg = float(w.get("avg_pnl_usd", 0.0))
     total_pnl = float(w.get("total_pnl_usd", 0.0))
     dd = float(w.get("max_drawdown_usd", 0.0))
@@ -81,7 +79,7 @@ def _robust_score(w: Dict[str, Any]) -> float:
 
 
 def _window_comparability(w: Dict[str, Any], target_hours: float) -> bool:
-    """Return True if the window is close enough to the target to be comparable."""
+    # Return True if the window is close enough to the target to be comparable.
     actual = float(w.get("hours", 0))
     return abs(actual - target_hours) <= target_hours * 0.5
 

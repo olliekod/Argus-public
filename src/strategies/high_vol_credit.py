@@ -1,14 +1,13 @@
-"""
-High-Volatility Credit Strategy
-===============================
+# Created by Oliver Meihls
 
-Replay strategy that sells premium when vol regime is elevated (VOL_SPIKE or VOL_HIGH).
-Thrives in high IV environments where VRP would block.
-
-Config keys (passed via thresholds dict):
-  min_iv: float       Minimum IV to trade (default 0.15 = 15%)
-  allowed_vol_regimes: list  Vol regimes to trade in (default VOL_SPIKE, VOL_HIGH)
-"""
+# High-Volatility Credit Strategy
+#
+# Replay strategy that sells premium when vol regime is elevated (VOL_SPIKE or VOL_HIGH).
+# Thrives in high IV environments where VRP would block.
+#
+# Config keys (passed via thresholds dict):
+# min_iv: float       Minimum IV to trade (default 0.15 = 15%)
+# allowed_vol_regimes: list  Vol regimes to trade in (default VOL_SPIKE, VOL_HIGH)
 
 from __future__ import annotations
 
@@ -23,10 +22,9 @@ logger = logging.getLogger("argus.strategies.high_vol_credit")
 
 
 class HighVolCreditStrategy(ReplayStrategy):
-    """Sell credit when vol regime is elevated (VOL_SPIKE, VOL_HIGH).
-
-    Does not require VRP > 0; instead seeks high IV environments.
-    """
+    # Sell credit when vol regime is elevated (VOL_SPIKE, VOL_HIGH).
+    #
+    # Does not require VRP > 0; instead seeks high IV environments.
 
     def __init__(self, thresholds: Optional[Dict[str, Any]] = None):
         self._thresholds = thresholds or {

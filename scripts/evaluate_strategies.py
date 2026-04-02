@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""
-Strategy Evaluation CLI
-========================
+# Created by Oliver Meihls
 
-Loads experiment JSON outputs, computes composite rankings, and writes
-a ranked strategy report.
-
-Usage::
-
-    python scripts/evaluate_strategies.py --input logs/experiments
-    python scripts/evaluate_strategies.py --input logs/experiments --output logs/rankings.json
-    python scripts/evaluate_strategies.py --input logs/experiments --quiet
-
-The ranking JSON is written to ``logs/strategy_rankings_<date>.json``
-by default.
-"""
+# Strategy Evaluation CLI
+#
+# Loads experiment JSON outputs, computes composite rankings, and writes
+# a ranked strategy report.
+#
+# Usage::
+#
+# python scripts/evaluate_strategies.py --input logs/experiments
+# python scripts/evaluate_strategies.py --input logs/experiments --output logs/rankings.json
+# python scripts/evaluate_strategies.py --input logs/experiments --quiet
+#
+# The ranking JSON is written to ``logs/strategy_rankings_<date>.json``
+# by default.
 
 import argparse
 import json

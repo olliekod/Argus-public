@@ -1,13 +1,13 @@
-"""
-Tests for options receipt time persistence and replay gating.
+# Created by Oliver Meihls
 
-Validates:
-- DB schema (new recv_ts_ms column, indexes)
-- upsert_option_chain_snapshot / get_option_chain_snapshots round-trip
-- PersistenceManager correctly stamps recv_ts_ms (using event_ts_ms)
-- Replay harness availability barrier gating on recv_ts_ms
-- load_replay_data correctly populates MarketDataSnapshot.recv_ts_ms
-"""
+# Tests for options receipt time persistence and replay gating.
+#
+# Validates:
+# - DB schema (new recv_ts_ms column, indexes)
+# - upsert_option_chain_snapshot / get_option_chain_snapshots round-trip
+# - PersistenceManager correctly stamps recv_ts_ms (using event_ts_ms)
+# - Replay harness availability barrier gating on recv_ts_ms
+# - load_replay_data correctly populates MarketDataSnapshot.recv_ts_ms
 
 from __future__ import annotations
 
@@ -30,14 +30,14 @@ from src.analysis.replay_harness import (
 
 @pytest.fixture
 def event_loop():
-    """Provide a fresh event loop for each test."""
+    # Provide a fresh event loop for each test.
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
 
 def run(coro, loop=None):
-    """Helper to run async code in sync tests."""
+    # Helper to run async code in sync tests.
     if loop is None:
         loop = asyncio.new_event_loop()
         try:
@@ -48,7 +48,7 @@ def run(coro, loop=None):
 
 
 async def _create_test_db():
-    """Create an in-memory Database instance with schema."""
+    # Create an in-memory Database instance with schema.
     import aiosqlite
     from src.core.database import Database
     db = Database.__new__(Database)
@@ -112,7 +112,7 @@ class TestSnapshotRoundTrip:
 
 
 class ToyStrategy(ReplayStrategy):
-    """Strategy that records visible snapshots."""
+    # Strategy that records visible snapshots.
     def __init__(self):
         self.seen_snapshots = []
 
@@ -130,7 +130,7 @@ class ToyStrategy(ReplayStrategy):
 
 class TestReplaySnapshotBarrier:
     def test_snapshot_availability_barrier(self):
-        """Snapshots only visible when sim_time >= recv_ts_ms."""
+        # Snapshots only visible when sim_time >= recv_ts_ms.
         # bar_duration = 60s (default in ReplayConfig)
         # Bar 1 starts at 1000, ends at 61000 (sim_time)
         # Bar 2 starts at 61000, ends at 121000 (sim_time)
@@ -171,7 +171,7 @@ class TestReplaySnapshotBarrier:
         assert 200000 not in recv_timestamps
         
     def test_provider_ts_ignored_for_gating(self):
-        """Snapshot with old provider_ts but future recv_ts is gated correctly."""
+        # Snapshot with old provider_ts but future recv_ts is gated correctly.
         bars = [BarData(timestamp_ms=1000, open=100, high=101, low=99, close=100, volume=100)]
         # sim_ts = 1000 + 60000 = 61000
         # provider_ts = 500 (old), but recv_ts = 61001 (future relative to bar close)

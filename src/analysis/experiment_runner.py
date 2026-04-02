@@ -1,10 +1,9 @@
-"""
-Experiment Runner
-=================
+# Created by Oliver Meihls
 
-Orchestrates strategy evaluation over Replay Packs.
-Provides deterministic walk-forward splitting and parameter sweeps.
-"""
+# Experiment Runner
+#
+# Orchestrates strategy evaluation over Replay Packs.
+# Provides deterministic walk-forward splitting and parameter sweeps.
 
 import json
 import logging
@@ -34,7 +33,7 @@ logger = logging.getLogger("argus.experiment_runner")
 
 @dataclass
 class ExperimentConfig:
-    """Settings for a single experiment run."""
+    # Settings for a single experiment run.
     strategy_class: Type[ReplayStrategy]
     strategy_params: Dict[str, Any] = field(default_factory=dict)
     replay_pack_paths: List[str] = field(default_factory=list)
@@ -52,14 +51,14 @@ class ExperimentConfig:
     case_id: str = ""  # Pantheon research case ID for attribution
 
 class ExperimentRunner:
-    """Standardized handler for strategy research experiments."""
+    # Standardized handler for strategy research experiments.
 
     def __init__(self, output_dir: str = "logs/experiments"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def load_pack(self, path: str) -> Dict[str, Any]:
-        """Load a Replay Pack JSON file."""
+        # Load a Replay Pack JSON file.
         with open(path, "r") as f:
             pack = json.load(f)
         return pack
@@ -75,11 +74,10 @@ class ExperimentRunner:
 
     @staticmethod
     def _pack_snapshots_to_objects(snapshot_dicts: List[Dict[str, Any]]) -> List[MarketDataSnapshot]:
-        """Convert replay pack snapshot dicts to MarketDataSnapshot for ReplayHarness.
-
-        Passes quotes_json so strategies can derive IV from bid/ask when atm_iv is absent.
-        When pack atm_iv is None/0, attempts derivation so VRP and similar strategies get IV.
-        """
+        # Convert replay pack snapshot dicts to MarketDataSnapshot for ReplayHarness.
+        #
+        # Passes quotes_json so strategies can derive IV from bid/ask when atm_iv is absent.
+        # When pack atm_iv is None/0, attempts derivation so VRP and similar strategies get IV.
         out: List[MarketDataSnapshot] = []
         for s in snapshot_dicts or []:
             recv_ts = s.get("recv_ts_ms")
@@ -100,6 +98,7 @@ class ExperimentRunner:
                     underlying = float(data.get("underlying_price") or 0.0)
                 except (TypeError, ValueError, Exception):
                     pass
+
             if (atm_iv is None or atm_iv <= 0) and qj:
                 derived = _derive_iv_from_quotes(s)
                 if derived is not None and derived > 0:
@@ -121,7 +120,7 @@ class ExperimentRunner:
         return out
 
     def run(self, config: ExperimentConfig) -> ReplayResult:
-        """Run a single experiment configuration."""
+        # Run a single experiment configuration.
         # 1. Prepare data from packs
         all_bars: List[BarData] = []
         all_outcomes: List[Dict[str, Any]] = []
@@ -221,7 +220,7 @@ class ExperimentRunner:
     def run_parameter_grid(self, strategy_cls: Type[ReplayStrategy], 
                            base_config: ExperimentConfig, 
                            param_grid: Dict[str, List[Any]]) -> List[ReplayResult]:
-        """Run a parameter sweep/grid search."""
+        # Run a parameter sweep/grid search.
         import itertools
         keys = param_grid.keys()
         values = param_grid.values()
@@ -257,25 +256,22 @@ class ExperimentRunner:
         config: ExperimentConfig,
         cost_multipliers: Optional[List[float]] = None,
     ) -> Dict[str, Any]:
-        """Run experiments at multiple cost multipliers.
-
-        Tests whether a strategy's edge survives reasonable cost
-        inflation.  Kills if edge disappears at +50% costs.
-
-        Parameters
-        ----------
-        config : ExperimentConfig
-            Base experiment configuration.
-        cost_multipliers : list of float, optional
-            Cost multipliers to test (default [1.0, 1.25, 1.50]).
-
-        Returns
-        -------
-        dict
-            ``killed``: bool, ``results``: list of per-multiplier dicts,
-            ``sharpe_at_100pct``, ``sharpe_at_125pct``, ``sharpe_at_150pct``,
-            ``mean_return_at_150pct``.
-        """
+        # Run experiments at multiple cost multipliers.
+        #
+        # Tests whether a strategy's edge survives reasonable cost
+        # inflation.  Kills if edge disappears at +50% costs.
+        #
+        # Parameters
+        # config : ExperimentConfig
+        # Base experiment configuration.
+        # cost_multipliers : list of float, optional
+        # Cost multipliers to test (default [1.0, 1.25, 1.50]).
+        #
+        # Returns
+        # dict
+        # ``killed``: bool, ``results``: list of per-multiplier dicts,
+        # ``sharpe_at_100pct``, ``sharpe_at_125pct``, ``sharpe_at_150pct``,
+        # ``mean_return_at_150pct``.
         if cost_multipliers is None:
             cost_multipliers = [1.0, 1.25, 1.50]
 
@@ -386,7 +382,7 @@ class ExperimentRunner:
 
         return sweep_summary
     def _extract_pack_data_sources(self, pack_paths: List[str]) -> Dict[str, Any]:
-        """Extract data-source metadata from loaded packs."""
+        # Extract data-source metadata from loaded packs.
         bars_providers = set()
         options_snapshot_providers = set()
         secondary_included = False
@@ -439,7 +435,7 @@ class ExperimentRunner:
         run_id_salt: str = "",
         manifest_overrides: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Persist result to JSON artifact with rich manifest."""
+        # Persist result to JSON artifact with rich manifest.
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         # 1. Environment Metadata
@@ -514,7 +510,7 @@ class ExperimentRunner:
     def split_walk_forward(self, bars: List[BarData], 
                           train_days: int, test_days: int, 
                           step_days: Optional[int] = None) -> Generator[tuple[List[BarData], List[BarData]], None, None]:
-        """Generator that yields (train_bars, test_bars) windows based on unique trading days."""
+        # Generator that yields (train_bars, test_bars) windows based on unique trading days.
         if not bars: return
         
         # 1. Group bars by date (YYYY-MM-DD)
@@ -567,7 +563,7 @@ class ExperimentRunner:
 
     def run_walk_forward(self, config: ExperimentConfig, 
                          train_days: int, test_days: int, persist_windows: bool = True) -> List[Dict[str, Any]]:
-        """Run rolling walk-forward evaluation."""
+        # Run rolling walk-forward evaluation.
         # 1. Load all data
         all_bars: List[BarData] = []
         all_outcomes: List[Dict[str, Any]] = []

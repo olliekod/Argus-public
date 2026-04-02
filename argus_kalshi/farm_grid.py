@@ -1,12 +1,12 @@
-"""
-Deterministic farm config generator — no 21k-line YAML.
+# Created by Oliver Meihls
 
-Each bot is assigned parameters ONCE from a fixed grid (or seeded ranges).
-Same (grid, seed, bot_count) → same configs every run. No drift unless you
-change the grid/seed or reset the log/DB.
-
-Max bot count is 10000 (see MAX_BOT_COUNT). Grid has 37,120 unique rows.
-"""
+# Deterministic farm config generator — no 21k-line YAML.
+#
+# Each bot is assigned parameters ONCE from a fixed grid (or seeded ranges).
+# Same (grid, seed, bot_count) → same configs every run. No drift unless you
+# change the grid/seed or reset the log/DB.
+#
+# Max bot count is 10000 (see MAX_BOT_COUNT). Grid has 37,120 unique rows.
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ DEFAULT_SIZING_RISK_FRACTION = 0.005
 
 
 def _default_grid_product() -> List[Dict[str, Any]]:
-    """Product of all dimensions; each row is a unique param set for one bot (>= MAX_BOT_COUNT rows)."""
+    # Product of all dimensions; each row is a unique param set for one bot (>= MAX_BOT_COUNT rows).
     rows: List[Dict[str, Any]] = []
     for (
         (min_e, max_e),
@@ -78,7 +78,7 @@ def _default_grid_product() -> List[Dict[str, Any]]:
 
 
 def load_dwarf_names(path: str) -> List[str]:
-    """Load bot IDs from dwarf names file (one name per line)."""
+    # Load bot IDs from dwarf names file (one name per line).
     p = Path(path)
     if not p.exists():
         return []
@@ -87,11 +87,10 @@ def load_dwarf_names(path: str) -> List[str]:
 
 
 def load_winner_zone(path: str) -> Optional[Dict[str, Any]]:
-    """Load winner-zone parameter bounds from a kalshi_bot_performance.json file.
-
-    Returns a base-config overlay dict with candidate_region_* keys set to the
-    winner zone bounds, or None if the file is missing/malformed.
-    """
+    # Load winner-zone parameter bounds from a kalshi_bot_performance.json file.
+    #
+    # Returns a base-config overlay dict with candidate_region_* keys set to the
+    # winner zone bounds, or None if the file is missing/malformed.
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
@@ -137,25 +136,24 @@ def generate_farm_configs(
     winner_zone_path: Optional[str] = None,
     cycle_offset: int = 0,
 ) -> List[Dict[str, Any]]:
-    """Produce one config dict per bot. Params assigned once and deterministic.
-
-    - base: shared defaults (e.g. from config.yaml argus_kalshi block).
-    - bot_ids: list of bot_id strings (e.g. dwarf names). Length = number of configs.
-    - grid_overrides: if None, use default grid. Else use this list;
-      len(grid_overrides) must be >= len(bot_ids) (we take first len(bot_ids)).
-    - seed: reserved for future range-based sampling; currently unused (grid is fixed).
-    - winner_zone_path: optional path to kalshi_bot_performance.json. If provided and
-      the file exists, the winner zone overrides candidate_region_* keys in base so
-      subsequent bots are biased toward the previous run's top-performer parameters.
-    - cycle_offset: when candidate-region sampling is enabled, rotate each shuffled
-      pool before assignment so repeated runs start from different positions.
-
-    Returns list of dicts suitable for load_config(); each has bot_id set.
-    Candidate-region sampling uses deterministic pre-split pool sizes and cycles
-    through each shuffled pool without replacement, only repeating after a full
-    pool exhaustion. Same (base, bot_ids, grid_overrides, seed, winner_zone_path,
-    cycle_offset) → same list every time.
-    """
+    # Produce one config dict per bot. Params assigned once and deterministic.
+    #
+    # - base: shared defaults (e.g. from config.yaml argus_kalshi block).
+    # - bot_ids: list of bot_id strings (e.g. dwarf names). Length = number of configs.
+    # - grid_overrides: if None, use default grid. Else use this list;
+    # len(grid_overrides) must be >= len(bot_ids) (we take first len(bot_ids)).
+    # - seed: reserved for future range-based sampling; currently unused (grid is fixed).
+    # - winner_zone_path: optional path to kalshi_bot_performance.json. If provided and
+    # the file exists, the winner zone overrides candidate_region_* keys in base so
+    # subsequent bots are biased toward the previous run's top-performer parameters.
+    # - cycle_offset: when candidate-region sampling is enabled, rotate each shuffled
+    # pool before assignment so repeated runs start from different positions.
+    #
+    # Returns list of dicts suitable for load_config(); each has bot_id set.
+    # Candidate-region sampling uses deterministic pre-split pool sizes and cycles
+    # through each shuffled pool without replacement, only repeating after a full
+    # pool exhaustion. Same (base, bot_ids, grid_overrides, seed, winner_zone_path,
+    # cycle_offset) → same list every time.
     if not bot_ids:
         return []
 

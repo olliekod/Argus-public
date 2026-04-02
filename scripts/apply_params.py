@@ -1,12 +1,11 @@
-"""
-Apply Optimized Parameters
-==========================
+# Created by Oliver Meihls
 
-Applies the optimized parameters from the last optimization run.
-By default, applies to PAPER TRADING first.
-
-Run: python scripts/apply_params.py [--paper|--live]
-"""
+# Apply Optimized Parameters
+#
+# Applies the optimized parameters from the last optimization run.
+# By default, applies to PAPER TRADING first.
+#
+# Run: python scripts/apply_params.py [--paper|--live]
 
 import sys
 import json
@@ -20,7 +19,7 @@ from src.analysis.production_optimizer import ProductionOptimizer
 
 
 def load_last_report() -> dict:
-    """Load the last optimization report."""
+    # Load the last optimization report.
     report_path = Path("data/optimization_report.txt")
     if not report_path.exists():
         return None
@@ -68,7 +67,7 @@ def load_last_report() -> dict:
 
 
 def apply_to_paper(params: dict) -> None:
-    """Apply parameters to thresholds.yaml (the actual config file)."""
+    # Apply parameters to thresholds.yaml (the actual config file).
     import yaml
     
     config_path = Path("config/thresholds.yaml")
@@ -115,7 +114,7 @@ def apply_to_paper(params: dict) -> None:
 
 
 def _find_current_value(content: str, key: str) -> str:
-    """Find current value for a key in YAML content."""
+    # Find current value for a key in YAML content.
     import re
     match = re.search(rf'{key}:\s*([-\d.]+)', content)
     if match:
@@ -124,7 +123,7 @@ def _find_current_value(content: str, key: str) -> str:
 
 
 def apply_to_live(params: dict) -> None:
-    """Apply parameters to live trading configuration."""
+    # Apply parameters to live trading configuration.
     config_path = Path("config/strategy_params.json")
     
     if not config_path.exists():
@@ -162,7 +161,7 @@ def apply_to_live(params: dict) -> None:
 
 
 def main():
-    """Apply optimized parameters."""
+    # Apply optimized parameters.
     # Parse args
     mode = 'paper'
     if '--live' in sys.argv:

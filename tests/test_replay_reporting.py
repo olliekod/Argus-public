@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import pytest
 from typing import List, Dict, Any
 from src.analysis.replay_harness import (
@@ -34,7 +36,7 @@ class MockExecutionModel:
         self.ledger = Ledger()
 
     def reset(self):
-        """Reset ledger — no-op for mock since state is stateless."""
+        # Reset ledger — no-op for mock since state is stateless.
         pass
 
     def attempt_fill(self, quote, side, quantity, sim_ts_ms, multiplier=100):

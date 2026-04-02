@@ -1,12 +1,11 @@
-"""
-Argus Signal Types
-==================
+# Created by Oliver Meihls
 
-Deterministic signal event schemas for Phase 3.
-
-All timestamps are int milliseconds (UTC epoch).
-All signals are produced from BarEvents + RegimeEvents only.
-"""
+# Argus Signal Types
+#
+# Deterministic signal event schemas for Phase 3.
+#
+# All timestamps are int milliseconds (UTC epoch).
+# All signals are produced from BarEvents + RegimeEvents only.
 
 from __future__ import annotations
 
@@ -15,44 +14,34 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Schema Version
-# ═══════════════════════════════════════════════════════════════════════════
 
 SIGNAL_SCHEMA_VERSION = 1
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Signal Direction
-# ═══════════════════════════════════════════════════════════════════════════
 
 DIRECTION_LONG = "LONG"
 DIRECTION_SHORT = "SHORT"
 DIRECTION_NEUTRAL = "NEUTRAL"
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Entry Types
-# ═══════════════════════════════════════════════════════════════════════════
 
 ENTRY_MARKET = "MARKET"
 ENTRY_LIMIT = "LIMIT"
 ENTRY_STOP = "STOP"
 ENTRY_CONDITIONAL = "CONDITIONAL"
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Signal Types (for filtering)
-# ═══════════════════════════════════════════════════════════════════════════
 
 SIGNAL_TYPE_ENTRY = "ENTRY"
 SIGNAL_TYPE_EXIT = "EXIT"
 SIGNAL_TYPE_FILTER = "FILTER"  # e.g., "market window open"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Serialization Helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 def _round_float(val: float, decimals: int = 8) -> float:
-    """Round float to fixed decimals for stable serialization."""
+    # Round float to fixed decimals for stable serialization.
     if not isinstance(val, (int, float)):
         return val
     return round(val, decimals)
@@ -87,12 +76,12 @@ def _sorted_dict(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def normalize_snapshot(snapshot: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize snapshot data to JSON-safe deterministic values."""
+    # Normalize snapshot data to JSON-safe deterministic values.
     return _normalize_snapshot(snapshot)
 
 
 def _to_int_ms(ts: Any) -> int:
-    """Convert timestamp to int milliseconds (backwards compat)."""
+    # Convert timestamp to int milliseconds (backwards compat).
     if isinstance(ts, int):
         return ts
     if isinstance(ts, float):
@@ -108,17 +97,15 @@ def compute_signal_id(
     symbol: str,
     timestamp_ms: int,
 ) -> str:
-    """
-    Compute deterministic idempotency key for a signal.
-    
-    Returns first 16 chars of SHA256 hex digest.
-    """
+    # Compute deterministic idempotency key for a signal.
+    #
+    # Returns first 16 chars of SHA256 hex digest.
     payload = f"{strategy_id}|{config_hash}|{symbol}|{timestamp_ms}"
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
 def _normalize_for_hash(obj: Any) -> Any:
-    """Normalize values for stable hashing (round floats to 8 decimals)."""
+    # Normalize values for stable hashing (round floats to 8 decimals).
     if isinstance(obj, float):
         return round(obj, 8)
     if isinstance(obj, dict):
@@ -129,26 +116,22 @@ def _normalize_for_hash(obj: Any) -> Any:
 
 
 def compute_config_hash(config: Dict[str, Any]) -> str:
-    """Compute deterministic hash of strategy configuration."""
+    # Compute deterministic hash of strategy configuration.
     normalized = _normalize_for_hash(config)
     canonical = json.dumps(normalized, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()[:12]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Signal Event Dataclass
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass(frozen=True, slots=True)
 class SignalEvent:
-    """
-    Deterministic trading signal event.
-    
-    Produced by strategy modules, consumed by the Signal Router/Ranker.
-    Persisted and tape-recorded for replay and analysis.
-    
-    Published to: signals.raw
-    """
+    # Deterministic trading signal event.
+    #
+    # Produced by strategy modules, consumed by the Signal Router/Ranker.
+    # Persisted and tape-recorded for replay and analysis.
+    #
+    # Published to: signals.raw
     # ─── Attribution ───────────────────────────────────────────────────────
     timestamp_ms: int           # bar timestamp triggering signal
     strategy_id: str            # e.g., "OPTIONS_SPREAD_V1", "FVG_BREAKOUT_V1"
@@ -186,17 +169,13 @@ class SignalEvent:
     v: int = SIGNAL_SCHEMA_VERSION
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Ranked Signal (Output of Ranker)
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass(frozen=True, slots=True)
 class RankedSignalEvent:
-    """
-    A SignalEvent that has been scored and ranked.
-    
-    Published to: signals.ranked
-    """
+    # A SignalEvent that has been scored and ranked.
+    #
+    # Published to: signals.ranked
     signal: SignalEvent
     rank: int                   # 1 = top signal
     final_score: float          # composite score (higher = better)
@@ -205,17 +184,13 @@ class RankedSignalEvent:
     suppression_reason: str = ""
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Signal Outcome (Markout)
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass(frozen=True, slots=True)
 class SignalOutcomeEvent:
-    """
-    Forward returns after a signal was emitted.
-    
-    Computed by the Markout Harness and persisted for analysis.
-    """
+    # Forward returns after a signal was emitted.
+    #
+    # Computed by the Markout Harness and persisted for analysis.
     idempotency_key: str        # links back to SignalEvent
     timestamp_ms: int           # signal timestamp
     symbol: str
@@ -235,12 +210,10 @@ class SignalOutcomeEvent:
     v: int = SIGNAL_SCHEMA_VERSION
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Serialization: SignalEvent
-# ═══════════════════════════════════════════════════════════════════════════
 
 def signal_to_dict(event: SignalEvent) -> Dict[str, Any]:
-    """Serialize SignalEvent to dict for tape/persistence."""
+    # Serialize SignalEvent to dict for tape/persistence.
     data = {
         "event_type": "signal",
         "timestamp_ms": event.timestamp_ms,
@@ -281,7 +254,7 @@ def signal_to_dict(event: SignalEvent) -> Dict[str, Any]:
 
 
 def dict_to_signal(d: Dict[str, Any]) -> SignalEvent:
-    """Deserialize dict to SignalEvent (backwards compat)."""
+    # Deserialize dict to SignalEvent (backwards compat).
     return SignalEvent(
         timestamp_ms=_to_int_ms(d["timestamp_ms"]),
         strategy_id=str(d["strategy_id"]),
@@ -316,7 +289,7 @@ def dict_to_signal(d: Dict[str, Any]) -> SignalEvent:
 
 
 def ranked_signal_to_dict(event: RankedSignalEvent) -> Dict[str, Any]:
-    """Serialize RankedSignalEvent to dict."""
+    # Serialize RankedSignalEvent to dict.
     data = {
         "event_type": "ranked_signal",
         "signal": signal_to_dict(event.signal),
@@ -330,7 +303,7 @@ def ranked_signal_to_dict(event: RankedSignalEvent) -> Dict[str, Any]:
 
 
 def dict_to_ranked_signal(d: Dict[str, Any]) -> RankedSignalEvent:
-    """Deserialize dict to RankedSignalEvent."""
+    # Deserialize dict to RankedSignalEvent.
     return RankedSignalEvent(
         signal=dict_to_signal(d["signal"]),
         rank=int(d["rank"]),
@@ -344,7 +317,7 @@ def dict_to_ranked_signal(d: Dict[str, Any]) -> RankedSignalEvent:
 
 
 def outcome_to_dict(event: SignalOutcomeEvent) -> Dict[str, Any]:
-    """Serialize SignalOutcomeEvent to dict."""
+    # Serialize SignalOutcomeEvent to dict.
     data = {
         "event_type": "signal_outcome",
         "idempotency_key": event.idempotency_key,
@@ -364,7 +337,7 @@ def outcome_to_dict(event: SignalOutcomeEvent) -> Dict[str, Any]:
 
 
 def dict_to_outcome(d: Dict[str, Any]) -> SignalOutcomeEvent:
-    """Deserialize dict to SignalOutcomeEvent."""
+    # Deserialize dict to SignalOutcomeEvent.
     return SignalOutcomeEvent(
         idempotency_key=str(d["idempotency_key"]),
         timestamp_ms=_to_int_ms(d["timestamp_ms"]),

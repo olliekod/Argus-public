@@ -1,30 +1,29 @@
-"""
-MispricingAnalyzer — structural diagnostics for Kalshi BTC contract scalping.
+# Created by Oliver Meihls
 
-Tracks the following measurements independently of terminal_ui state:
-
-  Distance-from-strike buckets  (|S-K|/K):  ≤0.05%, 0.05-0.1%, 0.1-0.25%, >0.25%
-  Time-to-settlement buckets:                <60s, 1-3min, 3-10min, >10min
-  Realized volatility (60s / 120s):          BTC price range % over each window
-  Expected contract move per 0.1% BTC move:  OLS slope of p_yes vs price (30s window)
-  Move / spread ratio:                        expected_move / spread
-  Repricing lag distribution:                median, p95, mean, n (near-money only)
-  Strike-crossing events (30-min window):    count, avg edge at cross, median lag after
-  Edge persistence durations (near-money):   avg, p95, current streak
-
-This module is diagnostic only. It never places orders and never calls the bus.
-Call update() once per frame; read public attributes for display.
-
-Interpretation guide
---------------------
-  DIST buckets   — edge concentrates near-the-money; >.25% should show low/zero edge
-  TIME buckets   — near expiry (<60s) often shows high edge but wide spread and fast repricing
-  RVol           — low vol → small moves → edge evaporates quickly after repricing
-  Move/spread    — >1× means a 0.1% BTC move shifts p_yes by more than the spread (good)
-  Lag p95        — upper tail of catch-up time; longer = more time to act after each move
-  Crossings      — high edge at strike-cross moments is the most predictable scalp window
-  Persistence    — avg>0.5s with p95>2s suggests edges are tradable before repricing
-"""
+# MispricingAnalyzer — structural diagnostics for Kalshi BTC contract scalping.
+#
+# Tracks the following measurements independently of terminal_ui state:
+#
+# Distance-from-strike buckets  (|S-K|/K):  ≤0.05%, 0.05-0.1%, 0.1-0.25%, >0.25%
+# Time-to-settlement buckets:                <60s, 1-3min, 3-10min, >10min
+# Realized volatility (60s / 120s):          BTC price range % over each window
+# Expected contract move per 0.1% BTC move:  OLS slope of p_yes vs price (30s window)
+# Move / spread ratio:                        expected_move / spread
+# Repricing lag distribution:                median, p95, mean, n (near-money only)
+# Strike-crossing events (30-min window):    count, avg edge at cross, median lag after
+# Edge persistence durations (near-money):   avg, p95, current streak
+#
+# This module is diagnostic only. It never places orders and never calls the bus.
+# Call update() once per frame; read public attributes for display.
+#
+# Interpretation guide
+# DIST buckets   — edge concentrates near-the-money; >.25% should show low/zero edge
+# TIME buckets   — near expiry (<60s) often shows high edge but wide spread and fast repricing
+# RVol           — low vol → small moves → edge evaporates quickly after repricing
+# Move/spread    — >1× means a 0.1% BTC move shifts p_yes by more than the spread (good)
+# Lag p95        — upper tail of catch-up time; longer = more time to act after each move
+# Crossings      — high edge at strike-cross moments is the most predictable scalp window
+# Persistence    — avg>0.5s with p95>2s suggests edges are tradable before repricing
 
 from __future__ import annotations
 
@@ -64,7 +63,7 @@ _MAXLEN_EVENTS = 300            # lag / cross / persist event deques
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 class _BucketStats:
-    """Per-bucket rolling store of (ts, max_edge_cents, spread_cents) samples."""
+    # Per-bucket rolling store of (ts, max_edge_cents, spread_cents) samples.
 
     __slots__ = ("_s",)
 
@@ -75,7 +74,7 @@ class _BucketStats:
         self._s.append((ts, max_edge, spread))
 
     def stats(self, cutoff: float) -> Optional[Dict]:
-        """Return stats dict for samples with ts >= cutoff, or None if no data."""
+        # Return stats dict for samples with ts >= cutoff, or None if no data.
         valid = [(e, s) for ts, e, s in self._s if ts >= cutoff]
         if not valid:
             return None
@@ -94,12 +93,10 @@ class _BucketStats:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 class MispricingAnalyzer:
-    """
-    Diagnostic-only structural analysis for Kalshi BTC contract scalping viability.
-
-    Call update() once per frame. Read public attributes (rvol_60s_pct, lag_median_s,
-    etc.) or call dist_stats(cutoff) / time_stats(cutoff) for display.
-    """
+    # Diagnostic-only structural analysis for Kalshi BTC contract scalping viability.
+    #
+    # Call update() once per frame. Read public attributes (rvol_60s_pct, lag_median_s,
+    # etc.) or call dist_stats(cutoff) / time_stats(cutoff) for display.
 
     def __init__(self) -> None:
         # ── Bucket trackers ───────────────────────────────────────────────────
@@ -148,7 +145,7 @@ class MispricingAnalyzer:
     # ── Helpers ────────────────────────────────────────────────────────────────
 
     def _range_pct(self, now: float, window_s: float) -> Optional[float]:
-        """BTC price range as % of mid over the last *window_s* seconds."""
+        # BTC price range as % of mid over the last *window_s* seconds.
         cut = now - window_s
         pts = [p for ts, p in self._price_hist if ts >= cut and p > 0]
         if len(pts) < 2:
@@ -159,11 +156,11 @@ class MispricingAnalyzer:
     # ── Snapshot accessors ────────────────────────────────────────────────────
 
     def dist_stats(self, cutoff: float) -> List[Optional[Dict]]:
-        """Per-bucket stats dicts for the DIST_BUCKETS, filtered to ts >= cutoff."""
+        # Per-bucket stats dicts for the DIST_BUCKETS, filtered to ts >= cutoff.
         return [b.stats(cutoff) for b in self._dist]
 
     def time_stats(self, cutoff: float) -> List[Optional[Dict]]:
-        """Per-bucket stats dicts for the TIME_BUCKETS, filtered to ts >= cutoff."""
+        # Per-bucket stats dicts for the TIME_BUCKETS, filtered to ts >= cutoff.
         return [b.stats(cutoff) for b in self._time]
 
     # ── Main frame update ─────────────────────────────────────────────────────
@@ -180,7 +177,7 @@ class MispricingAnalyzer:
         spread:       float,   # pre-computed round-trip spread cents
         near_money:   bool,    # BTC within NEAR_MONEY_FRAC of strike
     ) -> None:
-        """Called once per frame. All work is O(1) per call; heavy stats at 1 Hz."""
+        # Called once per frame. All work is O(1) per call; heavy stats at 1 Hz.
         max_edge = max(edge_yes, edge_no)
         self._last_spread = spread
 

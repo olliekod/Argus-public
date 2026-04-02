@@ -1,14 +1,13 @@
-"""
-Tests for Deploy Gates Integration
-=====================================
+# Created by Oliver Meihls
 
-Verifies:
-- DSR kill threshold integration in StrategyEvaluator
-- Slippage sensitivity kill reason
-- Reality Check kill reason
-- cost_multiplier in ExecutionConfig
-- New config schema fields
-"""
+# Tests for Deploy Gates Integration
+#
+# Verifies:
+# - DSR kill threshold integration in StrategyEvaluator
+# - Slippage sensitivity kill reason
+# - Reality Check kill reason
+# - cost_multiplier in ExecutionConfig
+# - New config schema fields
 
 from __future__ import annotations
 
@@ -96,7 +95,7 @@ class TestCostMultiplier:
         assert cfg.cost_multiplier == 1.5
 
     def test_multiplier_scales_slippage(self):
-        """cost_multiplier=2.0 should double slippage."""
+        # cost_multiplier=2.0 should double slippage.
         quote = Quote(bid=1.00, ask=1.10, bid_size=10, ask_size=10)
 
         model_1x = ExecutionModel(ExecutionConfig(
@@ -140,7 +139,7 @@ class TestCostMultiplier:
 
 class TestDSRKillThreshold:
     def test_dsr_kill_reason_added(self):
-        """Strategy with low DSR should get dsr_below_threshold kill."""
+        # Strategy with low DSR should get dsr_below_threshold kill.
         with tempfile.TemporaryDirectory() as tmpdir:
             # Use low Sharpe so DSR stays below 0.99 (with n_trials=2, threshold is low
             # but observed Sharpe must be modest for DSR < 0.99)
@@ -178,7 +177,7 @@ class TestDSRKillThreshold:
 
 class TestSlippageSensitivityKill:
     def test_slippage_kill_from_manifest(self):
-        """Strategy with slippage_sensitivity.killed=True in manifest."""
+        # Strategy with slippage_sensitivity.killed=True in manifest.
         with tempfile.TemporaryDirectory() as tmpdir:
             exp = _make_experiment(
                 run_id="slip1",
@@ -214,7 +213,7 @@ class TestSlippageSensitivityKill:
 
 class TestRealityCheckKill:
     def test_reality_check_kill_from_manifest(self):
-        """Strategy with reality_check p_value >= threshold."""
+        # Strategy with reality_check p_value >= threshold.
         with tempfile.TemporaryDirectory() as tmpdir:
             exp = _make_experiment(
                 run_id="rc1",

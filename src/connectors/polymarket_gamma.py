@@ -1,23 +1,21 @@
-"""
-Polymarket Gamma REST Connector (Stream 3)
-==========================================
+# Created by Oliver Meihls
 
-Discovers and fetches market metadata from the Polymarket Gamma API.
-
-The Gamma API provides:
-* Market listings (condition IDs, question text, outcomes)
-* Token metadata for each outcome
-* Resolution status and end dates
-
-This connector is **read-only / poll-based** — it does not place orders
-or interact with the CLOB.
-
-Safety constraints
-------------------
-* No trade execution — read-only discovery.
-* Rate-limited polling (configurable interval, default 60s).
-* Publishes MarketMetadataEvent to the event bus for downstream use.
-"""
+# Polymarket Gamma REST Connector (Stream 3)
+#
+# Discovers and fetches market metadata from the Polymarket Gamma API.
+#
+# The Gamma API provides:
+# * Market listings (condition IDs, question text, outcomes)
+# * Token metadata for each outcome
+# * Resolution status and end dates
+#
+# This connector is **read-only / poll-based** — it does not place orders
+# or interact with the CLOB.
+#
+# Safety constraints
+# * No trade execution — read-only discovery.
+# * Rate-limited polling (configurable interval, default 60s).
+# * Publishes MarketMetadataEvent to the event bus for downstream use.
 
 from __future__ import annotations
 
@@ -45,15 +43,13 @@ _REQUEST_TIMEOUT = 15.0
 
 
 class PolymarketGammaClient:
-    """REST client for the Polymarket Gamma (discovery) API.
-
-    Parameters
-    ----------
-    event_bus : EventBus, optional
-        If provided, discovered markets are published as MetricEvents.
-    poll_interval : float
-        Seconds between discovery polls.
-    """
+    # REST client for the Polymarket Gamma (discovery) API.
+    #
+    # Parameters
+    # event_bus : EventBus, optional
+    # If provided, discovered markets are published as MetricEvents.
+    # poll_interval : float
+    # Seconds between discovery polls.
 
     def __init__(
         self,
@@ -73,7 +69,7 @@ class PolymarketGammaClient:
     # ── lifecycle ────────────────────────────────────────────
 
     async def start(self) -> None:
-        """Start the async HTTP client."""
+        # Start the async HTTP client.
         self._client = httpx.AsyncClient(
             base_url=_GAMMA_BASE,
             timeout=_REQUEST_TIMEOUT,
@@ -92,7 +88,7 @@ class PolymarketGammaClient:
     # ── polling loop (called by orchestrator) ────────────────
 
     async def poll_loop(self) -> None:
-        """Continuous polling loop — intended to run as an asyncio.Task."""
+        # Continuous polling loop — intended to run as an asyncio.Task.
         while self._running:
             try:
                 await self.fetch_markets()
@@ -109,10 +105,9 @@ class PolymarketGammaClient:
         active: bool = True,
         closed: bool = False,
     ) -> List[Dict[str, Any]]:
-        """Fetch market listings from Gamma API.
-
-        Returns a list of market metadata dicts.
-        """
+        # Fetch market listings from Gamma API.
+        #
+        # Returns a list of market metadata dicts.
         if not self._client:
             return []
 
@@ -170,7 +165,7 @@ class PolymarketGammaClient:
         return markets
 
     async def fetch_market(self, condition_id: str) -> Optional[Dict[str, Any]]:
-        """Fetch a single market by condition ID."""
+        # Fetch a single market by condition ID.
         if not self._client:
             return None
         resp = await self._client.get(f"/markets/{condition_id}")
@@ -180,7 +175,7 @@ class PolymarketGammaClient:
     # ── accessors ────────────────────────────────────────────
 
     def get_cached_markets(self) -> Dict[str, Dict[str, Any]]:
-        """Return the latest cached market metadata."""
+        # Return the latest cached market metadata.
         return dict(self._markets)
 
     def get_market(self, condition_id: str) -> Optional[Dict[str, Any]]:

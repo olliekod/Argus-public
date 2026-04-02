@@ -1,10 +1,9 @@
-"""
-Soak Summary Builder
-====================
+# Created by Oliver Meihls
 
-Aggregates telemetry from all components into a single JSON payload
-for the ``/debug/soak`` endpoint and ``python -m argus.soak`` CLI.
-"""
+# Soak Summary Builder
+#
+# Aggregates telemetry from all components into a single JSON payload
+# for the ``/debug/soak`` endpoint and ``python -m argus.soak`` CLI.
 
 from __future__ import annotations
 
@@ -29,11 +28,10 @@ def build_soak_summary(
     polymarket_watchlist=None,
     bybit_ws=None,
 ) -> Dict[str, Any]:
-    """Build a single-payload soak summary.
-
-    All parameters are optional — missing components produce
-    ``None`` entries so the summary is always valid JSON.
-    """
+    # Build a single-payload soak summary.
+    #
+    # All parameters are optional — missing components produce
+    # ``None`` entries so the summary is always valid JSON.
     now = time.time()
     summary: Dict[str, Any] = {"timestamp": now}
 

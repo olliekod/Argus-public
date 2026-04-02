@@ -1,9 +1,8 @@
-"""
-Tests for Option Events Module
-==============================
+# Created by Oliver Meihls
 
-Unit tests for Phase 3B option event schemas and serialization.
-"""
+# Tests for Option Events Module
+#
+# Unit tests for Phase 3B option event schemas and serialization.
 
 import pytest
 from src.core.option_events import (
@@ -22,10 +21,10 @@ from src.core.option_events import (
 
 
 class TestOptionContractEvent:
-    """Tests for OptionContractEvent."""
+    # Tests for OptionContractEvent.
     
     def test_create_contract(self):
-        """Test creating an option contract event."""
+        # Test creating an option contract event.
         contract = OptionContractEvent(
             symbol="IBIT",
             contract_id="abc123",
@@ -43,7 +42,7 @@ class TestOptionContractEvent:
         assert contract.style == "american"
     
     def test_contract_round_trip(self):
-        """Test serialization round-trip."""
+        # Test serialization round-trip.
         contract = OptionContractEvent(
             symbol="BITO",
             contract_id="def456",
@@ -67,10 +66,10 @@ class TestOptionContractEvent:
 
 
 class TestOptionQuoteEvent:
-    """Tests for OptionQuoteEvent."""
+    # Tests for OptionQuoteEvent.
     
     def test_create_quote(self):
-        """Test creating an option quote event."""
+        # Test creating an option quote event.
         quote = OptionQuoteEvent(
             contract_id="abc123",
             symbol="IBIT",
@@ -94,7 +93,7 @@ class TestOptionQuoteEvent:
         assert quote.iv == 0.45
     
     def test_quote_with_optional_greeks(self):
-        """Test quote with missing Greeks."""
+        # Test quote with missing Greeks.
         quote = OptionQuoteEvent(
             contract_id="abc123",
             symbol="IBIT",
@@ -110,7 +109,7 @@ class TestOptionQuoteEvent:
         assert quote.gamma is None
     
     def test_quote_round_trip(self):
-        """Test serialization round-trip."""
+        # Test serialization round-trip.
         quote = OptionQuoteEvent(
             contract_id="abc123",
             symbol="IBIT",
@@ -136,10 +135,10 @@ class TestOptionQuoteEvent:
 
 
 class TestOptionChainSnapshotEvent:
-    """Tests for OptionChainSnapshotEvent."""
+    # Tests for OptionChainSnapshotEvent.
     
     def test_create_snapshot(self):
-        """Test creating a chain snapshot."""
+        # Test creating a chain snapshot.
         put1 = OptionQuoteEvent(
             contract_id="p1", symbol="IBIT", strike=44.0,
             expiration_ms=1740124800000, option_type="PUT", bid=1.0, ask=1.1,
@@ -166,7 +165,7 @@ class TestOptionChainSnapshotEvent:
         assert snapshot.puts[0].strike == 44.0  # Sorted ascending
     
     def test_snapshot_is_immutable(self):
-        """Test snapshot immutability."""
+        # Test snapshot immutability.
         snapshot = OptionChainSnapshotEvent(
             symbol="IBIT",
             expiration_ms=1740124800000,
@@ -180,7 +179,7 @@ class TestOptionChainSnapshotEvent:
             snapshot.symbol = "BITO"
     
     def test_snapshot_round_trip(self):
-        """Test serialization round-trip."""
+        # Test serialization round-trip.
         put = OptionQuoteEvent(
             contract_id="p1", symbol="IBIT", strike=45.0,
             expiration_ms=1740124800000, option_type="PUT", bid=1.5, ask=1.6,
@@ -213,10 +212,10 @@ class TestOptionChainSnapshotEvent:
 
 
 class TestHelperFunctions:
-    """Tests for helper functions."""
+    # Tests for helper functions.
     
     def test_compute_snapshot_id(self):
-        """Test deterministic snapshot ID."""
+        # Test deterministic snapshot ID.
         id1 = compute_snapshot_id("IBIT", 1740124800000, 1700000000000)
         id2 = compute_snapshot_id("IBIT", 1740124800000, 1700000000000)
         id3 = compute_snapshot_id("BITO", 1740124800000, 1700000000000)
@@ -225,7 +224,7 @@ class TestHelperFunctions:
         assert id1 != id3  # Different symbol → different output
     
     def test_compute_chain_hash(self):
-        """Test deterministic chain hash."""
+        # Test deterministic chain hash.
         snapshot1 = OptionChainSnapshotEvent(
             symbol="IBIT",
             expiration_ms=1740124800000,

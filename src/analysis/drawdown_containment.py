@@ -1,24 +1,22 @@
-"""
-Drawdown Containment
-=====================
+# Created by Oliver Meihls
 
-Computes a throttle factor [min_throttle, 1.0] based on current portfolio
-drawdown.  The throttle is applied as a scalar multiplier on all normalized
-allocation exposures.
-
-Two modes are supported:
-
-- **linear**: throttle = max(min_throttle, 1 - k * (dd - threshold))
-- **step**: throttle = throttle_scale once drawdown exceeds threshold
-
-Hysteresis is provided via ``recovery_threshold_pct``: once throttled,
-the throttle is only fully released when drawdown recovers to
-``recovery_threshold_pct`` (which should be < ``threshold_pct``).
-
-References
-----------
-- MASTER_PLAN.md §9 — Phase 5: Portfolio Risk Engine.
-"""
+# Drawdown Containment
+#
+# Computes a throttle factor [min_throttle, 1.0] based on current portfolio
+# drawdown.  The throttle is applied as a scalar multiplier on all normalized
+# allocation exposures.
+#
+# Two modes are supported:
+#
+# - **linear**: throttle = max(min_throttle, 1 - k * (dd - threshold))
+# - **step**: throttle = throttle_scale once drawdown exceeds threshold
+#
+# Hysteresis is provided via ``recovery_threshold_pct``: once throttled,
+# the throttle is only fully released when drawdown recovers to
+# ``recovery_threshold_pct`` (which should be < ``threshold_pct``).
+#
+# References
+# - MASTER_PLAN.md §9 — Phase 5: Portfolio Risk Engine.
 
 from __future__ import annotations
 
@@ -31,25 +29,23 @@ logger = logging.getLogger("argus.drawdown_containment")
 
 @dataclass
 class DrawdownConfig:
-    """Configuration for drawdown-based throttling.
-
-    Attributes
-    ----------
-    threshold_pct : float
-        Drawdown fraction at which throttling begins (e.g. 0.10 = 10%).
-    throttle_mode : str
-        ``"linear"`` or ``"step"``.
-    throttle_scale : float
-        Used in step mode: throttle drops to this value when dd > threshold.
-    k : float
-        Used in linear mode: slope of throttle decay.
-        throttle = max(min_throttle, 1 - k * (dd - threshold)).
-    recovery_threshold_pct : float
-        Drawdown level at which full exposure is restored (hysteresis).
-        Must be < threshold_pct.
-    min_throttle : float
-        Floor for the throttle factor (e.g. 0.1 = never below 10%).
-    """
+    # Configuration for drawdown-based throttling.
+    #
+    # Attributes
+    # threshold_pct : float
+    # Drawdown fraction at which throttling begins (e.g. 0.10 = 10%).
+    # throttle_mode : str
+    # ``"linear"`` or ``"step"``.
+    # throttle_scale : float
+    # Used in step mode: throttle drops to this value when dd > threshold.
+    # k : float
+    # Used in linear mode: slope of throttle decay.
+    # throttle = max(min_throttle, 1 - k * (dd - threshold)).
+    # recovery_threshold_pct : float
+    # Drawdown level at which full exposure is restored (hysteresis).
+    # Must be < threshold_pct.
+    # min_throttle : float
+    # Floor for the throttle factor (e.g. 0.1 = never below 10%).
     threshold_pct: float = 0.10
     throttle_mode: str = "linear"
     throttle_scale: float = 0.5
@@ -64,25 +60,22 @@ def compute_drawdown_throttle(
     *,
     was_throttled: bool = False,
 ) -> float:
-    """Compute the drawdown throttle factor.
-
-    Parameters
-    ----------
-    current_drawdown_pct : float
-        Current drawdown as a fraction (0.0 = no drawdown, 0.15 = 15%).
-    config : DrawdownConfig
-        Throttle configuration.
-    was_throttled : bool
-        Whether the portfolio was previously in a throttled state.
-        Used for hysteresis: if True, throttling continues until
-        drawdown recovers below ``recovery_threshold_pct``.
-
-    Returns
-    -------
-    float
-        Throttle factor in [config.min_throttle, 1.0].
-        1.0 means no throttling.
-    """
+    # Compute the drawdown throttle factor.
+    #
+    # Parameters
+    # current_drawdown_pct : float
+    # Current drawdown as a fraction (0.0 = no drawdown, 0.15 = 15%).
+    # config : DrawdownConfig
+    # Throttle configuration.
+    # was_throttled : bool
+    # Whether the portfolio was previously in a throttled state.
+    # Used for hysteresis: if True, throttling continues until
+    # drawdown recovers below ``recovery_threshold_pct``.
+    #
+    # Returns
+    # float
+    # Throttle factor in [config.min_throttle, 1.0].
+    # 1.0 means no throttling.
     dd = max(0.0, current_drawdown_pct)
     threshold = config.threshold_pct
     recovery = config.recovery_threshold_pct

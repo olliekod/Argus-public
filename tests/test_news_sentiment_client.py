@@ -1,4 +1,6 @@
-"""Unit tests for NewsSentimentClient ticker filtering and scoring."""
+# Created by Oliver Meihls
+
+# Unit tests for NewsSentimentClient ticker filtering and scoring.
 
 from __future__ import annotations
 
@@ -10,7 +12,7 @@ from src.connectors.news_sentiment_client import NewsSentimentClient
 
 @pytest.mark.asyncio
 async def test_sentiment_client_ticker_filtering():
-    """Verify that headlines are correctly filtered and scored for a specific ticker."""
+    # Verify that headlines are correctly filtered and scored for a specific ticker.
     config = {
         "news_sentiment": {
             "enabled": True,
@@ -66,7 +68,7 @@ async def test_sentiment_client_ticker_filtering():
 
 @pytest.mark.asyncio
 async def test_sentiment_client_fallback_logic():
-    """Verify that aggregate sentiment is returned if no ticker headlines are found."""
+    # Verify that aggregate sentiment is returned if no ticker headlines are found.
     config = {
         "news_sentiment": {
             "enabled": True,
@@ -96,7 +98,7 @@ async def test_sentiment_client_fallback_logic():
 
 @pytest.mark.asyncio
 async def test_sentiment_client_disabled_stub():
-    """Verify that a neutral stub is returned when disabled."""
+    # Verify that a neutral stub is returned when disabled.
     client = NewsSentimentClient({"news_sentiment": {"enabled": False}})
     result = await client.get_market_sentiment(ticker="BTCUSDT")
     assert result["score"] == 0.0

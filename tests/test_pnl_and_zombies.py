@@ -1,8 +1,8 @@
-"""
-Tests for PnL computation, zombie detection, uniformity monitor, and best-trader scoring.
+# Created by Oliver Meihls
 
-Usage: python -m pytest tests/test_pnl_and_zombies.py -v
-"""
+# Tests for PnL computation, zombie detection, uniformity monitor, and best-trader scoring.
+#
+# Usage: python -m pytest tests/test_pnl_and_zombies.py -v
 
 import asyncio
 import os
@@ -22,7 +22,7 @@ import importlib.util
 import types
 
 def _setup_stub_packages():
-    """Register minimal stub packages so relative imports work."""
+    # Register minimal stub packages so relative imports work.
     for pkg_name in ('src', 'src.core', 'src.analysis'):
         if pkg_name not in sys.modules:
             pkg = types.ModuleType(pkg_name)
@@ -33,7 +33,7 @@ def _setup_stub_packages():
 _setup_stub_packages()
 
 def _import_module(name, file_path):
-    """Import a module by file path."""
+    # Import a module by file path.
     spec = importlib.util.spec_from_file_location(name, file_path)
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
@@ -63,20 +63,17 @@ compute_entropy = _um_mod.compute_entropy
 analyze_variable = _um_mod.analyze_variable
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 def run(coro):
-    """Run an async function synchronously."""
+    # Run an async function synchronously.
     return asyncio.run(coro)
 
 
 async def make_db():
-    """Create a fresh in-memory database for testing.
-
-    Calls _create_tables to set up the full schema including paper_trades.
-    """
+    # Create a fresh in-memory database for testing.
+    #
+    # Calls _create_tables to set up the full schema including paper_trades.
     db = Database(":memory:")
     await db.connect()
     # _create_tables is called by connect(), but the paper_trades table is
@@ -112,7 +109,7 @@ async def make_db():
 async def insert_trade(db, trader_id, strategy_type="bull_put", symbol="IBIT",
                        pnl=10.0, status="closed", days_ago=1,
                        expiry=None, strikes="55/53"):
-    """Insert a paper trade for testing."""
+    # Insert a paper trade for testing.
     ts = (datetime.now(timezone.utc) - timedelta(days=days_ago)).isoformat()
     close_ts = datetime.now(timezone.utc).isoformat() if status != 'open' else None
     trade_id = f"test-{trader_id}-{days_ago}-{pnl}"
@@ -128,15 +125,13 @@ async def insert_trade(db, trader_id, strategy_type="bull_put", symbol="IBIT",
     return trade_id
 
 
-# ---------------------------------------------------------------------------
 # PnL Tests
-# ---------------------------------------------------------------------------
 
 class TestPerTraderPnl:
-    """Test per-trader PnL computation correctness."""
+    # Test per-trader PnL computation correctness.
 
     def test_single_trader_return(self):
-        """Return = total_pnl / starting_balance * 100."""
+        # Return = total_pnl / starting_balance * 100.
         async def _test():
             db = await make_db()
             # Trader with $50 profit on $5000 base = 1% return
@@ -155,7 +150,7 @@ class TestPerTraderPnl:
         run(_test())
 
     def test_multiple_traders_independent(self):
-        """Each trader's return is independent — no cross-contamination."""
+        # Each trader's return is independent — no cross-contamination.
         async def _test():
             db = await make_db()
             await insert_trade(db, "PT-000001", pnl=100.0, days_ago=2)
@@ -173,7 +168,7 @@ class TestPerTraderPnl:
         run(_test())
 
     def test_min_trades_filter(self):
-        """Traders below min_trades threshold are excluded."""
+        # Traders below min_trades threshold are excluded.
         async def _test():
             db = await make_db()
             # Trader 1: 5 trades
@@ -190,7 +185,7 @@ class TestPerTraderPnl:
         run(_test())
 
     def test_window_filter(self):
-        """Only trades within the window are counted."""
+        # Only trades within the window are counted.
         async def _test():
             db = await make_db()
             # Recent trade
@@ -207,7 +202,7 @@ class TestPerTraderPnl:
         run(_test())
 
     def test_open_positions_excluded_from_realized(self):
-        """Open positions should not count towards realized PnL."""
+        # Open positions should not count towards realized PnL.
         async def _test():
             db = await make_db()
             await insert_trade(db, "PT-000001", pnl=50.0, days_ago=2, status="closed")
@@ -222,15 +217,13 @@ class TestPerTraderPnl:
         run(_test())
 
 
-# ---------------------------------------------------------------------------
 # Zombie Detection Tests
-# ---------------------------------------------------------------------------
 
 class TestZombieDetection:
-    """Test zombie position detection rules."""
+    # Test zombie position detection rules.
 
     def test_stale_open_position(self):
-        """Positions open for > stale_hours should be detected as zombies."""
+        # Positions open for > stale_hours should be detected as zombies.
         async def _test():
             db = await make_db()
             # Open position from 72 hours ago (> 48h threshold)
@@ -245,7 +238,7 @@ class TestZombieDetection:
         run(_test())
 
     def test_past_expiry_open_position(self):
-        """Open positions with past expiry should be detected as zombies."""
+        # Open positions with past expiry should be detected as zombies.
         async def _test():
             db = await make_db()
             yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
@@ -259,7 +252,7 @@ class TestZombieDetection:
         run(_test())
 
     def test_fresh_open_position_not_zombie(self):
-        """Recent open positions with future expiry should NOT be zombies."""
+        # Recent open positions with future expiry should NOT be zombies.
         async def _test():
             db = await make_db()
             future = (datetime.now(timezone.utc) + timedelta(days=30)).strftime('%Y-%m-%d')
@@ -281,7 +274,7 @@ class TestZombieDetection:
         run(_test())
 
     def test_mark_zombies(self):
-        """mark_zombies should update status and add reason."""
+        # mark_zombies should update status and add reason.
         async def _test():
             db = await make_db()
             trade_id = await insert_trade(db, "PT-000001", pnl=0, days_ago=5, status="open",
@@ -300,37 +293,35 @@ class TestZombieDetection:
         run(_test())
 
 
-# ---------------------------------------------------------------------------
 # Uniformity Monitor Tests
-# ---------------------------------------------------------------------------
 
 class TestUniformityMonitor:
-    """Test HHI, entropy, and convergence detection."""
+    # Test HHI, entropy, and convergence detection.
 
     def test_hhi_all_same(self):
-        """HHI = 1.0 when all values are identical."""
+        # HHI = 1.0 when all values are identical.
         values = ['A'] * 100
         assert compute_hhi(values) == 1.0
 
     def test_hhi_perfectly_uniform(self):
-        """HHI = 1/N when values are perfectly uniform."""
+        # HHI = 1/N when values are perfectly uniform.
         values = ['A'] * 25 + ['B'] * 25 + ['C'] * 25 + ['D'] * 25
         hhi = compute_hhi(values)
         assert abs(hhi - 0.25) < 0.001  # 1/4 = 0.25
 
     def test_entropy_all_same(self):
-        """Entropy = 0 when all values are identical."""
+        # Entropy = 0 when all values are identical.
         values = ['A'] * 100
         assert compute_entropy(values) == 0.0
 
     def test_entropy_uniform(self):
-        """Entropy = log2(N) when values are perfectly uniform."""
+        # Entropy = log2(N) when values are perfectly uniform.
         values = ['A'] * 25 + ['B'] * 25 + ['C'] * 25 + ['D'] * 25
         entropy = compute_entropy(values)
         assert abs(entropy - 2.0) < 0.01  # log2(4) = 2.0
 
     def test_analyze_triggers_alert_on_convergence(self):
-        """analyze_variable should alert when one value dominates."""
+        # analyze_variable should alert when one value dominates.
         # 95% same value = clear bug signal
         values = ['$55/$53'] * 95 + ['$57/$55'] * 5
         result = analyze_variable(values, 'strikes')
@@ -338,28 +329,26 @@ class TestUniformityMonitor:
         assert result['modal_pct'] > 0.9
 
     def test_analyze_no_alert_on_diversity(self):
-        """analyze_variable should not alert when choices are diverse."""
+        # analyze_variable should not alert when choices are diverse.
         # 10 different values, roughly equal
         values = [f"strike_{i}" for i in range(10)] * 10
         result = analyze_variable(values, 'strikes')
         assert result['is_alert'] is False
 
     def test_analyze_skips_small_samples(self):
-        """Should skip analysis when sample is too small."""
+        # Should skip analysis when sample is too small.
         values = ['A'] * 5
         result = analyze_variable(values, 'test')
         assert result.get('skipped') is True
 
 
-# ---------------------------------------------------------------------------
 # Best Trader Scoring Tests
-# ---------------------------------------------------------------------------
 
 class TestBestTraderScoring:
-    """Test the scoring function for best trader selection."""
+    # Test the scoring function for best trader selection.
 
     def test_score_positive_pnl_wins(self):
-        """Trader with positive PnL should score higher than negative."""
+        # Trader with positive PnL should score higher than negative.
         from scripts.select_best_trader import score_trader
 
         winner = {
@@ -373,13 +362,13 @@ class TestBestTraderScoring:
         assert score_trader(winner) > score_trader(loser)
 
     def test_score_zero_trades(self):
-        """Trader with zero trades should get -inf score."""
+        # Trader with zero trades should get -inf score.
         from scripts.select_best_trader import score_trader
         row = {'total_pnl': 0, 'closed_trades': 0, 'wins': 0, 'avg_pnl': 0, 'worst_trade': 0}
         assert score_trader(row) == float('-inf')
 
     def test_drawdown_penalty(self):
-        """Trader with large single loss should score lower."""
+        # Trader with large single loss should score lower.
         from scripts.select_best_trader import score_trader
 
         safe = {
@@ -393,12 +382,10 @@ class TestBestTraderScoring:
         assert score_trader(safe) > score_trader(risky)
 
 
-# ---------------------------------------------------------------------------
 # Followed Traders DB Tests
-# ---------------------------------------------------------------------------
 
 class TestFollowedTraders:
-    """Test followed traders DB operations."""
+    # Test followed traders DB operations.
 
     def test_set_and_get(self):
         async def _test():
@@ -420,7 +407,7 @@ class TestFollowedTraders:
         run(_test())
 
     def test_replace_on_set(self):
-        """set_followed_traders should replace, not append."""
+        # set_followed_traders should replace, not append.
         async def _test():
             db = await make_db()
             await db.set_followed_traders([
@@ -439,12 +426,10 @@ class TestFollowedTraders:
         run(_test())
 
 
-# ---------------------------------------------------------------------------
 # Run all tests
-# ---------------------------------------------------------------------------
 
 def run_all_tests():
-    """Run all test classes manually (for environments without pytest)."""
+    # Run all test classes manually (for environments without pytest).
     import traceback
 
     classes = [

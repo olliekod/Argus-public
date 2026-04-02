@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import tempfile
 from pathlib import Path
 
@@ -60,7 +62,7 @@ async def test_farm_runner_coerces_missing_and_default_bot_ids():
 
 
 def test_load_farm_configs_compact_farm_generates_deterministic_configs():
-    """Compact farm block generates configs from grid; same seed → same params per bot."""
+    # Compact farm block generates configs from grid; same seed → same params per bot.
     raw = {
         "argus_kalshi": {
             "farm": {
@@ -90,11 +92,9 @@ def test_load_farm_configs_compact_farm_generates_deterministic_configs():
 
 
 def test_load_farm_configs_expands_bot_ids_by_reuse_when_fewer_names_than_bot_count():
-    """
-    Problem: File has 3 names but we want 10 bots. Without expansion we get only 3 configs.
-    Test: With dwarf_names_file of 3 names and bot_count=10, we get 10 configs and
-    every bot_id is non-empty and one of the 3 names (reused).
-    """
+    # Problem: File has 3 names but we want 10 bots. Without expansion we get only 3 configs.
+    # Test: With dwarf_names_file of 3 names and bot_count=10, we get 10 configs and
+    # every bot_id is non-empty and one of the 3 names (reused).
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write("Alice\nBob\nCarol\n")
         dwarf_path = f.name
@@ -120,7 +120,7 @@ def test_load_farm_configs_expands_bot_ids_by_reuse_when_fewer_names_than_bot_co
 
 
 def test_load_farm_configs_no_default_or_empty_bot_id_with_compact_farm():
-    """With compact farm and non-empty dwarf file, no config has bot_id 'default' or empty."""
+    # With compact farm and non-empty dwarf file, no config has bot_id 'default' or empty.
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write("Dwarf1\nDwarf2\n")
         dwarf_path = f.name

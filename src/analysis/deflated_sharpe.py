@@ -1,23 +1,21 @@
-"""
-Deflated Sharpe Ratio (DSR)
-============================
+# Created by Oliver Meihls
 
-Implements the Deflated Sharpe Ratio from Bailey & López de Prado (2014),
-"The Deflated Sharpe Ratio: Correcting for Selection Bias, Backtest
-Overfitting and Non-Normality."
-
-DSR corrects for:
-1. Selection bias — best of N trials inflates observed Sharpe.
-2. Non-normality — skewness and kurtosis of returns.
-
-The DSR is a probability (0–1).  A strategy should only be deployed if
-DSR >= threshold (default 0.95).
-
-References
-----------
-- Bailey, D.H. & López de Prado, M. (2014). The Deflated Sharpe Ratio.
-  *Journal of Portfolio Management*, 40(5), 94–107.
-"""
+# Deflated Sharpe Ratio (DSR)
+#
+# Implements the Deflated Sharpe Ratio from Bailey & López de Prado (2014),
+# "The Deflated Sharpe Ratio: Correcting for Selection Bias, Backtest
+# Overfitting and Non-Normality."
+#
+# DSR corrects for:
+# 1. Selection bias — best of N trials inflates observed Sharpe.
+# 2. Non-normality — skewness and kurtosis of returns.
+#
+# The DSR is a probability (0–1).  A strategy should only be deployed if
+# DSR >= threshold (default 0.95).
+#
+# References
+# - Bailey, D.H. & López de Prado, M. (2014). The Deflated Sharpe Ratio.
+# *Journal of Portfolio Management*, 40(5), 94–107.
 
 from __future__ import annotations
 
@@ -32,16 +30,15 @@ _EULER_MASCHERONI = 0.5772156649015329
 
 
 def _normal_cdf(x: float) -> float:
-    """Standard normal CDF using the complementary error function."""
+    # Standard normal CDF using the complementary error function.
     return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
 
 
 def _normal_ppf(p: float) -> float:
-    """Inverse standard normal CDF (percent-point function).
-
-    Uses a rational approximation (Abramowitz & Stegun 26.2.23)
-    for p in (0, 1).
-    """
+    # Inverse standard normal CDF (percent-point function).
+    #
+    # Uses a rational approximation (Abramowitz & Stegun 26.2.23)
+    # for p in (0, 1).
     if p <= 0.0:
         return -10.0
     if p >= 1.0:
@@ -70,19 +67,16 @@ def _normal_ppf(p: float) -> float:
 
 
 def compute_sharpe_stats(returns: Sequence[float]) -> dict:
-    """Compute Sharpe ratio and higher moments from a return series.
-
-    Parameters
-    ----------
-    returns : sequence of float
-        Per-period returns (not annualized).
-
-    Returns
-    -------
-    dict
-        Keys: ``sharpe``, ``mean``, ``std``, ``skew``, ``kurtosis``,
-        ``n_obs``.  Kurtosis is *excess* kurtosis (normal = 0).
-    """
+    # Compute Sharpe ratio and higher moments from a return series.
+    #
+    # Parameters
+    # returns : sequence of float
+    # Per-period returns (not annualized).
+    #
+    # Returns
+    # dict
+    # Keys: ``sharpe``, ``mean``, ``std``, ``skew``, ``kurtosis``,
+    # ``n_obs``.  Kurtosis is *excess* kurtosis (normal = 0).
     n = len(returns)
     if n < 2:
         return {
@@ -124,25 +118,22 @@ def threshold_sharpe_ratio(
     sharpe_variance: float,
     n_trials: int,
 ) -> float:
-    """Compute the threshold Sharpe ratio SR_0 (False Strategy Theorem).
-
-    This is the expected maximum Sharpe among ``n_trials`` unskilled
-    strategies.
-
-    Parameters
-    ----------
-    sharpe_variance : float
-        Cross-sectional variance of Sharpe ratios across trials, i.e.
-        Var[SR_n].
-    n_trials : int
-        Number of independent trials (or effective number of trials
-        after clustering).
-
-    Returns
-    -------
-    float
-        SR_0, the threshold Sharpe ratio.
-    """
+    # Compute the threshold Sharpe ratio SR_0 (False Strategy Theorem).
+    #
+    # This is the expected maximum Sharpe among ``n_trials`` unskilled
+    # strategies.
+    #
+    # Parameters
+    # sharpe_variance : float
+    # Cross-sectional variance of Sharpe ratios across trials, i.e.
+    # Var[SR_n].
+    # n_trials : int
+    # Number of independent trials (or effective number of trials
+    # after clustering).
+    #
+    # Returns
+    # float
+    # SR_0, the threshold Sharpe ratio.
     if n_trials <= 0:
         return 0.0
     if sharpe_variance <= 0:
@@ -170,26 +161,23 @@ def compute_deflated_sharpe_ratio(
     skewness: float = 0.0,
     kurtosis: float = 0.0,
 ) -> float:
-    """Compute the Deflated Sharpe Ratio.
-
-    Parameters
-    ----------
-    observed_sharpe : float
-        Non-annualized Sharpe ratio of the best strategy.
-    threshold_sr : float
-        Threshold Sharpe from :func:`threshold_sharpe_ratio`.
-    n_obs : int
-        Number of return observations (sample length T).
-    skewness : float
-        Skewness of returns (default 0 = normal).
-    kurtosis : float
-        Excess kurtosis of returns (default 0 = normal).
-
-    Returns
-    -------
-    float
-        DSR value in [0, 1].  Deploy only if DSR >= threshold (e.g. 0.95).
-    """
+    # Compute the Deflated Sharpe Ratio.
+    #
+    # Parameters
+    # observed_sharpe : float
+    # Non-annualized Sharpe ratio of the best strategy.
+    # threshold_sr : float
+    # Threshold Sharpe from :func:`threshold_sharpe_ratio`.
+    # n_obs : int
+    # Number of return observations (sample length T).
+    # skewness : float
+    # Skewness of returns (default 0 = normal).
+    # kurtosis : float
+    # Excess kurtosis of returns (default 0 = normal).
+    #
+    # Returns
+    # float
+    # DSR value in [0, 1].  Deploy only if DSR >= threshold (e.g. 0.95).
     if n_obs < 2:
         return 0.0
 
@@ -228,25 +216,22 @@ def deflated_sharpe_ratio(
     n_trials: int,
     all_sharpes: Optional[Sequence[float]] = None,
 ) -> dict:
-    """End-to-end DSR computation from raw returns.
-
-    Parameters
-    ----------
-    returns : sequence of float
-        Per-period return series of the *best* strategy.
-    n_trials : int
-        Total number of independent strategy trials (or effective N).
-    all_sharpes : sequence of float, optional
-        Sharpe ratios of all trials.  If provided, cross-sectional
-        variance is computed from these.  Otherwise, assumes unit
-        variance as a conservative default.
-
-    Returns
-    -------
-    dict
-        ``dsr``, ``observed_sharpe``, ``threshold_sr``, ``n_obs``,
-        ``n_trials``, ``skew``, ``kurtosis``, ``sharpe_variance``.
-    """
+    # End-to-end DSR computation from raw returns.
+    #
+    # Parameters
+    # returns : sequence of float
+    # Per-period return series of the *best* strategy.
+    # n_trials : int
+    # Total number of independent strategy trials (or effective N).
+    # all_sharpes : sequence of float, optional
+    # Sharpe ratios of all trials.  If provided, cross-sectional
+    # variance is computed from these.  Otherwise, assumes unit
+    # variance as a conservative default.
+    #
+    # Returns
+    # dict
+    # ``dsr``, ``observed_sharpe``, ``threshold_sr``, ``n_obs``,
+    # ``n_trials``, ``skew``, ``kurtosis``, ``sharpe_variance``.
     stats = compute_sharpe_stats(returns)
 
     # Cross-sectional variance of Sharpe ratios

@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import json
 
 from src.analysis.mc_bootstrap import evaluate_mc_kill, run_mc_paths

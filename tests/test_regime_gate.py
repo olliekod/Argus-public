@@ -1,14 +1,14 @@
-"""
-Tests for regime gate + Kalshi dispatch integration.
+# Created by Oliver Meihls
 
-Covers:
-  - RegimeGate scalp gating (VOL_SPIKE microstructure, LIQ_LOW/DRIED block)
-  - RegimeGate hold gating (spike entry horizon, spike min edge, risk-off)
-  - SharedFarmState regime cache updates
-  - Conservative fallback when regime data is missing
-  - Config defaults and validation
-  - Diagnostics counters
-"""
+# Tests for regime gate + Kalshi dispatch integration.
+#
+# Covers:
+# - RegimeGate scalp gating (VOL_SPIKE microstructure, LIQ_LOW/DRIED block)
+# - RegimeGate hold gating (spike entry horizon, spike min edge, risk-off)
+# - SharedFarmState regime cache updates
+# - Conservative fallback when regime data is missing
+# - Config defaults and validation
+# - Diagnostics counters
 
 from __future__ import annotations
 
@@ -22,9 +22,7 @@ from argus_kalshi.shared_state import SharedFarmState
 from argus_kalshi.regime_gate import RegimeGate, GateResult
 
 
-# ---------------------------------------------------------------------------
 #  Helpers
-# ---------------------------------------------------------------------------
 
 def _make_gate(
     enable: bool = True,
@@ -35,7 +33,7 @@ def _make_gate(
     last_update: float = 0.0,
     **cfg_overrides,
 ) -> tuple:
-    """Create a RegimeGate with pre-populated SharedFarmState."""
+    # Create a RegimeGate with pre-populated SharedFarmState.
     cfg = KalshiConfig(
         enable_regime_gating=enable,
         regime_fallback_mode=fallback_mode,
@@ -53,9 +51,7 @@ def _make_gate(
     return gate, shared
 
 
-# ---------------------------------------------------------------------------
 #  Scalp gating tests
-# ---------------------------------------------------------------------------
 
 class TestScalpGating:
 
@@ -90,7 +86,7 @@ class TestScalpGating:
         assert result.allowed
 
     def test_vol_spike_fails_microstructure(self):
-        """VOL_SPIKE with bad microstructure should block."""
+        # VOL_SPIKE with bad microstructure should block.
         gate, _ = _make_gate(
             vol="VOL_SPIKE", liq="LIQ_NORMAL", last_update=time.monotonic(),
             scalp_spike_max_spread_cents=1,
@@ -109,7 +105,7 @@ class TestScalpGating:
         assert "regime_spike_microstructure_fail" in result.reason
 
     def test_vol_spike_passes_strict_microstructure(self):
-        """VOL_SPIKE with good microstructure should allow with reduced size."""
+        # VOL_SPIKE with good microstructure should allow with reduced size.
         gate, _ = _make_gate(
             vol="VOL_SPIKE", liq="LIQ_NORMAL", last_update=time.monotonic(),
             scalp_spike_max_spread_cents=2,
@@ -132,9 +128,7 @@ class TestScalpGating:
         assert result.max_hold_override_s == 180.0  # 3 * 60
 
 
-# ---------------------------------------------------------------------------
 #  Hold gating tests
-# ---------------------------------------------------------------------------
 
 class TestHoldGating:
 
@@ -145,7 +139,7 @@ class TestHoldGating:
         assert result.reason == "gating_disabled"
 
     def test_vol_spike_blocks_early_entry(self):
-        """VOL_SPIKE with too much time to settle should block."""
+        # VOL_SPIKE with too much time to settle should block.
         gate, _ = _make_gate(
             vol="VOL_SPIKE", liq="LIQ_NORMAL",
             last_update=time.monotonic(),
@@ -157,7 +151,7 @@ class TestHoldGating:
         assert "spike_too_early" in result.reason
 
     def test_vol_spike_blocks_low_edge(self):
-        """VOL_SPIKE near-expiry but low edge should block."""
+        # VOL_SPIKE near-expiry but low edge should block.
         gate, _ = _make_gate(
             vol="VOL_SPIKE", liq="LIQ_NORMAL",
             last_update=time.monotonic(),
@@ -169,7 +163,7 @@ class TestHoldGating:
         assert "spike_low_edge" in result.reason
 
     def test_vol_spike_allows_near_expiry_high_edge(self):
-        """VOL_SPIKE with near-expiry + high edge should allow."""
+        # VOL_SPIKE with near-expiry + high edge should allow.
         gate, _ = _make_gate(
             vol="VOL_SPIKE", liq="LIQ_NORMAL",
             last_update=time.monotonic(),
@@ -213,14 +207,12 @@ class TestHoldGating:
         assert result.reason == "regime_ok"
 
 
-# ---------------------------------------------------------------------------
 #  Missing regime data (fallback modes)
-# ---------------------------------------------------------------------------
 
 class TestFallbackModes:
 
     def test_conservative_fallback_blocks_scalp(self):
-        """Missing regime data with conservative fallback should block scalps."""
+        # Missing regime data with conservative fallback should block scalps.
         gate, _ = _make_gate(fallback_mode="conservative")
         # No regime data set — last_update=0 means data is missing
         result = gate.gate_scalp("BTC")
@@ -228,13 +220,13 @@ class TestFallbackModes:
         assert "LIQ_LOW" in result.reason or "regime_block" in result.reason
 
     def test_permissive_fallback_allows_scalp(self):
-        """Missing regime data with permissive fallback should allow."""
+        # Missing regime data with permissive fallback should allow.
         gate, _ = _make_gate(fallback_mode="permissive")
         result = gate.gate_scalp("BTC")
         assert result.allowed
 
     def test_conservative_fallback_blocks_hold(self):
-        """Missing regime data with conservative fallback should block holds (spike logic)."""
+        # Missing regime data with conservative fallback should block holds (spike logic).
         gate, _ = _make_gate(
             fallback_mode="conservative",
             hold_spike_entry_horizon_s=300.0,
@@ -249,9 +241,7 @@ class TestFallbackModes:
         assert gate.counters["regime_data_missing"] >= 1
 
 
-# ---------------------------------------------------------------------------
 #  SharedFarmState regime cache
-# ---------------------------------------------------------------------------
 
 class TestSharedFarmStateRegime:
 
@@ -284,14 +274,12 @@ class TestSharedFarmStateRegime:
         assert shared.regime_last_update["BTC"] > 0
 
 
-# ---------------------------------------------------------------------------
 #  Config defaults and validation
-# ---------------------------------------------------------------------------
 
 class TestConfigRegimeFields:
 
     def test_defaults_backward_compatible(self):
-        """Default config must have regime gating disabled."""
+        # Default config must have regime gating disabled.
         cfg = KalshiConfig()
         assert cfg.enable_regime_gating is False
         assert cfg.regime_fallback_mode == "conservative"
@@ -315,9 +303,7 @@ class TestConfigRegimeFields:
         assert cfg.scalp_spike_min_edge_cents == 10
 
 
-# ---------------------------------------------------------------------------
 #  Diagnostics
-# ---------------------------------------------------------------------------
 
 class TestDiagnostics:
 

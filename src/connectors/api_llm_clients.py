@@ -1,4 +1,6 @@
-"""External API-backed LLM clients used for escalation tiers."""
+# Created by Oliver Meihls
+
+# External API-backed LLM clients used for escalation tiers.
 
 from __future__ import annotations
 
@@ -8,7 +10,7 @@ import aiohttp
 
 
 class BaseAPIClient:
-    """Shared behavior for API chat clients."""
+    # Shared behavior for API chat clients.
 
     def __init__(self, api_key: str, model: str, api_base: str = "") -> None:
         self.api_key = api_key
@@ -20,11 +22,10 @@ class BaseAPIClient:
 
 
 class AnthropicClient(BaseAPIClient):
-    """Anthropic Messages API client.
-
-    Returns Ollama-compatible shape:
-    {"message": {"content": "..."}}
-    """
+    # Anthropic Messages API client.
+    #
+    # Returns Ollama-compatible shape:
+    # {"message": {"content": "..."}}
 
     DEFAULT_MODEL = "claude-3-5-sonnet-20241022"
     DEFAULT_BASE = "https://api.anthropic.com"
@@ -65,11 +66,10 @@ class AnthropicClient(BaseAPIClient):
 
 
 class OpenAIClient(BaseAPIClient):
-    """OpenAI chat-completions API client.
-
-    Returns Ollama-compatible shape:
-    {"message": {"content": "..."}}
-    """
+    # OpenAI chat-completions API client.
+    #
+    # Returns Ollama-compatible shape:
+    # {"message": {"content": "..."}}
 
     DEFAULT_MODEL = "gpt-4o"
     DEFAULT_BASE = "https://api.openai.com"

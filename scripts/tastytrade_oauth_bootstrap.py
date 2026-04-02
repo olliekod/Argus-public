@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Bootstrap Tastytrade OAuth refresh token via the local dashboard."""
+# Created by Oliver Meihls
+
+# Bootstrap Tastytrade OAuth refresh token via the local dashboard.
 
 from __future__ import annotations
 

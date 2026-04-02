@@ -1,32 +1,31 @@
-"""
-Best Trader Selection Script
-=============================
+# Created by Oliver Meihls
 
-Scores each trader_id on a composite metric over a configurable window,
-writes the top N to the followed_traders table, and optionally alerts via
-Telegram when the follow list changes.
-
-Scoring method: weighted composite
-  score = (
-      w_pnl * normalized_total_pnl
-    + w_wr  * win_rate / 100
-    + w_con * consistency_score
-    - w_dd  * drawdown_penalty
-  )
-
-Where:
-  - normalized_total_pnl = total_pnl / starting_balance
-  - consistency_score    = 1 - (std_pnl / (abs(mean_pnl) + 1))
-  - drawdown_penalty     = max_single_loss / starting_balance
-  - win_rate is as computed (wins / total_closed * 100)
-
-Minimum requirements:
-  - At least min_trades closed trades
-  - At least 2 distinct trade dates (not a one-day fluke)
-
-Usage:
-  python -m scripts.select_best_trader [--days 30] [--top-n 10] [--min-trades 5]
-"""
+# Best Trader Selection Script
+#
+# Scores each trader_id on a composite metric over a configurable window,
+# writes the top N to the followed_traders table, and optionally alerts via
+# Telegram when the follow list changes.
+#
+# Scoring method: weighted composite
+# score = (
+# w_pnl * normalized_total_pnl
+# + w_wr  * win_rate / 100
+# + w_con * consistency_score
+# - w_dd  * drawdown_penalty
+# )
+#
+# Where:
+# - normalized_total_pnl = total_pnl / starting_balance
+# - consistency_score    = 1 - (std_pnl / (abs(mean_pnl) + 1))
+# - drawdown_penalty     = max_single_loss / starting_balance
+# - win_rate is as computed (wins / total_closed * 100)
+#
+# Minimum requirements:
+# - At least min_trades closed trades
+# - At least 2 distinct trade dates (not a one-day fluke)
+#
+# Usage:
+# python -m scripts.select_best_trader [--days 30] [--top-n 10] [--min-trades 5]
 
 import argparse
 import asyncio
@@ -51,7 +50,7 @@ STARTING_BALANCE = 5000.0
 
 
 def score_trader(row: dict, starting_balance: float = STARTING_BALANCE) -> float:
-    """Compute composite score for a single trader row."""
+    # Compute composite score for a single trader row.
     total_pnl = row.get('total_pnl', 0) or 0
     closed = row.get('closed_trades', 0) or 0
     wins = row.get('wins', 0) or 0
@@ -87,7 +86,7 @@ async def select_best_traders(
     min_trades: int = 5,
     verbose: bool = True,
 ) -> list:
-    """Run selection and return top traders."""
+    # Run selection and return top traders.
     db = Database(db_path)
     await db.connect()
 

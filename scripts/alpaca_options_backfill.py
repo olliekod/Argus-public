@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
-"""
-Options Historical Backfill
-============================
+# Created by Oliver Meihls
 
-Fetches historical options chain snapshots (price, IV, Greeks) and persists
-to the Argus database's `option_snapshots` table.
-
-Tiered provider strategy:
-  1. **Tastytrade** — Full chain metadata (strikes, expirations, IV, Greeks)
-     via GET /option-chains/{symbol}/nested (current-chain only, no time travel).
-  2. **Alpaca** — Historical options snapshots via options bars + snapshot endpoints.
-     Price-only (no IV/Greeks).
-
-Usage::
-
-    # Tastytrade current chain snapshot for IBIT (dry-run)
-    python scripts/alpaca_options_backfill.py --symbol IBIT --provider tastytrade --dry-run
-
-    # Alpaca historical options bars (price-only) for SPY in Jan 2024
-    python scripts/alpaca_options_backfill.py --symbol SPY --provider alpaca \\
-        --start 2024-01-02 --end 2024-01-31 --dry-run
-
-NOTE: Tastytrade does NOT offer historical options snapshots via their API.
-      Their chain endpoint returns only currently-active contracts.
-      For deep historical data (2021-2023), Alpaca historical options
-      bars are the closest available public source.
-"""
+# Options Historical Backfill
+#
+# Fetches historical options chain snapshots (price, IV, Greeks) and persists
+# to the Argus database's `option_snapshots` table.
+#
+# Tiered provider strategy:
+# 1. **Tastytrade** — Full chain metadata (strikes, expirations, IV, Greeks)
+# via GET /option-chains/{symbol}/nested (current-chain only, no time travel).
+# 2. **Alpaca** — Historical options snapshots via options bars + snapshot endpoints.
+# Price-only (no IV/Greeks).
+#
+# Usage::
+#
+# # Tastytrade current chain snapshot for IBIT (dry-run)
+# python scripts/alpaca_options_backfill.py --symbol IBIT --provider tastytrade --dry-run
+#
+# # Alpaca historical options bars (price-only) for SPY in Jan 2024
+# python scripts/alpaca_options_backfill.py --symbol SPY --provider alpaca \
+# --start 2024-01-02 --end 2024-01-31 --dry-run
+#
+# NOTE: Tastytrade does NOT offer historical options snapshots via their API.
+# Their chain endpoint returns only currently-active contracts.
+# For deep historical data (2021-2023), Alpaca historical options
+# bars are the closest available public source.
 
 import argparse
 import asyncio
@@ -84,11 +83,9 @@ def _load_tastytrade_credentials() -> tuple[str, str]:
 # ─── Tastytrade provider ───────────────────────────────────────────────────────
 
 async def backfill_tastytrade(symbol: str, dry_run: bool = False) -> int:
-    """
-    Fetch CURRENT option chain from Tastytrade and store as a snapshot row.
-    Tastytrade does not provide historical chain data via REST.
-    This is useful for capturing live chains for future research.
-    """
+    # Fetch CURRENT option chain from Tastytrade and store as a snapshot row.
+    # Tastytrade does not provide historical chain data via REST.
+    # This is useful for capturing live chains for future research.
     import json
     from src.core.database import Database
     from src.connectors.tastytrade_rest import TastytradeRestClient, TastytradeError
@@ -191,11 +188,9 @@ async def backfill_alpaca_options(
     end_dt: datetime,
     dry_run: bool = False,
 ) -> int:
-    """
-    Fetch current options snapshot from Alpaca and store as price-only snapshot rows.
-    Note: Alpaca indicative feed does NOT include IV/Greeks.
-    This captures today's chain, persisted with a timestamp so it can be queried later.
-    """
+    # Fetch current options snapshot from Alpaca and store as price-only snapshot rows.
+    # Note: Alpaca indicative feed does NOT include IV/Greeks.
+    # This captures today's chain, persisted with a timestamp so it can be queried later.
     import json
     import aiohttp
     from src.core.database import Database

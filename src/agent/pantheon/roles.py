@@ -1,18 +1,17 @@
-"""
-Pantheon Intelligence Engine — Role Definitions
-================================================
+# Created by Oliver Meihls
 
-Defines the structured research agents (Prometheus, Ares, Athena) that
-drive the Argus research loop.  Each role has:
-
-- A detailed system prompt that enforces structured output
-- An output schema that the response must conform to
-- An escalation priority (which LLM tier is required)
-- A context injection framework for dynamic prompt enrichment
-
-These agents generate and critique machine-readable trading strategies
-via :class:`~src.core.manifests.StrategyManifest`.
-"""
+# Pantheon Intelligence Engine — Role Definitions
+#
+# Defines the structured research agents (Prometheus, Ares, Athena) that
+# drive the Argus research loop.  Each role has:
+#
+# - A detailed system prompt that enforces structured output
+# - An output schema that the response must conform to
+# - An escalation priority (which LLM tier is required)
+# - A context injection framework for dynamic prompt enrichment
+#
+# These agents generate and critique machine-readable trading strategies
+# via :class:`~src.core.manifests.StrategyManifest`.
 
 from __future__ import annotations
 
@@ -41,30 +40,25 @@ from src.core.manifests import (
 logger = logging.getLogger(__name__)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Escalation Levels
-# ═══════════════════════════════════════════════════════════════════════════
 
 ESCALATION_LOCAL_14B = 0    # 14B local model is sufficient
 ESCALATION_LOCAL_32B = 1    # 32B local model preferred
 ESCALATION_CLAUDE = 2       # Claude API mandatory
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Context Injector
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass
 class ContextInjector:
-    """Manages dynamic context injection for Pantheon agent prompts.
-
-    Enriches each agent with selective system context:
-    - Prometheus gets full context (indicators, universe, risk limits,
-      strategy library, Hades results, failure logs).
-    - Ares gets only Hades battle evidence and failure logs (sight-limited
-      to prevent novelty bias corrupting its adversarial role).
-    - Athena gets library + Hades + risk limits (for grounded scoring).
-    """
+    # Manages dynamic context injection for Pantheon agent prompts.
+    #
+    # Enriches each agent with selective system context:
+    # - Prometheus gets full context (indicators, universe, risk limits,
+    # strategy library, Hades results, failure logs).
+    # - Ares gets only Hades battle evidence and failure logs (sight-limited
+    # to prevent novelty bias corrupting its adversarial role).
+    # - Athena gets library + Hades + risk limits (for grounded scoring).
 
     # Market state
     regime_context: Optional[Dict[str, str]] = None
@@ -100,7 +94,7 @@ class ContextInjector:
         session_regime: str = "UNKNOWN",
         risk_regime: str = "UNKNOWN",
     ) -> None:
-        """Update the current market regime state."""
+        # Update the current market regime state.
         self.regime_context = {
             "vol_regime": vol_regime,
             "trend_regime": trend_regime,
@@ -110,15 +104,15 @@ class ContextInjector:
         }
 
     def set_benchmark_greeks(self, greeks: Dict[str, float]) -> None:
-        """Update aggregate Greeks for benchmark index (e.g. BTC)."""
+        # Update aggregate Greeks for benchmark index (e.g. BTC).
         self.benchmark_greeks = greeks
 
     def set_available_symbols(self, symbols: List[str]) -> None:
-        """Set confirmed tradeable symbols that have bar data in Argus DB."""
+        # Set confirmed tradeable symbols that have bar data in Argus DB.
         self.available_symbols = sorted(set(symbols))
 
     def set_risk_limits(self, limits: Dict[str, Any]) -> None:
-        """Set hard risk constraints from RiskEngineOpts config."""
+        # Set hard risk constraints from RiskEngineOpts config.
         self.risk_limits = limits
 
     def add_strategy_to_library(
@@ -129,7 +123,7 @@ class ContextInjector:
         signals: List[str],
         category: str = "",
     ) -> None:
-        """Record a promoted strategy for novelty comparison."""
+        # Record a promoted strategy for novelty comparison.
         self.strategy_library.append({
             "name": name,
             "category": category,
@@ -149,7 +143,7 @@ class ContextInjector:
         kill_reason: Optional[str] = None,
         grading: str = "Unrated",
     ) -> None:
-        """Record a Hades backtest result for feedback loop."""
+        # Record a Hades backtest result for feedback loop.
         self.hades_performance_log.append({
             "name": strategy_name,
             "sharpe": round(sharpe, 3),
@@ -162,7 +156,7 @@ class ContextInjector:
             self.hades_performance_log = self.hades_performance_log[-10:]
 
     def add_failure_log(self, case_id: str, reason: str, strategy_name: str = "") -> None:
-        """Record a historical failure for context in future cases."""
+        # Record a historical failure for context in future cases.
         self.failure_logs.append({
             "case_id": case_id,
             "strategy_name": strategy_name,
@@ -201,7 +195,7 @@ class ContextInjector:
         )
 
     def format_indicator_descriptions(self) -> str:
-        """Brief one-liners for each indicator to prevent misuse."""
+        # Brief one-liners for each indicator to prevent misuse.
         if not self.indicator_descriptions:
             return ""
         lines = ["Indicator Reference (what each signal actually measures):"]
@@ -217,7 +211,7 @@ class ContextInjector:
         )
 
     def format_symbol_universe(self) -> str:
-        """Confirmed tradeable symbols — prevents Prometheus hallucinating tickers."""
+        # Confirmed tradeable symbols — prevents Prometheus hallucinating tickers.
         if not self.available_symbols:
             return ""
         syms = ", ".join(self.available_symbols)
@@ -228,7 +222,7 @@ class ContextInjector:
         )
 
     def format_risk_limits(self) -> str:
-        """Hard risk caps from RiskEngineOpts — Prometheus MUST stay within these."""
+        # Hard risk caps from RiskEngineOpts — Prometheus MUST stay within these.
         if not self.risk_limits:
             return ""
         label_map = {
@@ -245,7 +239,7 @@ class ContextInjector:
         return "\n".join(lines)
 
     def format_strategy_library(self) -> str:
-        """Existing promoted strategies — use for novelty comparison."""
+        # Existing promoted strategies — use for novelty comparison.
         if not self.strategy_library:
             return "Strategy Library: Empty (no prior promoted strategies — you have full novelty latitude)."
         lines = ["Existing Promoted Strategies (compare for novelty scoring):"]
@@ -259,7 +253,7 @@ class ContextInjector:
         return "\n".join(lines)
 
     def format_hades_performance_log(self) -> str:
-        """Recent Hades backtest results — evidence for attack and scoring."""
+        # Recent Hades backtest results — evidence for attack and scoring.
         if not self.hades_performance_log:
             return "Hades Backtest History: No results yet."
         lines = ["Recent Hades Backtest Results (what actually happened in live tests):"]
@@ -282,12 +276,11 @@ class ContextInjector:
         return "\n".join(lines)
 
     def format_context_for_role(self, role: str) -> str:
-        """Return role-appropriate context subset.
-
-        Ares is sight-limited intentionally — it sees only Hades battle
-        evidence and failure logs. This prevents novelty bias corrupting
-        its adversarial critique (its job is quant rigor, not originality).
-        """
+        # Return role-appropriate context subset.
+        #
+        # Ares is sight-limited intentionally — it sees only Hades battle
+        # evidence and failure logs. This prevents novelty bias corrupting
+        # its adversarial critique (its job is quant rigor, not originality).
         role_l = role.lower()
 
         if role_l == "prometheus":
@@ -330,7 +323,7 @@ class ContextInjector:
         return "\n\n".join(filter(None, sections))
 
     def format_full_context(self) -> str:
-        """Full context — used as fallback when no role is specified."""
+        # Full context — used as fallback when no role is specified.
         sections = [
             self.format_regime_block(),
             self.format_benchmark_greeks(),
@@ -346,13 +339,11 @@ class ContextInjector:
         return "\n\n".join(filter(None, sections))
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # PantheonRole
-# ═══════════════════════════════════════════════════════════════════════════
 
 @dataclass
 class PantheonRole:
-    """Definition of a Pantheon research agent role."""
+    # Definition of a Pantheon research agent role.
 
     name: str
     personality: str
@@ -361,7 +352,7 @@ class PantheonRole:
     system_prompt_template: str
 
     def build_system_prompt(self, context: ContextInjector) -> str:
-        """Build the full system prompt with role-filtered injected context."""
+        # Build the full system prompt with role-filtered injected context.
         return self.system_prompt_template.format(
             context=context.format_context_for_role(self.name),
             indicator_catalog=context.format_indicator_catalog(),
@@ -382,18 +373,15 @@ class PantheonRole:
         original: str = "",
         full_debate: str = "",
     ) -> str:
-        """Build the complete messages for a case-file stage.
-
-        Returns the system prompt + user prompt as a formatted string
-        ready for LLM completion.
-        """
+        # Build the complete messages for a case-file stage.
+        #
+        # Returns the system prompt + user prompt as a formatted string
+        # ready for LLM completion.
         system = self.build_system_prompt(context)
         return system, objective, artifact, original, full_debate
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Prometheus — The Manifest Generator
-# ═══════════════════════════════════════════════════════════════════════════
 
 _PROMETHEUS_SYSTEM = """\
 You are Prometheus, the Creative Strategist of the Argus Pantheon.
@@ -592,9 +580,7 @@ PROMETHEUS = PantheonRole(
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Ares — The Adversary
-# ═══════════════════════════════════════════════════════════════════════════
 
 _ARES_SYSTEM = """\
 You are Ares, the War-God Critic of the Argus Pantheon — the Filter of Truth.
@@ -750,9 +736,7 @@ ARES = PantheonRole(
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Athena — The Adjudicator
-# ═══════════════════════════════════════════════════════════════════════════
 
 _ATHENA_SYSTEM = """\
 You are Athena, the Neutral Arbiter of the Argus Pantheon.
@@ -906,9 +890,7 @@ ATHENA = PantheonRole(
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Role Registry & Stage Mapping
-# ═══════════════════════════════════════════════════════════════════════════
 
 # Import CaseStage here to avoid circular imports at module level.
 # The orchestrator defines CaseStage, and roles need to map stages to roles.
@@ -924,7 +906,7 @@ _STAGE_ROLE_MAP = {
 
 
 def get_role_for_stage(stage_value: int) -> PantheonRole:
-    """Return the PantheonRole for a given CaseStage value."""
+    # Return the PantheonRole for a given CaseStage value.
     entry = _STAGE_ROLE_MAP.get(stage_value)
     if entry is None:
         raise ValueError(f"No role defined for stage {stage_value}")
@@ -932,7 +914,7 @@ def get_role_for_stage(stage_value: int) -> PantheonRole:
 
 
 def _get_system_prompt_for_stage(stage_value: int, context: ContextInjector) -> str:
-    """Get the appropriate system prompt for a stage, including variants."""
+    # Get the appropriate system prompt for a stage, including variants.
     entry = _STAGE_ROLE_MAP.get(stage_value)
     if entry is None:
         raise ValueError(f"No role defined for stage {stage_value}")
@@ -969,28 +951,25 @@ def build_stage_prompt(
     artifacts: List[Dict[str, Any]],
     parse_errors: str = "",
 ) -> List[Dict[str, str]]:
-    """Build the complete message list for a case-file stage.
-
-    Parameters
-    ----------
-    stage_value : int
-        CaseStage enum value (1–5).
-    objective : str
-        The research objective / user request.
-    context : ContextInjector
-        Runtime context for prompt enrichment.
-    artifacts : List[Dict[str, Any]]
-        Previous stage artifacts from the CaseFile.
-    parse_errors : str
-        Accumulated parse error messages from previous stages.
-        Injected into Stage 3 (revision) and Stage 5 (adjudication)
-        so the LLMs can see what failed.
-
-    Returns
-    -------
-    List[Dict[str, str]]
-        Messages list suitable for LLM completion (system + user).
-    """
+    # Build the complete message list for a case-file stage.
+    #
+    # Parameters
+    # stage_value : int
+    # CaseStage enum value (1–5).
+    # objective : str
+    # The research objective / user request.
+    # context : ContextInjector
+    # Runtime context for prompt enrichment.
+    # artifacts : List[Dict[str, Any]]
+    # Previous stage artifacts from the CaseFile.
+    # parse_errors : str
+    # Accumulated parse error messages from previous stages.
+    # Injected into Stage 3 (revision) and Stage 5 (adjudication)
+    # so the LLMs can see what failed.
+    #
+    # Returns
+    # List[Dict[str, str]]
+    # Messages list suitable for LLM completion (system + user).
     role = get_role_for_stage(stage_value)
     system_prompt = _get_system_prompt_for_stage(stage_value, context)
 
@@ -1108,21 +1087,18 @@ def build_stage_prompt(
     ]
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Response Parsers
-# ═══════════════════════════════════════════════════════════════════════════
 
 def parse_manifest_response(response: str) -> StrategyManifest:
-    """Parse a Prometheus response into a StrategyManifest.
-
-    Extracts JSON from <manifest> tags, fenced blocks, or raw JSON.
-    Validates the manifest structure.
-
-    Raises
-    ------
-    ManifestValidationError
-        If the response contains no valid manifest or the manifest is invalid.
-    """
+    # Parse a Prometheus response into a StrategyManifest.
+    #
+    # Extracts JSON from <manifest> tags, fenced blocks, or raw JSON.
+    # Validates the manifest structure.
+    #
+    # Raises
+    # ------
+    # ManifestValidationError
+    # If the response contains no valid manifest or the manifest is invalid.
     data = extract_json_from_response(response)
     if data is None:
         raise ManifestValidationError(
@@ -1136,15 +1112,14 @@ def parse_manifest_response(response: str) -> StrategyManifest:
 
 
 def parse_critique_response(response: str, manifest_hash: str = "") -> AresCritique:
-    """Parse an Ares response into an AresCritique.
-
-    Extracts JSON from <critique> tags, fenced blocks, or raw JSON.
-
-    Raises
-    ------
-    ManifestValidationError
-        If the response contains no valid critique.
-    """
+    # Parse an Ares response into an AresCritique.
+    #
+    # Extracts JSON from <critique> tags, fenced blocks, or raw JSON.
+    #
+    # Raises
+    # ------
+    # ManifestValidationError
+    # If the response contains no valid critique.
     data = extract_json_from_response(response)
     if data is None:
         raise ManifestValidationError(
@@ -1168,15 +1143,14 @@ def parse_critique_response(response: str, manifest_hash: str = "") -> AresCriti
 
 
 def parse_verdict_response(response: str) -> AthenaVerdict:
-    """Parse an Athena response into an AthenaVerdict.
-
-    Extracts JSON from <verdict> tags, fenced blocks, or raw JSON.
-
-    Raises
-    ------
-    ManifestValidationError
-        If the response contains no valid verdict.
-    """
+    # Parse an Athena response into an AthenaVerdict.
+    #
+    # Extracts JSON from <verdict> tags, fenced blocks, or raw JSON.
+    #
+    # Raises
+    # ------
+    # ManifestValidationError
+    # If the response contains no valid verdict.
     data = extract_json_from_response(response)
     if data is None:
         raise ManifestValidationError(

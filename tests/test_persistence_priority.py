@@ -1,9 +1,9 @@
-"""
-Tests for persistence priority behavior: bars never dropped, retry on failure.
-Also tests bounded bar buffer with disk spool overflow.
+# Created by Oliver Meihls
 
-Run with:  python -m pytest tests/test_persistence_priority.py -v
-"""
+# Tests for persistence priority behavior: bars never dropped, retry on failure.
+# Also tests bounded bar buffer with disk spool overflow.
+#
+# Run with:  python -m pytest tests/test_persistence_priority.py -v
 
 import asyncio
 import json
@@ -18,7 +18,7 @@ from src.core.persistence import PersistenceManager
 
 
 class _DummyDB:
-    """DB stub that tracks calls and can simulate failures."""
+    # DB stub that tracks calls and can simulate failures.
 
     def __init__(self, fail_count=0):
         self.bar_batches = []
@@ -62,7 +62,7 @@ def _make_bar(symbol="BTC", ts=None):
 
 class TestBarNeverDropped:
     def test_bars_buffered_within_limit(self):
-        """Bars fit in bounded buffer when under max."""
+        # Bars fit in bounded buffer when under max.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -108,7 +108,7 @@ class TestBarNeverDropped:
             thread.join(timeout=2)
 
     def test_flush_failure_returns_bars_to_buffer(self):
-        """On total flush failure, bars go back to the buffer."""
+        # On total flush failure, bars go back to the buffer.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -130,7 +130,7 @@ class TestBarNeverDropped:
             thread.join(timeout=2)
 
     def test_flush_retry_succeeds_on_second_attempt(self):
-        """Bars are flushed on retry after initial failure."""
+        # Bars are flushed on retry after initial failure.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -152,7 +152,7 @@ class TestBarNeverDropped:
             thread.join(timeout=2)
 
     def test_bar_drop_count_always_zero(self):
-        """bars_dropped_total must remain zero in all normal paths."""
+        # bars_dropped_total must remain zero in all normal paths.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -176,7 +176,7 @@ class TestBarNeverDropped:
 
 class TestSpoolOverflow:
     def test_overflow_spools_to_disk(self):
-        """When buffer is full, bars spill to disk spool."""
+        # When buffer is full, bars spill to disk spool.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -207,7 +207,7 @@ class TestSpoolOverflow:
             thread.join(timeout=2)
 
     def test_spool_drained_after_flush(self):
-        """After buffer flush, spool is drained to DB."""
+        # After buffer flush, spool is drained to DB.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -237,7 +237,7 @@ class TestSpoolOverflow:
             thread.join(timeout=2)
 
     def test_no_bars_dropped_during_overflow(self):
-        """Zero bars are dropped even during overflow."""
+        # Zero bars are dropped even during overflow.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -268,7 +268,7 @@ class TestSpoolOverflow:
 
 
     def test_spool_recovery_on_restart(self):
-        """Leftover spool from previous crash is detected."""
+        # Leftover spool from previous crash is detected.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -296,7 +296,7 @@ class TestSpoolOverflow:
             thread.join(timeout=2)
 
     def test_status_includes_spool_metrics(self):
-        """Status dict exposes spool state."""
+        # Status dict exposes spool state.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -323,7 +323,7 @@ class TestSpoolOverflow:
 
 class TestPriorityQueues:
     def test_signal_and_telemetry_queues_separate(self):
-        """Signals and metrics use different queues."""
+        # Signals and metrics use different queues.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -341,7 +341,7 @@ class TestPriorityQueues:
             thread.join(timeout=2)
 
     def test_signal_dropped_counter(self):
-        """Signals dropped when signal queue is full."""
+        # Signals dropped when signal queue is full.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:
@@ -372,7 +372,7 @@ class TestPriorityQueues:
             thread.join(timeout=2)
 
     def test_metric_dropped_counter(self):
-        """Metrics dropped when telemetry queue is full."""
+        # Metrics dropped when telemetry queue is full.
         loop = asyncio.new_event_loop()
         thread = _start_loop(loop)
         try:

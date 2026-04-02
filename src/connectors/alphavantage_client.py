@@ -1,17 +1,16 @@
-"""
-Alpha Vantage REST Client
-=========================
+# Created by Oliver Meihls
 
-Fetches daily bars (ETF / equity) and daily FX rates for the
-GlobalRiskFlow feature.  Free tier: 5 requests/min, 25/day.
-
-Usage::
-
-    client = AlphaVantageClient(api_key="YOUR_KEY")
-    bars = await client.fetch_daily_bars("EWJ")
-    fx   = await client.fetch_fx_daily("EUR", "USD")
-    await client.close()
-"""
+# Alpha Vantage REST Client
+#
+# Fetches daily bars (ETF / equity) and daily FX rates for the
+# GlobalRiskFlow feature.  Free tier: 5 requests/min, 25/day.
+#
+# Usage::
+#
+# client = AlphaVantageClient(api_key="YOUR_KEY")
+# bars = await client.fetch_daily_bars("EWJ")
+# fx   = await client.fetch_fx_daily("EUR", "USD")
+# await client.close()
 
 from __future__ import annotations
 
@@ -36,21 +35,20 @@ _DEFAULT_RETRY_BASE_SECONDS = 60.0  # AV rate windows are per minute
 
 
 class AlphaVantageRateLimitError(Exception):
-    """Raised when Alpha Vantage returns a rate-limit "Note" response."""
+    # Raised when Alpha Vantage returns a rate-limit "Note" response.
     pass
 
 
 class AlphaVantageClient:
-    """Async REST client for Alpha Vantage daily bars and FX.
-
-    Args:
-        api_key: Alpha Vantage API key.
-        base_url: Override API endpoint (for testing).
-        call_interval_seconds: Minimum seconds between API calls.
-            Defaults to 12.5 (free tier safe margin).
-        max_retries: Max retries on rate-limit "Note" responses.
-        retry_base_seconds: Base backoff delay on rate-limit retry.
-    """
+    # Async REST client for Alpha Vantage daily bars and FX.
+    #
+    # Args:
+    # api_key: Alpha Vantage API key.
+    # base_url: Override API endpoint (for testing).
+    # call_interval_seconds: Minimum seconds between API calls.
+    # Defaults to 12.5 (free tier safe margin).
+    # max_retries: Max retries on rate-limit "Note" responses.
+    # retry_base_seconds: Base backoff delay on rate-limit retry.
 
     def __init__(
         self,
@@ -72,7 +70,7 @@ class AlphaVantageClient:
 
     @property
     def calls_made(self) -> int:
-        """Total API calls made (including retries)."""
+        # Total API calls made (including retries).
         return self._calls_made
 
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -88,7 +86,7 @@ class AlphaVantageClient:
     # ── Rate limiter ────────────────────────────────────────────────────
 
     async def _throttle(self) -> None:
-        """Ensure minimum interval between API calls."""
+        # Ensure minimum interval between API calls.
         now = time.monotonic()
         elapsed = now - self._last_call_ts
         if elapsed < self._call_interval:
@@ -98,14 +96,13 @@ class AlphaVantageClient:
     # ── HTTP helper ─────────────────────────────────────────────────────
 
     async def _get_json(self, params: Dict[str, str]) -> Dict[str, Any]:
-        """Make a throttled GET request and return parsed JSON.
-
-        Raises:
-            RuntimeError: On non-200 HTTP status.
-            ValueError: On explicit API error messages.
-            AlphaVantageRateLimitError: On rate-limit "Note" responses
-                (after exhausting retries).
-        """
+        # Make a throttled GET request and return parsed JSON.
+        #
+        # Raises:
+        # RuntimeError: On non-200 HTTP status.
+        # ValueError: On explicit API error messages.
+        # AlphaVantageRateLimitError: On rate-limit "Note" responses
+        # (after exhausting retries).
         last_note = ""
         for attempt in range(self._max_retries + 1):
             await self._throttle()
@@ -174,19 +171,18 @@ class AlphaVantageClient:
         *,
         outputsize: str = "compact",
     ) -> List[Dict[str, Any]]:
-        """Fetch daily OHLCV bars for a stock / ETF.
-
-        Args:
-            symbol: Ticker (e.g. ``"EWJ"``).
-            outputsize: ``"compact"`` (last 100 days) or ``"full"``
-                (20+ years).
-
-        Returns:
-            List of dicts with keys: ``timestamp_ms``, ``open``, ``high``,
-            ``low``, ``close``, ``volume``, ``symbol``.  Bars are sorted
-            oldest-first.  Timestamps are set to **00:00 UTC** of the
-            trading date (per plan: strict less-than semantics in replay).
-        """
+        # Fetch daily OHLCV bars for a stock / ETF.
+        #
+        # Args:
+        # symbol: Ticker (e.g. ``"EWJ"``).
+        # outputsize: ``"compact"`` (last 100 days) or ``"full"``
+        # (20+ years).
+        #
+        # Returns:
+        # List of dicts with keys: ``timestamp_ms``, ``open``, ``high``,
+        # ``low``, ``close``, ``volume``, ``symbol``.  Bars are sorted
+        # oldest-first.  Timestamps are set to **00:00 UTC** of the
+        # trading date (per plan: strict less-than semantics in replay).
         data = await self._get_json({
             "function": "TIME_SERIES_DAILY",
             "symbol": symbol,
@@ -226,18 +222,17 @@ class AlphaVantageClient:
         *,
         outputsize: str = "compact",
     ) -> List[Dict[str, Any]]:
-        """Fetch daily FX OHLC for a currency pair.
-
-        Args:
-            from_currency: Base (e.g. ``"EUR"``).
-            to_currency: Quote (e.g. ``"USD"``).
-            outputsize: ``"compact"`` or ``"full"``.
-
-        Returns:
-            List of dicts with keys: ``timestamp_ms``, ``open``, ``high``,
-            ``low``, ``close``, ``symbol``.  Sorted oldest-first.
-            ``symbol`` is ``"FX:EURUSD"`` style.
-        """
+        # Fetch daily FX OHLC for a currency pair.
+        #
+        # Args:
+        # from_currency: Base (e.g. ``"EUR"``).
+        # to_currency: Quote (e.g. ``"USD"``).
+        # outputsize: ``"compact"`` or ``"full"``.
+        #
+        # Returns:
+        # List of dicts with keys: ``timestamp_ms``, ``open``, ``high``,
+        # ``low``, ``close``, ``symbol``.  Sorted oldest-first.
+        # ``symbol`` is ``"FX:EURUSD"`` style.
         data = await self._get_json({
             "function": "FX_DAILY",
             "from_symbol": from_currency,

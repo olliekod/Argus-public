@@ -1,8 +1,9 @@
-"""Public.com API client for options greeks.
+# Created by Oliver Meihls
 
-Uses Public quickstart auth: exchange secret key for an access token, then use
-Bearer access_token for all API requests. See https://public.com/api/docs/quickstart
-"""
+# Public.com API client for options greeks.
+#
+# Uses Public quickstart auth: exchange secret key for an access token, then use
+# Bearer access_token for all API requests. See https://public.com/api/docs/quickstart
 
 from __future__ import annotations
 
@@ -22,8 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 class PublicAPIError(RuntimeError):
-    """Raised on Public API request failures."""
+    # Raised on Public API request failures.
 
+
+    pass
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
@@ -40,7 +43,7 @@ class PublicAPIConfig:
 
 
 class PublicAPIClient:
-    """Minimal async client for Public options greeks endpoint."""
+    # Minimal async client for Public options greeks endpoint.
 
     MAX_GREEKS_SYMBOLS = 250
     _TOKEN_PATH = "/userapiauthservice/personal/access-tokens"
@@ -57,7 +60,7 @@ class PublicAPIClient:
         self._token_lock = asyncio.Lock()
 
     async def _acquire_rate_limit(self) -> None:
-        """Enforce Public REST request budget (default: 10 req/s)."""
+        # Enforce Public REST request budget (default: 10 req/s).
         rate_limit = max(int(self._config.rate_limit_rps or 10), 1)
         async with self._rate_limit_lock:
             while True:
@@ -73,7 +76,7 @@ class PublicAPIClient:
                 await asyncio.sleep(wait_seconds)
 
     async def _refresh_access_token(self) -> None:
-        """Exchange secret key for access token. Public quickstart: POST .../access-tokens."""
+        # Exchange secret key for access token. Public quickstart: POST .../access-tokens.
         validity = max(1, min(self._config.access_token_validity_minutes, 1440))
         payload = {"validityInMinutes": validity, "secret": self._config.api_secret}
         url = f"{self._config.base_url.rstrip('/')}{self._TOKEN_PATH}"
@@ -97,7 +100,7 @@ class PublicAPIClient:
         logger.debug("Public access token obtained (validity=%dm)", validity)
 
     async def _ensure_access_token(self) -> None:
-        """Ensure we have a valid access token; exchange secret if needed."""
+        # Ensure we have a valid access token; exchange secret if needed.
         async with self._token_lock:
             if self._access_token:
                 return
@@ -149,7 +152,7 @@ class PublicAPIClient:
             return data if isinstance(data, dict) else {"data": data}
 
     async def get_account_id(self) -> str:
-        """Return account_id from config. Public API requires it; no accounts listing endpoint."""
+        # Return account_id from config. Public API requires it; no accounts listing endpoint.
         if self._resolved_account_id:
             return self._resolved_account_id
         account_id = (self._config.account_id or "").strip()
@@ -162,7 +165,7 @@ class PublicAPIClient:
         return account_id
 
     async def get_option_greeks(self, osi_symbols: List[str]) -> List[Dict[str, Any]]:
-        """Fetch greeks for up to 250 OSI symbols."""
+        # Fetch greeks for up to 250 OSI symbols.
         if len(osi_symbols) > self.MAX_GREEKS_SYMBOLS:
             raise PublicAPIError(f"Public greeks limit exceeded: {len(osi_symbols)} > {self.MAX_GREEKS_SYMBOLS}")
         if not osi_symbols:

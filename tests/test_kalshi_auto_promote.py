@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import json
 import os
 import shutil

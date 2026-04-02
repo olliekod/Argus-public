@@ -1,22 +1,21 @@
-"""
-News & Sentiment Client for Pantheon Research Agents
-=====================================================
+# Created by Oliver Meihls
 
-Provides a unified interface for fetching news headlines and computing
-sentiment scores.  Designed to be consumed by Delphi-registered tools
-so that Pantheon agents (especially Ares and Prometheus) can ground
-their analysis in current market sentiment.
-
-Integrates with the existing :class:`~src.core.headline_fetcher.HeadlineFetcher`
-and :class:`~src.core.lexicon_scorer.LexiconScorer` infrastructure.
-
-The ``get_market_sentiment`` entry point returns a structured dict with:
-- ``score``: Aggregate sentiment (-1.0 to 1.0)
-- ``label``: Human-readable label (bullish/bearish/neutral)
-- ``bullets``: 3-5 key headline summaries
-- ``n_headlines``: Number of headlines analyzed
-- ``ticker_mentions``: Count of ticker-specific mentions
-"""
+# News & Sentiment Client for Pantheon Research Agents
+#
+# Provides a unified interface for fetching news headlines and computing
+# sentiment scores.  Designed to be consumed by Delphi-registered tools
+# so that Pantheon agents (especially Ares and Prometheus) can ground
+# their analysis in current market sentiment.
+#
+# Integrates with the existing :class:`~src.core.headline_fetcher.HeadlineFetcher`
+# and :class:`~src.core.lexicon_scorer.LexiconScorer` infrastructure.
+#
+# The ``get_market_sentiment`` entry point returns a structured dict with:
+# - ``score``: Aggregate sentiment (-1.0 to 1.0)
+# - ``label``: Human-readable label (bullish/bearish/neutral)
+# - ``bullets``: 3-5 key headline summaries
+# - ``n_headlines``: Number of headlines analyzed
+# - ``ticker_mentions``: Count of ticker-specific mentions
 
 from __future__ import annotations
 
@@ -49,7 +48,7 @@ _TICKER_ALIASES: Dict[str, List[str]] = {
 
 
 def _label_from_score(score: float) -> str:
-    """Convert numeric score to sentiment label."""
+    # Convert numeric score to sentiment label.
     if score >= 0.10:
         return "bullish"
     if score <= -0.10:
@@ -58,7 +57,7 @@ def _label_from_score(score: float) -> str:
 
 
 def _matches_ticker(text: str, ticker: str) -> bool:
-    """Check if text mentions a ticker or its aliases."""
+    # Check if text mentions a ticker or its aliases.
     lower = text.lower()
 
     # Direct ticker match (case-insensitive, word boundary)
@@ -79,10 +78,9 @@ def _pick_top_bullets(
     scores: List[float],
     limit: int = 5,
 ) -> List[str]:
-    """Select the most sentiment-significant headlines as bullet points.
-
-    Picks the headlines with the highest absolute sentiment score.
-    """
+    # Select the most sentiment-significant headlines as bullet points.
+    #
+    # Picks the headlines with the highest absolute sentiment score.
     if not headlines or not scores:
         return []
 
@@ -101,13 +99,11 @@ def _pick_top_bullets(
 
 
 class NewsSentimentClient:
-    """Fetch news and compute sentiment for Pantheon research agents.
-
-    Parameters
-    ----------
-    config : dict
-        Full Argus config dict (reads ``news_sentiment`` section).
-    """
+    # Fetch news and compute sentiment for Pantheon research agents.
+    #
+    # Parameters
+    # config : dict
+    # Full Argus config dict (reads ``news_sentiment`` section).
 
     def __init__(self, config: Dict[str, Any]) -> None:
         ns_cfg = config.get("news_sentiment") or {}
@@ -141,32 +137,28 @@ class NewsSentimentClient:
             logger.info("NewsSentimentClient initialized (disabled)")
 
     async def close(self) -> None:
-        """Clean up HTTP sessions."""
+        # Clean up HTTP sessions.
         await self._fetcher.close()
 
     async def get_market_sentiment(self, ticker: str = "") -> Dict[str, Any]:
-        """Compute market sentiment, optionally filtered to a specific ticker.
-
-        Parameters
-        ----------
-        ticker : str
-            If non-empty, filter headlines to those mentioning this ticker
-            and compute ticker-specific sentiment.  If empty, return
-            aggregate market sentiment from all headlines.
-
-        Returns
-        -------
-        dict
-            {
-                "score": float,        # -1.0 to 1.0
-                "label": str,          # "bullish" / "bearish" / "neutral"
-                "n_headlines": int,
-                "ticker": str,
-                "ticker_mentions": int,
-                "bullets": List[str],  # 3-5 key headlines
-                "timestamp_utc": str,
-            }
-        """
+        # Compute market sentiment, optionally filtered to a specific ticker.
+        #
+        # Parameters
+        # ticker : str
+        # If non-empty, filter headlines to those mentioning this ticker
+        # and compute ticker-specific sentiment.  If empty, return
+        # aggregate market sentiment from all headlines.
+        #
+        # Returns
+# dict
+        # "score": float,        # -1.0 to 1.0
+        # "label": str,          # "bullish" / "bearish" / "neutral"
+        # "n_headlines": int,
+        # "ticker": str,
+        # "ticker_mentions": int,
+        # "bullets": List[str],  # 3-5 key headlines
+        # "timestamp_utc": str,
+        # }
         if not self._enabled:
             return self._stub(ticker)
 
@@ -227,7 +219,7 @@ class NewsSentimentClient:
 
     @staticmethod
     def _stub(ticker: str) -> Dict[str, Any]:
-        """Return a neutral stub when sentiment data is unavailable."""
+        # Return a neutral stub when sentiment data is unavailable.
         return {
             "score": 0.0,
             "label": "neutral",

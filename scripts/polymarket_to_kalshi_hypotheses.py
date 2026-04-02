@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-Translate Polymarket wallet analysis into Kalshi Explore-sleeve hypotheses.
+# Created by Oliver Meihls
 
-Usage:
-  python scripts/polymarket_to_kalshi_hypotheses.py --analysis logs/analysis/polymarket/.../wallet_0x..._analysis.json
-"""
+# Translate Polymarket wallet analysis into Kalshi Explore-sleeve hypotheses.
+#
+# Usage:
+# python scripts/polymarket_to_kalshi_hypotheses.py --analysis logs/analysis/polymarket/.../wallet_0x..._analysis.json
 
 from __future__ import annotations
 

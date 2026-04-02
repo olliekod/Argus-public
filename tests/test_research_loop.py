@@ -1,13 +1,13 @@
-"""
-Tests for the Strategy Research Loop.
+# Created by Oliver Meihls
 
-Covers:
-- Config loader with valid YAML
-- Config loader with last_n_days
-- Config validation errors (invalid mode, missing symbols, etc.)
-- Full integration cycle (tiny pack, minimal strategy)
-- Dry-run mode
-"""
+# Tests for the Strategy Research Loop.
+#
+# Covers:
+# - Config loader with valid YAML
+# - Config loader with last_n_days
+# - Config validation errors (invalid mode, missing symbols, etc.)
+# - Full integration cycle (tiny pack, minimal strategy)
+# - Dry-run mode
 
 import json
 import pytest
@@ -22,9 +22,7 @@ from src.analysis.research_loop_config import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Config loader tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 def _write_yaml(path: Path, data: dict) -> str:
@@ -35,7 +33,7 @@ def _write_yaml(path: Path, data: dict) -> str:
 
 
 def _minimal_config(**overrides) -> dict:
-    """Return a minimal valid config dict."""
+    # Return a minimal valid config dict.
     cfg = {
         "pack": {
             "mode": "single",
@@ -233,16 +231,14 @@ class TestConfigLoader:
         assert config.strategies[1].params == {"b": 2}
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Integration test: full cycle with tiny pack and mock strategy
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestIntegrationCycle:
-    """Integration test that runs one full cycle with a mock pack."""
+    # Integration test that runs one full cycle with a mock pack.
 
     def _create_mock_pack(self, pack_dir: Path, symbol: str = "SPY") -> str:
-        """Create a tiny mock replay pack JSON."""
+        # Create a tiny mock replay pack JSON.
         pack = {
             "metadata": {
                 "symbol": symbol,
@@ -281,7 +277,7 @@ class TestIntegrationCycle:
         return str(pack_path)
 
     def test_run_experiments_and_evaluate(self, tmp_path):
-        """Run experiments on a mock pack, then evaluate — check output files."""
+        # Run experiments on a mock pack, then evaluate — check output files.
         from src.analysis.experiment_runner import ExperimentRunner, ExperimentConfig
         from src.analysis.replay_harness import ReplayStrategy, TradeIntent
         from src.analysis.strategy_evaluator import StrategyEvaluator
@@ -354,7 +350,7 @@ class TestIntegrationCycle:
         assert isinstance(candidates, list)
 
     def test_dry_run_no_side_effects(self, tmp_path):
-        """Dry run should not create any experiment or ranking files."""
+        # Dry run should not create any experiment or ranking files.
         from scripts.strategy_research_loop import run_cycle
         from src.analysis.research_loop_config import (
             ResearchLoopConfig,
@@ -417,14 +413,12 @@ class TestIntegrationCycle:
         assert not rankings_dir.exists() or len(list(rankings_dir.glob("*.json"))) == 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 #  Candidate set output test
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestCandidateSet:
     def test_candidate_set_written(self, tmp_path):
-        """When candidate_set_output_path is set, candidates JSON is written."""
+        # When candidate_set_output_path is set, candidates JSON is written.
         from src.analysis.experiment_runner import ExperimentRunner, ExperimentConfig
         from src.analysis.replay_harness import ReplayStrategy
         from scripts.strategy_research_loop import evaluate_and_persist

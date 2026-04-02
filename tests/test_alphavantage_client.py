@@ -1,16 +1,15 @@
-"""
-Tests for Alpha Vantage REST Client
-====================================
+# Created by Oliver Meihls
 
-Covers:
-- Daily bar parsing (correct timestamps, OHLCV, sorting)
-- FX daily parsing (symbol naming, zero volume)
-- Rate-limit "Note" response → retry with backoff → raise after max
-- HTTP error handling
-- API error message handling
-- Timestamp semantics (00:00 UTC, no future leakage)
-- Configurable rate limit pacing
-"""
+# Tests for Alpha Vantage REST Client
+#
+# Covers:
+# - Daily bar parsing (correct timestamps, OHLCV, sorting)
+# - FX daily parsing (symbol naming, zero volume)
+# - Rate-limit "Note" response → retry with backoff → raise after max
+# - HTTP error handling
+# - API error message handling
+# - Timestamp semantics (00:00 UTC, no future leakage)
+# - Configurable rate limit pacing
 
 from __future__ import annotations
 
@@ -27,9 +26,7 @@ from src.connectors.alphavantage_client import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Fixtures and helpers
-# ═══════════════════════════════════════════════════════════════════════════
 
 _SAMPLE_DAILY_RESPONSE: Dict[str, Any] = {
     "Meta Data": {
@@ -76,7 +73,7 @@ _SAMPLE_FX_RESPONSE: Dict[str, Any] = {
 
 
 def _make_client(**kwargs) -> AlphaVantageClient:
-    """Create a client with zero throttle for fast tests."""
+    # Create a client with zero throttle for fast tests.
     defaults = {
         "api_key": "TEST_KEY",
         "call_interval_seconds": 0,
@@ -87,17 +84,15 @@ def _make_client(**kwargs) -> AlphaVantageClient:
     return AlphaVantageClient(**defaults)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Daily bar parsing tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestDailyBarParsing:
-    """Tests for fetch_daily_bars response parsing."""
+    # Tests for fetch_daily_bars response parsing.
 
     @pytest.mark.asyncio
     async def test_parse_ohlcv(self):
-        """OHLCV values are correctly parsed from AV response."""
+        # OHLCV values are correctly parsed from AV response.
         client = _make_client()
         client._get_json = AsyncMock(return_value=_SAMPLE_DAILY_RESPONSE)
 
@@ -115,7 +110,7 @@ class TestDailyBarParsing:
 
     @pytest.mark.asyncio
     async def test_timestamps_are_midnight_utc(self):
-        """All timestamps are 00:00 UTC of the trading date."""
+        # All timestamps are 00:00 UTC of the trading date.
         client = _make_client()
         client._get_json = AsyncMock(return_value=_SAMPLE_DAILY_RESPONSE)
 
@@ -131,7 +126,7 @@ class TestDailyBarParsing:
 
     @pytest.mark.asyncio
     async def test_sorted_oldest_first(self):
-        """Bars are returned sorted by timestamp ascending."""
+        # Bars are returned sorted by timestamp ascending.
         client = _make_client()
         client._get_json = AsyncMock(return_value=_SAMPLE_DAILY_RESPONSE)
 
@@ -142,12 +137,11 @@ class TestDailyBarParsing:
 
     @pytest.mark.asyncio
     async def test_no_future_timestamp_leak(self):
-        """Bar timestamps represent past trading dates, not future ones.
-
-        Verify that all timestamps are <= current time (within reason).
-        This validates the 00:00 UTC normalization doesn't accidentally
-        push a bar date forward.
-        """
+        # Bar timestamps represent past trading dates, not future ones.
+        #
+        # Verify that all timestamps are <= current time (within reason).
+        # This validates the 00:00 UTC normalization doesn't accidentally
+        # push a bar date forward.
         client = _make_client()
         client._get_json = AsyncMock(return_value=_SAMPLE_DAILY_RESPONSE)
 
@@ -162,7 +156,7 @@ class TestDailyBarParsing:
 
     @pytest.mark.asyncio
     async def test_empty_response(self):
-        """Empty Time Series returns empty list."""
+        # Empty Time Series returns empty list.
         client = _make_client()
         client._get_json = AsyncMock(return_value={"Time Series (Daily)": {}})
 
@@ -171,7 +165,7 @@ class TestDailyBarParsing:
 
     @pytest.mark.asyncio
     async def test_missing_time_series_key(self):
-        """Response without Time Series key returns empty list."""
+        # Response without Time Series key returns empty list.
         client = _make_client()
         client._get_json = AsyncMock(return_value={"Meta Data": {}})
 
@@ -179,17 +173,15 @@ class TestDailyBarParsing:
         assert bars == []
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # FX parsing tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestFxParsing:
-    """Tests for fetch_fx_daily response parsing."""
+    # Tests for fetch_fx_daily response parsing.
 
     @pytest.mark.asyncio
     async def test_fx_symbol_naming(self):
-        """FX symbol is formatted as FX:EURUSD."""
+        # FX symbol is formatted as FX:EURUSD.
         client = _make_client()
         client._get_json = AsyncMock(return_value=_SAMPLE_FX_RESPONSE)
 
@@ -200,7 +192,7 @@ class TestFxParsing:
 
     @pytest.mark.asyncio
     async def test_fx_zero_volume(self):
-        """FX bars always have volume=0 (AV doesn't provide FX volume)."""
+        # FX bars always have volume=0 (AV doesn't provide FX volume).
         client = _make_client()
         client._get_json = AsyncMock(return_value=_SAMPLE_FX_RESPONSE)
 
@@ -211,7 +203,7 @@ class TestFxParsing:
 
     @pytest.mark.asyncio
     async def test_fx_ohlc_parsed(self):
-        """FX OHLC values are correctly parsed."""
+        # FX OHLC values are correctly parsed.
         client = _make_client()
         client._get_json = AsyncMock(return_value=_SAMPLE_FX_RESPONSE)
 
@@ -223,7 +215,7 @@ class TestFxParsing:
 
     @pytest.mark.asyncio
     async def test_fx_timestamps_midnight_utc(self):
-        """FX timestamps are 00:00 UTC."""
+        # FX timestamps are 00:00 UTC.
         client = _make_client()
         client._get_json = AsyncMock(return_value=_SAMPLE_FX_RESPONSE)
 
@@ -236,20 +228,17 @@ class TestFxParsing:
             assert dt.hour == 23
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Rate limit and error handling tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestRateLimitHandling:
-    """Tests for "Note" response handling and retry logic."""
+    # Tests for "Note" response handling and retry logic.
 
     @staticmethod
     def _mock_http_response(json_data, *, status=200, text=""):
-        """Create a mock aiohttp response + session for _get_json tests.
-
-        Returns (client_with_session_patched, mock_session).
-        """
+        # Create a mock aiohttp response + session for _get_json tests.
+        #
+        # Returns (client_with_session_patched, mock_session).
         mock_resp = MagicMock()
         mock_resp.status = status
         mock_resp.json = AsyncMock(return_value=json_data)
@@ -263,7 +252,7 @@ class TestRateLimitHandling:
 
     @pytest.mark.asyncio
     async def test_note_response_retries_then_raises(self):
-        """A "Note" response triggers retry with backoff, then raises."""
+        # A "Note" response triggers retry with backoff, then raises.
         client = _make_client(max_retries=2, retry_base_seconds=0.001)
 
         note_response = {
@@ -282,7 +271,7 @@ class TestRateLimitHandling:
 
     @pytest.mark.asyncio
     async def test_note_then_success_on_retry(self):
-        """A Note followed by valid data succeeds after retry."""
+        # A Note followed by valid data succeeds after retry.
         client = _make_client(max_retries=2, retry_base_seconds=0.001)
 
         call_count = 0
@@ -311,7 +300,7 @@ class TestRateLimitHandling:
 
     @pytest.mark.asyncio
     async def test_error_message_raises_value_error(self):
-        """API error messages raise ValueError."""
+        # API error messages raise ValueError.
         client = _make_client()
 
         error_response = {
@@ -326,7 +315,7 @@ class TestRateLimitHandling:
 
     @pytest.mark.asyncio
     async def test_http_error_raises_runtime_error(self):
-        """Non-200 HTTP status raises RuntimeError."""
+        # Non-200 HTTP status raises RuntimeError.
         client = _make_client()
 
         mock_session, _ = self._mock_http_response(
@@ -338,21 +327,19 @@ class TestRateLimitHandling:
             await client._get_json({"function": "TIME_SERIES_DAILY"})
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Configuration and pacing tests
-# ═══════════════════════════════════════════════════════════════════════════
 
 
 class TestConfiguration:
-    """Tests for configurable rate limiting and behavior."""
+    # Tests for configurable rate limiting and behavior.
 
     def test_default_call_interval(self):
-        """Default call interval is 12.5s (free tier safe)."""
+        # Default call interval is 12.5s (free tier safe).
         client = AlphaVantageClient(api_key="TEST")
         assert client._call_interval == 12.5
 
     def test_custom_call_interval(self):
-        """Call interval is configurable."""
+        # Call interval is configurable.
         client = AlphaVantageClient(
             api_key="TEST",
             call_interval_seconds=5.0,
@@ -360,11 +347,11 @@ class TestConfiguration:
         assert client._call_interval == 5.0
 
     def test_custom_max_retries(self):
-        """Max retries is configurable."""
+        # Max retries is configurable.
         client = AlphaVantageClient(api_key="TEST", max_retries=5)
         assert client._max_retries == 5
 
     def test_calls_made_counter(self):
-        """Calls counter starts at zero."""
+        # Calls counter starts at zero.
         client = AlphaVantageClient(api_key="TEST")
         assert client.calls_made == 0

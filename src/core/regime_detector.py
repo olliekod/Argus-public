@@ -1,9 +1,8 @@
-"""
-Argus Regime Detector (Phase 2)
-===============================
+# Created by Oliver Meihls
 
-Deterministic regime classification from BarEvents.
-"""
+# Argus Regime Detector (Phase 2)
+#
+# Deterministic regime classification from BarEvents.
 
 from __future__ import annotations
 
@@ -551,12 +550,11 @@ class RegimeDetector:
         return "LIQ_NORMAL", spread_pct, volume_pctile
 
     def _update_risk_state(self, symbol: str, event: SymbolRegimeEvent) -> None:
-        """Update global risk state from risk basket (SPY, IBIT, TLT, GLD).
-
-        Risk-on proxies (SPY, IBIT): trend up + calm vol → +1; trend down or vol spike → -1.
-        Defensive (TLT, GLD): trend up (flight to safety) → -1; trend down → +1.
-        Aggregate votes to set RISK_ON / RISK_OFF / NEUTRAL. IBIT ties regime to crypto/equity correlation.
-        """
+        # Update global risk state from risk basket (SPY, IBIT, TLT, GLD).
+        #
+        # Risk-on proxies (SPY, IBIT): trend up + calm vol → +1; trend down or vol spike → -1.
+        # Defensive (TLT, GLD): trend up (flight to safety) → -1; trend down → +1.
+        # Aggregate votes to set RISK_ON / RISK_OFF / NEUTRAL. IBIT ties regime to crypto/equity correlation.
         if symbol not in self._risk_basket:
             return
 
@@ -630,22 +628,21 @@ class RegimeDetector:
         self._last_market_regimes[market] = event
 
     def set_external_metric(self, key: str, value: Any) -> None:
-        """Inject an external metric into the risk metrics dict.
-
-        This is the integration point for features that are computed
-        outside the per-bar indicator pipeline (e.g. GlobalRiskFlow
-        from daily ETF bars).  The value will appear in ``metrics_json``
-        on subsequent market regime events.
-
-        Args:
-            key: Metric name (e.g. ``"global_risk_flow"``).
-            value: Metric value (must be JSON-serialisable).
-        """
+        # Inject an external metric into the risk metrics dict.
+        #
+        # This is the integration point for features that are computed
+        # outside the per-bar indicator pipeline (e.g. GlobalRiskFlow
+        # from daily ETF bars).  The value will appear in ``metrics_json``
+        # on subsequent market regime events.
+        #
+        # Args:
+        # key: Metric name (e.g. ``"global_risk_flow"``).
+        # value: Metric value (must be JSON-serialisable).
         with self._lock:
             self._risk_metrics[key] = value
 
     def _on_external_metric(self, event: ExternalMetricEvent) -> None:
-        """Handle an ExternalMetricEvent from the event bus."""
+        # Handle an ExternalMetricEvent from the event bus.
         v = getattr(event, "v", 1)
         if v > 1:
             logger.warning(

@@ -1,52 +1,46 @@
-"""
-Order execution and risk management for Kalshi BTC strike contracts.
+# Created by Oliver Meihls
 
-Execution policy
-----------------
-* Upon receiving a ``TradeSignal``, place **one aggressive limit order**
-  at the implied ask (crosses the spread).
-* If the order is not filled within ``order_timeout_ms``, cancel it.
-* **No chasing**: a cancelled order is not retried at a worse price.
-
-Local idempotency
------------------
-Even though the REST client attaches an ``Idempotency-Key`` header,
-we enforce local dedup:
-* Generate a ``client_order_id`` per signal.
-* Track outstanding orders per ``market_ticker``.
-* Refuse to place a second order for a market that already has a
-  pending order (unless explicitly replacing it).
-
-This protects against duplicate signals arriving from the strategy
-engine faster than the REST round-trip.
-
-Risk safeguards
----------------
-* Per-market position cap (``max_fraction_per_market``).
-* Daily drawdown kill switch (``daily_drawdown_limit``).
-* Automatic halt on WebSocket disconnect or invalid orderbook state.
-* Halt on repeated auth failures (published as ``auth_failure`` risk).
-
-Emergency cancel-all
---------------------
-Uses sequential cancels that respect the write rate limiter, with a
-small sleep between requests to avoid cascading 429s.  Kalshi does not
-(as of March 2026) expose a batch-cancel endpoint.
-
-Fixed-point quantities
-----------------------
-Orders are sent with ``count`` as an integer of whole contracts.
-The ``count_fp`` field is also populated as a ``"X.00"`` string for
-forward-compatibility with Kalshi's *_fp migration (March 5 2026).
-
-Dry-run paper trading
----------------------
-When ``dry_run=True``, no REST orders are placed. Instead, each
-``TradeSignal`` (including from the mispricing scalper) is turned into
-a synthetic ``FillEvent`` on ``kalshi.fills``. The settlement tracker
-builds positions from these fills and resolves them at contract
-settlement, so PnL and win rate in the UI reflect paper performance.
-"""
+# Order execution and risk management for Kalshi BTC strike contracts.
+#
+# Execution policy
+# * Upon receiving a ``TradeSignal``, place **one aggressive limit order**
+# at the implied ask (crosses the spread).
+# * If the order is not filled within ``order_timeout_ms``, cancel it.
+# * **No chasing**: a cancelled order is not retried at a worse price.
+#
+# Local idempotency
+# Even though the REST client attaches an ``Idempotency-Key`` header,
+# we enforce local dedup:
+# * Generate a ``client_order_id`` per signal.
+# * Track outstanding orders per ``market_ticker``.
+# * Refuse to place a second order for a market that already has a
+# pending order (unless explicitly replacing it).
+#
+# This protects against duplicate signals arriving from the strategy
+# engine faster than the REST round-trip.
+#
+# Risk safeguards
+# * Per-market position cap (``max_fraction_per_market``).
+# * Daily drawdown kill switch (``daily_drawdown_limit``).
+# * Automatic halt on WebSocket disconnect or invalid orderbook state.
+# * Halt on repeated auth failures (published as ``auth_failure`` risk).
+#
+# Emergency cancel-all
+# Uses sequential cancels that respect the write rate limiter, with a
+# small sleep between requests to avoid cascading 429s.  Kalshi does not
+# (as of March 2026) expose a batch-cancel endpoint.
+#
+# Fixed-point quantities
+# Orders are sent with ``count`` as an integer of whole contracts.
+# The ``count_fp`` field is also populated as a ``"X.00"`` string for
+# forward-compatibility with Kalshi's *_fp migration (March 5 2026).
+#
+# Dry-run paper trading
+# When ``dry_run=True``, no REST orders are placed. Instead, each
+# ``TradeSignal`` (including from the mispricing scalper) is turned into
+# a synthetic ``FillEvent`` on ``kalshi.fills``. The settlement tracker
+# builds positions from these fills and resolves them at contract
+# settlement, so PnL and win rate in the UI reflect paper performance.
 
 from __future__ import annotations
 
@@ -88,12 +82,11 @@ _GLOBAL_LATENCY_MODEL = EmpiricalLatencyModel()
 
 
 def _append_paper_log(record: dict) -> asyncio.Task:
-    """Non-blocking paper log append. Dispatches to the default thread executor.
-
-    Returns the Task so callers can optionally await it.  In hot paths
-    (farm paper trading) callers fire-and-forget; the write happens on a
-    background thread so the event loop is never blocked.
-    """
+    # Non-blocking paper log append. Dispatches to the default thread executor.
+    #
+    # Returns the Task so callers can optionally await it.  In hot paths
+    # (farm paper trading) callers fire-and-forget; the write happens on a
+    # background thread so the event loop is never blocked.
     try:
         loop = asyncio.get_running_loop()
         return loop.run_in_executor(None, append_paper_log_sync, record)
@@ -104,7 +97,7 @@ def _append_paper_log(record: dict) -> asyncio.Task:
 
 
 class _PendingOrder:
-    """Tracks an in-flight order and its timeout task."""
+    # Tracks an in-flight order and its timeout task.
 
     __slots__ = ("order_id", "client_order_id", "signal", "placed_at", "timeout_task", "fill_task")
 
@@ -123,7 +116,7 @@ class _PendingOrder:
 
 
 class ExecutionEngine:
-    """Executes TradeSignals via REST and reconciles with WS feeds."""
+    # Executes TradeSignals via REST and reconciles with WS feeds.
 
     def __init__(
         self,
@@ -258,7 +251,7 @@ class ExecutionEngine:
                 log.debug("Execution stop: some consumer tasks did not exit in time")
 
     async def subscribe_orderbook(self, ticker: str) -> None:
-        """Lazily subscribe to orderbook updates for *ticker* (for depth checks)."""
+        # Lazily subscribe to orderbook updates for *ticker* (for depth checks).
         if ticker not in self._orderbooks:
             q_ob = await self._bus.subscribe(f"kalshi.orderbook.{ticker}")
             self._tasks.append(asyncio.create_task(self._consume_orderbook(q_ob, ticker)))
@@ -499,7 +492,7 @@ class ExecutionEngine:
         )
 
     async def _timeout_order(self, order_id: str, timeout_s: float) -> None:
-        """Cancel the order if not filled within timeout."""
+        # Cancel the order if not filled within timeout.
         try:
             await asyncio.sleep(timeout_s)
         except asyncio.CancelledError:
@@ -553,7 +546,7 @@ class ExecutionEngine:
         self._resolve_pending(order_id, "cancelled")
 
     def _resolve_pending(self, order_id: str, reason: str) -> None:
-        """Remove an order from pending tracking."""
+        # Remove an order from pending tracking.
         pending = self._pending.pop(order_id, None)
         if pending:
             if pending.timeout_task:
@@ -597,7 +590,7 @@ class ExecutionEngine:
         ob: Optional[OrderbookState],
         latency_s: float,
     ) -> int:
-        """Estimate fillable contracts from depth/queue/latency, no fixed slippage."""
+        # Estimate fillable contracts from depth/queue/latency, no fixed slippage.
         available = max(0, depth_centicx // 100)
         if available <= 0:
             return 0
@@ -807,6 +800,7 @@ class ExecutionEngine:
                 record["asset"] = getattr(meta, "asset", "BTC") or "BTC"
             except Exception:
                 pass
+
         argus_price = int(signal.p_yes * 100) if signal.side == "yes" else int((1.0 - signal.p_yes) * 100)
         log.debug(
             f"PAPER FILL: {ticker} {signal.side.upper()} | "
@@ -977,7 +971,7 @@ class ExecutionEngine:
         )
 
     async def _consume_metadata(self, q: asyncio.Queue) -> None:
-        """Cache market metadata so paper_fill log can include settlement_time, strike, asset."""
+        # Cache market metadata so paper_fill log can include settlement_time, strike, asset.
         try:
             while self._running:
                 msg = await q.get()
@@ -991,7 +985,7 @@ class ExecutionEngine:
             self._metadata[msg.market_ticker] = msg
 
     async def _check_consecutive_drawdown_days(self) -> None:
-        """Query DB for recent PnL and halt if consecutive losing days limit is hit."""
+        # Query DB for recent PnL and halt if consecutive losing days limit is hit.
         if not self._db:
             return
 
@@ -1020,7 +1014,7 @@ class ExecutionEngine:
             log.error(f"Failed to check consecutive drawdowns: {e}")
 
     async def _consume_ws_status(self, q: asyncio.Queue) -> None:
-        """Auto-resume execution engine when WS reconnects after a disconnect halt."""
+        # Auto-resume execution engine when WS reconnects after a disconnect halt.
         try:
             while self._running:
                 event = await q.get()
@@ -1038,13 +1032,12 @@ class ExecutionEngine:
             self._halt_reason = ""
 
     async def _cancel_all_pending(self) -> None:
-        """Best-effort cancel of all in-flight orders.
-
-        Cancels are sent sequentially with a small stagger to stay
-        within the write rate limit.  The rate limiter in the REST
-        client provides the primary guard, but the stagger avoids
-        bursting all cancels simultaneously.
-        """
+        # Best-effort cancel of all in-flight orders.
+        #
+        # Cancels are sent sequentially with a small stagger to stay
+        # within the write rate limit.  The rate limiter in the REST
+        # client provides the primary guard, but the stagger avoids
+        # bursting all cancels simultaneously.
         items = list(self._pending.items())
         for i, (oid, pending) in enumerate(items):
             if not self._cfg.dry_run:
@@ -1071,7 +1064,7 @@ class ExecutionEngine:
     # -- external interface --------------------------------------------------
 
     def resume(self) -> None:
-        """Resume after a risk halt (manual intervention)."""
+        # Resume after a risk halt (manual intervention).
         self._halted = False
         log.info("Execution resumed after halt")
 
@@ -1084,7 +1077,7 @@ class ExecutionEngine:
         return len(self._pending)
 
     def has_pending_for(self, market_ticker: str) -> bool:
-        """Return True if there is an outstanding order for this market."""
+        # Return True if there is an outstanding order for this market.
         return any(t == market_ticker for (t, _s) in self._pending_by_market_side.keys())
 
     def drain_diagnostics(self) -> Dict[str, Any]:

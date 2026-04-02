@@ -1,9 +1,8 @@
-"""
-Test: RiskEngine Idempotence
-=============================
+# Created by Oliver Meihls
 
-Verify that clamp(clamp(x)) == clamp(x) for all constraint combinations.
-"""
+# Test: RiskEngine Idempotence
+#
+# Verify that clamp(clamp(x)) == clamp(x) for all constraint combinations.
 
 import pytest
 
@@ -17,7 +16,7 @@ from src.analysis.tail_risk_scenario import TailRiskConfig
 
 
 def _make_allocations():
-    """Create a set of test allocations."""
+    # Create a set of test allocations.
     return [
         Allocation(
             strategy_id="strat_A",
@@ -50,7 +49,7 @@ def _make_allocations():
 
 
 def _make_state():
-    """Create a test portfolio state."""
+    # Create a test portfolio state.
     return PortfolioState(
         as_of_ts_ms=1700000000000,
         equity_usd=10_000.0,
@@ -60,7 +59,7 @@ def _make_state():
 
 
 def _make_config(**overrides):
-    """Create a risk engine config with optional overrides."""
+    # Create a risk engine config with optional overrides.
     defaults = dict(
         enabled=True,
         aggregate_exposure_cap=1.0,
@@ -76,10 +75,10 @@ def _make_config(**overrides):
 
 
 class TestRiskEngineIdempotence:
-    """clamp(clamp(x)) == clamp(x)"""
+    # clamp(clamp(x)) == clamp(x)
 
     def test_idempotence_no_constraints_active(self):
-        """No constraints triggered — allocations pass through unchanged."""
+        # No constraints triggered — allocations pass through unchanged.
         engine = RiskEngine()
         allocs = _make_allocations()
         state = _make_state()
@@ -100,7 +99,7 @@ class TestRiskEngineIdempotence:
             )
 
     def test_idempotence_with_aggregate_cap(self):
-        """Aggregate cap triggered — second pass should not change anything."""
+        # Aggregate cap triggered — second pass should not change anything.
         engine = RiskEngine()
         allocs = _make_allocations()
         state = _make_state()
@@ -123,12 +122,11 @@ class TestRiskEngineIdempotence:
             )
 
     def test_idempotence_with_drawdown_throttle(self):
-        """Drawdown throttle active — second pass should be stable.
-
-        The drawdown throttle works as a tighter aggregate cap:
-        effective_cap = aggregate_cap * throttle.  For throttling to
-        actually trigger, total exposure must exceed this effective cap.
-        """
+        # Drawdown throttle active — second pass should be stable.
+        #
+        # The drawdown throttle works as a tighter aggregate cap:
+        # effective_cap = aggregate_cap * throttle.  For throttling to
+        # actually trigger, total exposure must exceed this effective cap.
         engine = RiskEngine()
         # Use higher weights so total (0.90) exceeds effective_cap (0.75)
         allocs = [
@@ -182,7 +180,7 @@ class TestRiskEngineIdempotence:
             )
 
     def test_idempotence_with_underlying_cap(self):
-        """Underlying exposure cap — second pass stable."""
+        # Underlying exposure cap — second pass stable.
         engine = RiskEngine()
         allocs = _make_allocations()
         state = _make_state()
@@ -204,7 +202,7 @@ class TestRiskEngineIdempotence:
             )
 
     def test_idempotence_with_all_constraints(self):
-        """All constraints active simultaneously."""
+        # All constraints active simultaneously.
         engine = RiskEngine()
         allocs = _make_allocations()
         state = PortfolioState(

@@ -1,8 +1,8 @@
-"""
-Tests for source_ts sanity validation in BarBuilder.
+# Created by Oliver Meihls
 
-Run with:  python -m pytest tests/test_timestamp_validation.py -v
-"""
+# Tests for source_ts sanity validation in BarBuilder.
+#
+# Run with:  python -m pytest tests/test_timestamp_validation.py -v
 
 from src.core.bar_builder import BarBuilder, _minute_floor, _ts_sane
 from src.core.bus import EventBus
@@ -26,7 +26,7 @@ def _quote(symbol, price, volume, ts, source_ts=None):
 
 
 class TestTsSane:
-    """Unit tests for the _ts_sane helper."""
+    # Unit tests for the _ts_sane helper.
 
     def test_normal_epoch_seconds(self):
         assert _ts_sane(1_700_000_000.0)  # 2023
@@ -51,7 +51,7 @@ class TestTsSane:
 
 
 class TestTimestampValidation:
-    """End-to-end: BarBuilder rejects bad timestamps."""
+    # End-to-end: BarBuilder rejects bad timestamps.
 
     def test_millisecond_timestamp_rejected(self):
         bus = EventBus()
@@ -102,7 +102,7 @@ class TestTimestampValidation:
         assert status["extras"]["quotes_received_by_symbol"]["BTC"] == 1
 
     def test_zero_source_ts_still_rejected(self):
-        """source_ts=0 is already caught by the existing check."""
+        # source_ts=0 is already caught by the existing check.
         bus = EventBus()
         bb = BarBuilder(bus)
 

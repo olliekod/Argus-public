@@ -1,14 +1,14 @@
-"""
-Secrets file permission guard (10.8).
+# Created by Oliver Meihls
 
-Cross-platform helper that warns or enforces that secrets.yaml is not
-world-readable.
-
-- POSIX: chmod to 0o600 if too open (best-effort, does not break if
-  the chmod fails).
-- Windows: log a warning with guidance (no enforcement — ACLs are too
-  complex for a generic helper).
-"""
+# Secrets file permission guard (10.8).
+#
+# Cross-platform helper that warns or enforces that secrets.yaml is not
+# world-readable.
+#
+# - POSIX: chmod to 0o600 if too open (best-effort, does not break if
+# the chmod fails).
+# - Windows: log a warning with guidance (no enforcement — ACLs are too
+# complex for a generic helper).
 
 from __future__ import annotations
 
@@ -39,29 +39,26 @@ def check_secrets_permissions(
     _chmod_fn=None,
     _platform_fn=None,
 ) -> dict:
-    """Check (and optionally enforce) that a secrets file is not world-readable.
-
-    Parameters
-    ----------
-    path : Path, optional
-        Path to the secrets file.  Defaults to ``config/secrets.yaml``
-        relative to the repo root.
-    enforce : bool
-        If True (default) and on POSIX, attempt to chmod the file to 0o600.
-    _stat_fn, _chmod_fn, _platform_fn :
-        Injectable overrides for testing without touching the real filesystem.
-
-    Returns
-    -------
-    dict with keys:
-        - ``path``: str — resolved path
-        - ``exists``: bool
-        - ``platform``: str — "posix" or "windows" or "unknown"
-        - ``mode_octal``: str | None — e.g. "0o644"
-        - ``is_safe``: bool — True if no group/other bits set
-        - ``action``: str — "ok", "fixed", "warning", "skipped", "error"
-        - ``message``: str — human-readable summary
-    """
+    # Check (and optionally enforce) that a secrets file is not world-readable.
+    #
+    # Parameters
+    # path : Path, optional
+    # Path to the secrets file.  Defaults to ``config/secrets.yaml``
+    # relative to the repo root.
+    # enforce : bool
+    # If True (default) and on POSIX, attempt to chmod the file to 0o600.
+    # _stat_fn, _chmod_fn, _platform_fn :
+    # Injectable overrides for testing without touching the real filesystem.
+    #
+    # Returns
+    # dict with keys:
+    # - ``path``: str — resolved path
+    # - ``exists``: bool
+    # - ``platform``: str — "posix" or "windows" or "unknown"
+    # - ``mode_octal``: str | None — e.g. "0o644"
+    # - ``is_safe``: bool — True if no group/other bits set
+    # - ``action``: str — "ok", "fixed", "warning", "skipped", "error"
+    # - ``message``: str — human-readable summary
     stat_fn = _stat_fn or os.stat
     chmod_fn = _chmod_fn or os.chmod
     platform_fn = _platform_fn or platform.system

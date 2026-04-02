@@ -1,12 +1,11 @@
-"""
-Argus Market Monitor - Module Loader / Orchestrator
-====================================================
+# Created by Oliver Meihls
 
-Coordinates all connectors, detectors, and alerts via a central
-Pub/Sub event bus.  Reads ``ARGUS_MODE`` once at boot to decide
-between **collector** (default — observe only) and **live** modes.
-This is the canonical orchestrator entrypoint; legacy variants have been removed.
-"""
+# Argus Market Monitor - Module Loader / Orchestrator
+#
+# Coordinates all connectors, detectors, and alerts via a central
+# Pub/Sub event bus.  Reads ``ARGUS_MODE`` once at boot to decide
+# between **collector** (default — observe only) and **live** modes.
+# This is the canonical orchestrator entrypoint; legacy variants have been removed.
 
 import asyncio
 import os
@@ -96,11 +95,13 @@ _DEFAULT_OPTIONS_SYMBOLS = sorted({"IBIT", "BITO"} | set(get_liquid_etf_universe
 
 
 class CollectorModeViolation(RuntimeError):
-    """Raised when trade-execution code is invoked in collector mode."""
+    # Raised when trade-execution code is invoked in collector mode.
 
+
+    pass
 
 def _guard_collector_mode(mode: str):
-    """Fail-fast if any module attempts trade execution in collector mode."""
+    # Fail-fast if any module attempts trade execution in collector mode.
     if mode == "collector":
         raise CollectorModeViolation(
             "Trade execution attempted while ARGUS_MODE=collector. "
@@ -110,23 +111,19 @@ def _guard_collector_mode(mode: str):
 
 
 class ArgusOrchestrator:
-    """
-    Main Argus orchestrator.
-    
-    Coordinates:
-    - Exchange WebSocket connections
-    - Data polling clients
-    - Opportunity detectors
-    - Alert dispatching
-    """
+    # Main Argus orchestrator.
+    #
+    # Coordinates:
+    # - Exchange WebSocket connections
+    # - Data polling clients
+    # - Opportunity detectors
+    # - Alert dispatching
     
     def __init__(self, config_dir: str = "config"):
-        """
-        Initialize Argus.
-
-        Args:
-            config_dir: Path to config directory
-        """
+        # Initialize Argus.
+        #
+        # Args:
+        # config_dir: Path to config directory
         # Load configuration
         self.config = load_all_config(config_dir)
         self.secrets = self.config.get('secrets', {})
@@ -342,13 +339,13 @@ class ArgusOrchestrator:
         self.logger.info("Argus Orchestrator initialized")
     
     def _phase(self, name: str):
-        """Record a boot phase's elapsed time."""
+        # Record a boot phase's elapsed time.
         elapsed = time.monotonic() - self._boot_start
         self._boot_phases[name] = round(elapsed, 2)
         self.logger.info(f"[BOOT] {name}: {elapsed:.2f}s")
 
     def _format_boot_phases(self) -> str:
-        """Format boot phases for display."""
+        # Format boot phases for display.
         lines = []
         prev = 0.0
         for name, ts in self._boot_phases.items():
@@ -409,7 +406,7 @@ class ArgusOrchestrator:
         )
 
     def _note_external_metric(self, event: ExternalMetricEvent) -> None:
-        """Record activity for external metrics (e.g. risk flow)."""
+        # Record activity for external metrics (e.g. risk flow).
         self._activity_tracker.record_detector_event(
             "risk_flow",
             event_ts=event.timestamp_ms / 1000.0,
@@ -456,7 +453,7 @@ class ArgusOrchestrator:
         self._tasks.append(asyncio.create_task(self._run_periodic_farm_summary()))
 
     async def setup(self) -> None:
-        """Initialize all components with phase timing."""
+        # Initialize all components with phase timing.
         self.logger.info("Setting up Argus components...")
         self._boot_start = time.monotonic()
 
@@ -632,7 +629,7 @@ class ArgusOrchestrator:
         self.logger.info("Setup complete!")
     
     async def _setup_connectors(self) -> None:
-        """Initialize exchange connectors (with event bus wiring)."""
+        # Initialize exchange connectors (with event bus wiring).
         av_cfg = self.config.get('exchanges', {}).get('alphavantage', {})
         if av_cfg.get('enabled', False):
             av_api_key = get_secret(self.secrets, 'alphavantage', 'api_key')
@@ -696,7 +693,7 @@ class ArgusOrchestrator:
             }
 
         async def _on_okx_orchestrator_ticker(data: Dict) -> None:
-            """OKX fallback handler — only publishes when Coinbase is silent."""
+            # OKX fallback handler — only publishes when Coinbase is silent.
             symbol = data.get("symbol", "")
             # Map OKX instId to asset
             asset = "BTC" if "BTC" in symbol else "ETH" if "ETH" in symbol else None
@@ -972,7 +969,7 @@ class ArgusOrchestrator:
             )
 
     async def _setup_polymarket(self) -> None:
-        """Initialize Polymarket connectors (optional, fail-soft)."""
+        # Initialize Polymarket connectors (optional, fail-soft).
         pm_cfg = self.config.get('polymarket', {})
         if not pm_cfg.get('enabled', False):
             self.logger.info("Polymarket integration disabled (set polymarket.enabled=true to activate)")
@@ -1008,7 +1005,7 @@ class ArgusOrchestrator:
             self.polymarket_watchlist = None
 
     async def _setup_detectors(self) -> None:
-        """Initialize all detectors and attach to event bus."""
+        # Initialize all detectors and attach to event bus.
         thresholds = self.config.get('thresholds', {})
         is_collector = self.mode == "collector"
 
@@ -1073,7 +1070,7 @@ class ArgusOrchestrator:
         self.logger.info(f"Initialized {len(self.detectors)} detectors (bus-attached)")
     
     async def _setup_telegram(self) -> None:
-        """Initialize Telegram bot."""
+        # Initialize Telegram bot.
         bot_token = get_secret(self.secrets, 'telegram', 'bot_token')
         chat_id = get_secret(self.secrets, 'telegram', 'chat_id')
         
@@ -1093,7 +1090,7 @@ class ArgusOrchestrator:
             self.logger.warning("Telegram not configured - alerts disabled")
     
     async def _setup_off_hours_monitoring(self) -> None:
-        """Initialize gap risk tracker, conditions monitor, and daily review."""
+        # Initialize gap risk tracker, conditions monitor, and daily review.
         thresholds = self.config.get('thresholds', {})
         
         # Gap Risk Tracker
@@ -1185,7 +1182,7 @@ class ArgusOrchestrator:
         self.logger.info("Daily Review initialized")
         
     def _wire_telegram_callbacks(self) -> None:
-        """Wire up Telegram two-way callbacks once dependencies are ready."""
+        # Wire up Telegram two-way callbacks once dependencies are ready.
         if not self.telegram:
             return
         if not self.conditions_monitor:
@@ -1221,7 +1218,7 @@ class ArgusOrchestrator:
             self.soak_guardian._alert_cb = self._handle_soak_alert
     
     async def _handle_ai_chat(self, message: str) -> str:
-        """Route a Telegram chat message through the AI agent with safety guards."""
+        # Route a Telegram chat message through the AI agent with safety guards.
         if self.ai_agent is None:
             return "AI agent is not initialized. Check startup logs."
 
@@ -1264,7 +1261,7 @@ class ArgusOrchestrator:
             return "Brain offline. Check Ollama status."
 
     async def _handle_telegram_mode_switch(self, target: str) -> str:
-        """Bridge Telegram /mode command to the AI agent's governor."""
+        # Bridge Telegram /mode command to the AI agent's governor.
         if self.ai_agent is None:
             return "AI agent not initialized."
         
@@ -1277,7 +1274,7 @@ class ArgusOrchestrator:
             return f"Failed to switch mode: {e}"
 
     async def _on_conditions_alert(self, snapshot) -> None:
-        """Handle conditions threshold crossing alert."""
+        # Handle conditions threshold crossing alert.
         if not self.telegram:
             return
         if self.research_enabled and not self.research_alerts_enabled:
@@ -1298,21 +1295,22 @@ class ArgusOrchestrator:
         )
     
     async def _send_daily_review(self, message: str) -> None:
-        """Send daily review via Telegram."""
+        # Send daily review via Telegram.
         if self.telegram and (not self.research_enabled or self.research_daily_review_enabled):
             await self.telegram.send_message(message)
     
     async def _get_btc_iv(self) -> Optional[Dict]:
-        """Get current BTC IV from Deribit."""
+        # Get current BTC IV from Deribit.
         if self.deribit_client:
             try:
                 return await self.deribit_client.get_atm_iv('BTC')
             except Exception:
                 pass
+
         return None
     
     async def _get_btc_funding(self) -> Optional[Dict]:
-        """Get current BTC funding rate from Bybit."""
+        # Get current BTC funding rate from Bybit.
         if self.bybit_ws:
             rate = self.bybit_ws.get_funding_rate('BTCUSDT')
             if rate is not None:
@@ -1320,7 +1318,7 @@ class ArgusOrchestrator:
         return None
     
     async def _get_btc_price(self) -> Optional[Dict]:
-        """Get current BTC price."""
+        # Get current BTC price.
         if self.bybit_ws:
             ticker = self.bybit_ws.get_ticker('BTCUSDT')
             if ticker:
@@ -1345,7 +1343,7 @@ class ArgusOrchestrator:
         return None
     
     async def _get_pnl_summary(self) -> Dict:
-        """Get P&L summary for Telegram /pnl command."""
+        # Get P&L summary for Telegram /pnl command.
         cached = self._get_snapshot_section('pnl')
         if cached:
             return cached
@@ -1353,7 +1351,7 @@ class ArgusOrchestrator:
         return self._status_snapshot.get('pnl', {})
     
     async def _get_positions_summary(self) -> List[Dict]:
-        """Get positions summary for Telegram /positions command."""
+        # Get positions summary for Telegram /positions command.
         cached = self._get_snapshot_section('positions')
         if cached is not None:
             return cached
@@ -1361,7 +1359,7 @@ class ArgusOrchestrator:
         return self._status_snapshot.get('positions', [])
 
     async def _get_status_summary(self) -> Dict[str, Any]:
-        """Get conditions plus data freshness for Telegram /status command."""
+        # Get conditions plus data freshness for Telegram /status command.
         conditions = {}
         if self.conditions_monitor:
             conditions = await self.conditions_monitor.get_current_conditions()
@@ -1373,7 +1371,7 @@ class ArgusOrchestrator:
         return conditions
 
     async def _get_farm_status(self) -> Dict[str, Any]:
-        """Get paper trader farm status summary for Telegram."""
+        # Get paper trader farm status summary for Telegram.
         cached = self._get_snapshot_section('farm')
         if cached:
             return cached
@@ -1381,7 +1379,7 @@ class ArgusOrchestrator:
         return self._status_snapshot.get('farm', {})
 
     async def _get_signal_status(self) -> Dict[str, Any]:
-        """Get signal checklist for all active ETF detectors."""
+        # Get signal checklist for all active ETF detectors.
         status: Dict[str, Any] = {}
         for key, detector in self.detectors.items():
             if hasattr(detector, 'get_signal_checklist'):
@@ -1389,7 +1387,7 @@ class ArgusOrchestrator:
         return status
 
     async def _get_research_status(self) -> Dict[str, Any]:
-        """Get research mode telemetry for Telegram."""
+        # Get research mode telemetry for Telegram.
         if not self.paper_trader_farm:
             return {}
         aggregate = self.paper_trader_farm.get_aggregate_pnl()
@@ -1413,18 +1411,18 @@ class ArgusOrchestrator:
         }
 
     async def _get_zombies(self) -> Dict[str, Any]:
-        """Detect zombies using the farm's 7-14 DTE-aligned detection logic."""
+        # Detect zombies using the farm's 7-14 DTE-aligned detection logic.
         if not self.paper_trader_farm:
             return {'zombies': [], 'total': 0, 'report': 'Farm not initialized'}
         await self._refresh_zombies_snapshot(force=False)
         return self._zombies_snapshot
 
     async def _get_followed_traders(self) -> List[Dict]:
-        """Get the followed traders list from DB."""
+        # Get the followed traders list from DB.
         return await self.db.get_followed_traders()
 
     async def _get_dashboard(self) -> Dict[str, Any]:
-        """Get full system dashboard data for Telegram /dashboard command."""
+        # Get full system dashboard data for Telegram /dashboard command.
         now = datetime.now(timezone.utc)
         eastern = ZoneInfo("America/New_York")
         now_et = datetime.now(eastern)
@@ -1488,7 +1486,7 @@ class ArgusOrchestrator:
         }
 
     async def _get_data_status(self) -> Dict[str, Dict[str, Optional[str]]]:
-        """Collect data freshness signals for key tables."""
+        # Collect data freshness signals for key tables.
         tables = {
             "Detections": ("detections", 24 * 60 * 60),
             "Options IV": ("options_iv", 2 * 60 * 60),
@@ -1539,7 +1537,7 @@ class ArgusOrchestrator:
 
     @staticmethod
     def _format_age(age_seconds: int) -> str:
-        """Format age in human-friendly units."""
+        # Format age in human-friendly units.
         if age_seconds < 60:
             return f"{age_seconds}s ago"
         if age_seconds < 3600:
@@ -1549,7 +1547,7 @@ class ArgusOrchestrator:
         return f"{age_seconds // 86400}d ago"
     
     async def _on_bybit_ticker(self, data: Dict) -> None:
-        """Handle Bybit ticker update."""
+        # Handle Bybit ticker update.
         data['exchange'] = 'bybit'
         await self._maybe_log_price_snapshot(
             exchange='bybit',
@@ -1565,11 +1563,10 @@ class ArgusOrchestrator:
             await self.detectors['volatility'].analyze(data)
 
     async def _on_coinbase_ticker(self, data: Dict) -> None:
-        """Handle Coinbase ticker update.
-
-        Coinbase is the PRIMARY truth source for crypto price data.
-        Updates truth-feed health tracking so OKX fallback knows to stay silent.
-        """
+        # Handle Coinbase ticker update.
+        #
+        # Coinbase is the PRIMARY truth source for crypto price data.
+        # Updates truth-feed health tracking so OKX fallback knows to stay silent.
         data['exchange'] = 'coinbase'
 
         # Track truth-feed health per asset
@@ -1599,7 +1596,7 @@ class ArgusOrchestrator:
             await self.detectors['volatility'].analyze(data)
     
     async def _on_yahoo_update(self, data: Dict) -> None:
-        """Handle IBIT/BITO price update from Yahoo Finance."""
+        # Handle IBIT/BITO price update from Yahoo Finance.
         symbol = data.get('symbol')
         if not symbol:
             return
@@ -1621,7 +1618,7 @@ class ArgusOrchestrator:
         volume: Optional[float],
         min_interval_seconds: int = 60,
     ) -> None:
-        """Record price snapshots at a controlled cadence."""
+        # Record price snapshots at a controlled cadence.
         if not symbol or price is None:
             return
         now = datetime.now(timezone.utc)
@@ -1639,11 +1636,11 @@ class ArgusOrchestrator:
         self._last_price_snapshot[key] = now
     
     async def _on_funding_update(self, data: Dict) -> None:
-        """Handle funding rate update from Bybit."""
+        # Handle funding rate update from Bybit.
         self.logger.debug(f"Funding update: {data['symbol']} = {data['rate']:.4%}")
     
     async def _send_alert(self, detection: Dict) -> None:
-        """Send alert for a detection."""
+        # Send alert for a detection.
         if not self.telegram:
             return
         if self.research_enabled and not self.research_alerts_enabled:
@@ -1666,7 +1663,7 @@ class ArgusOrchestrator:
             await self._send_etf_alert(detection)
     
     async def _send_paper_notification(self, message: str) -> None:
-        """Send paper trade notification via Telegram."""
+        # Send paper trade notification via Telegram.
         if self.telegram and (not self.research_enabled or self.research_alerts_enabled):
             try:
                 await self.telegram.send_message(message, parse_mode="Markdown")
@@ -1674,7 +1671,7 @@ class ArgusOrchestrator:
                 self.logger.warning(f"Failed to send paper notification: {e}")
     
     async def _send_etf_alert(self, detection: Dict) -> None:
-        """Send ETF options opportunity alert."""
+        # Send ETF options opportunity alert.
         data = detection.get('detection_data', {})
         symbol = detection.get('asset', 'ETF')
         
@@ -1701,7 +1698,7 @@ class ArgusOrchestrator:
         )
     
     async def _poll_deribit(self) -> None:
-        """Poll Deribit for options IV data."""
+        # Poll Deribit for options IV data.
         if not self.deribit_client:
             return
         
@@ -1747,10 +1744,9 @@ class ArgusOrchestrator:
             await asyncio.sleep(interval)
     
     def _on_spread_signal(self, signal) -> None:
-        """Handle spread signal from SpreadCandidateGenerator.
-        
-        Emits SignalEvent to signals.raw with strategy_id=PUT_SPREAD_V1.
-        """
+        # Handle spread signal from SpreadCandidateGenerator.
+        #
+        # Emits SignalEvent to signals.raw with strategy_id=PUT_SPREAD_V1.
         from .core.signals import SignalEvent as Phase3Signal, signal_to_dict
         
         # Convert to Phase 3 SignalEvent if needed
@@ -1765,15 +1761,14 @@ class ArgusOrchestrator:
             )
     
     async def _poll_options_chains(self) -> None:
-        """Poll Alpaca for options chain snapshots.
-
-        Publishes OptionChainSnapshotEvent to options.chains topic.
-        SpreadCandidateGenerator is already subscribed via event bus.
-        Runs in its own task; backoff and interval are independent of
-        _poll_tastytrade_options_chains (no shared counter). Resumes
-        normal interval after transient failure once consecutive_errors
-        is reset.
-        """
+        # Poll Alpaca for options chain snapshots.
+        #
+        # Publishes OptionChainSnapshotEvent to options.chains topic.
+        # SpreadCandidateGenerator is already subscribed via event bus.
+        # Runs in its own task; backoff and interval are independent of
+        # _poll_tastytrade_options_chains (no shared counter). Resumes
+        # normal interval after transient failure once consecutive_errors
+        # is reset.
         if not self.alpaca_options:
             return
 
@@ -1846,14 +1841,13 @@ class ArgusOrchestrator:
             await asyncio.sleep(interval)
 
     async def _start_dxlink_greeks_streamer(self) -> None:
-        """Obtain a DXLink token and run a Greeks streamer in the background.
-
-        Uses the already-authenticated TastytradeOptionsConnector's REST
-        client to fetch a DXLink streaming token, then subscribes to
-        Greeks events for the configured option symbols.  Events are
-        forwarded to ``_on_dxlink_greeks_event`` which populates
-        ``_greeks_cache``.
-        """
+        # Obtain a DXLink token and run a Greeks streamer in the background.
+        #
+        # Uses the already-authenticated TastytradeOptionsConnector's REST
+        # client to fetch a DXLink streaming token, then subscribes to
+        # Greeks events for the configured option symbols.  Events are
+        # forwarded to ``_on_dxlink_greeks_event`` which populates
+        # ``_greeks_cache``.
         if not self.tastytrade_options:
             return
 
@@ -1893,14 +1887,13 @@ class ArgusOrchestrator:
             self.logger.debug("DXLink Greeks streamer failure detail", exc_info=True)
 
     def _on_dxlink_greeks_event(self, event: Any) -> None:
-        """Handle DXLink Greeks events by caching IV and Greeks.
-
-        Called from the DXLink streamer callback. Populates the
-        in-memory GreeksCache so that subsequent snapshot polls
-        can enrich ``atm_iv`` from cached provider IV.
-
-        No DB writes — memory only.
-        """
+        # Handle DXLink Greeks events by caching IV and Greeks.
+        #
+        # Called from the DXLink streamer callback. Populates the
+        # in-memory GreeksCache so that subsequent snapshot polls
+        # can enrich ``atm_iv`` from cached provider IV.
+        #
+        # No DB writes — memory only.
         event_symbol = getattr(event, "event_symbol", None)
         volatility = getattr(event, "volatility", None)
         if not event_symbol or volatility is None:
@@ -1919,7 +1912,7 @@ class ArgusOrchestrator:
         self._iv_consensus.observe_dxlink_greeks(event, recv_ts_ms=recv_ts_ms)
 
     def get_consensus_atm_iv(self, underlying: str, option_type: str, expiration_ms: int, as_of_ms: int):
-        """Return consensus ATM IV result for strategy/risk modules."""
+        # Return consensus ATM IV result for strategy/risk modules.
         return self._iv_consensus.get_atm_consensus(
             underlying=underlying,
             option_type=option_type,
@@ -1928,7 +1921,7 @@ class ArgusOrchestrator:
         )
 
     def get_consensus_contract_iv(self, underlying: str, expiration_ms: int, option_type: str, strike: float, as_of_ms: int):
-        """Return consensus per-contract IV/greeks for strategy/risk modules."""
+        # Return consensus per-contract IV/greeks for strategy/risk modules.
         from .core.iv_consensus import ContractKey
 
         return self._iv_consensus.get_contract_consensus(
@@ -1942,13 +1935,12 @@ class ArgusOrchestrator:
         )
 
     async def _poll_tastytrade_options_chains(self) -> None:
-        """Poll Tastytrade for options chain snapshots via REST.
-
-        Publishes OptionChainSnapshotEvents to options.chains topic.
-        Own task; backoff and interval independent of Alpaca polling.
-        If one provider fails the other continues; normal interval
-        resumes after consecutive_errors is reset.
-        """
+        # Poll Tastytrade for options chain snapshots via REST.
+        #
+        # Publishes OptionChainSnapshotEvents to options.chains topic.
+        # Own task; backoff and interval independent of Alpaca polling.
+        # If one provider fails the other continues; normal interval
+        # resumes after consecutive_errors is reset.
         if not self.tastytrade_options:
             return
 
@@ -1980,6 +1972,7 @@ class ArgusOrchestrator:
                                 underlying_price = price
                             except Exception:
                                 pass
+
                         if underlying_price <= 0 and self.db:
                             try:
                                 close = await self.db.get_latest_bar_close("alpaca", symbol, bar_duration=60)
@@ -2048,7 +2041,7 @@ class ArgusOrchestrator:
             await asyncio.sleep(interval)
 
     async def _poll_public_options_chains(self) -> None:
-        """Poll Public.com Greeks and publish options chain snapshots."""
+        # Poll Public.com Greeks and publish options chain snapshots.
         if not self.public_options:
             return
 
@@ -2074,6 +2067,7 @@ class ArgusOrchestrator:
                                 underlying_price = p
                             except Exception:
                                 pass
+
                         if underlying_price <= 0 and self.db:
                             try:
                                 close = await self.db.get_latest_bar_close("alpaca", symbol, bar_duration=60)
@@ -2081,6 +2075,7 @@ class ArgusOrchestrator:
                                     underlying_price = close
                             except Exception:
                                 pass
+
                         snapshots = await self.public_options.build_snapshots_for_symbol(
                             symbol,
                             min_dte=min_dte,
@@ -2122,7 +2117,7 @@ class ArgusOrchestrator:
             await asyncio.sleep(interval)
 
     async def _get_current_spread_prices(self) -> Dict[str, Dict[str, float]]:
-        """Get current spread prices for open positions to evaluate exits."""
+        # Get current spread prices for open positions to evaluate exits.
         prices: Dict[str, Dict[str, float]] = {}
         if not self.paper_trader_farm:
             return prices
@@ -2170,7 +2165,7 @@ class ArgusOrchestrator:
         return prices
 
     async def _run_market_close_snapshot(self) -> None:
-        """Take gap risk snapshots at market close (4 PM ET) on weekdays."""
+        # Take gap risk snapshots at market close (4 PM ET) on weekdays.
         if not self.gap_risk_tracker:
             return
         eastern = ZoneInfo("America/New_York")
@@ -2209,11 +2204,10 @@ class ArgusOrchestrator:
             await asyncio.sleep(300)
 
     async def _cleanup_zombie_positions(self) -> None:
-        """Close orphaned positions from previous runs that are still 'open' in DB.
-
-        Uses close_timestamp (not closed_at) and close_reason columns which
-        are created by the migration in paper_trader_farm._create_tables.
-        """
+        # Close orphaned positions from previous runs that are still 'open' in DB.
+        #
+        # Uses close_timestamp (not closed_at) and close_reason columns which
+        # are created by the migration in paper_trader_farm._create_tables.
         try:
             row = await self.db.fetch_one(
                 "SELECT COUNT(*) as cnt FROM paper_trades WHERE status = 'open'"
@@ -2247,14 +2241,13 @@ class ArgusOrchestrator:
             self.logger.error(f"Failed to cleanup zombie positions: {e}")
 
     async def _run_exit_monitor(self) -> None:
-        """Independent task: check exits and expirations every 30 seconds.
-
-        Decoupled from the research signal loop so exits still happen even
-        if signal evaluation crashes.
-
-        On exception, reports the error to the farm's runaway safety
-        tracker so repeated failures can halt new entries.
-        """
+        # Independent task: check exits and expirations every 30 seconds.
+        #
+        # Decoupled from the research signal loop so exits still happen even
+        # if signal evaluation crashes.
+        #
+        # On exception, reports the error to the farm's runaway safety
+        # tracker so repeated failures can halt new entries.
         if not self.paper_trader_farm:
             return
         interval = 30
@@ -2290,11 +2283,10 @@ class ArgusOrchestrator:
             await asyncio.sleep(interval)
 
     async def _run_research_farm(self) -> None:
-        """Continuously evaluate farm signals for research.
-
-        Exit checking is handled by the separate _run_exit_monitor task,
-        so this loop only handles signal evaluation and new entries.
-        """
+        # Continuously evaluate farm signals for research.
+        #
+        # Exit checking is handled by the separate _run_exit_monitor task,
+        # so this loop only handles signal evaluation and new entries.
         if not self.paper_trader_farm:
             return
         interval = int(self.research_config.get('evaluation_interval_seconds', 60))
@@ -2369,10 +2361,11 @@ class ArgusOrchestrator:
                         )
                     except Exception:
                         pass
+
             await asyncio.sleep(interval)
 
     async def _maybe_promote_configs(self) -> None:
-        """Promote top-performing configs after research window."""
+        # Promote top-performing configs after research window.
         if self._research_promoted:
             return
         if not self.research_config.get('auto_promote_enabled', False):
@@ -2414,7 +2407,7 @@ class ArgusOrchestrator:
                     detector.paper_trading_enabled = True
 
     async def _run_periodic_farm_summary(self) -> None:
-        """Background task: Periodically send consolidated farm activity summaries."""
+        # Background task: Periodically send consolidated farm activity summaries.
         while self._running:
             try:
                 # Summary interval: 30 minutes
@@ -2454,7 +2447,7 @@ class ArgusOrchestrator:
                 await asyncio.sleep(60)
 
     async def _alert_followed_trades(self, trades: list, signal: dict) -> None:
-        """Send Telegram alert when followed traders enter positions."""
+        # Send Telegram alert when followed traders enter positions.
         if not self.telegram:
             return
         try:
@@ -2479,7 +2472,7 @@ class ArgusOrchestrator:
             self.logger.warning(f"Failed to alert followed trades: {e}")
 
     async def _send_exit_summary(self, trades: list) -> None:
-        """Send consolidated summary of closed trades."""
+        # Send consolidated summary of closed trades.
         if not self.telegram:
             return
         
@@ -2515,7 +2508,7 @@ class ArgusOrchestrator:
             await self.telegram.send_message(msg)
 
     async def _handle_soak_alert(self, severity: str, guard: str, message: str) -> None:
-        """Handle soak guard alerts with filtering."""
+        # Handle soak guard alerts with filtering.
         # Log everything to disk
         self.logger.warning(f"SOAK GUARD [{severity}] {guard}: {message}")
         
@@ -2541,7 +2534,7 @@ class ArgusOrchestrator:
                 )
 
     async def _run_uniformity_check(self) -> None:
-        """Run uniformity check every N evaluations to detect convergence bugs."""
+        # Run uniformity check every N evaluations to detect convergence bugs.
         if not hasattr(self, '_uniformity_check_count'):
             self._uniformity_check_count = 0
         self._uniformity_check_count += 1
@@ -2584,7 +2577,7 @@ class ArgusOrchestrator:
             self.logger.warning(f"Uniformity check error: {e}")
 
     async def _log_iv_status(self) -> None:
-        """Log whether we are receiving IV (Consensus or DXLink) every 60s."""
+        # Log whether we are receiving IV (Consensus or DXLink) every 60s.
         interval = 60
         stale_seconds = 300  # consider "stale" if no update in 5 min
         while self._running:
@@ -2627,7 +2620,7 @@ class ArgusOrchestrator:
                 self.logger.debug("IV status check failed: %s", e)
 
     async def _health_check(self) -> None:
-        """Periodic health check (5 min) and 60-second heartbeat summary."""
+        # Periodic health check (5 min) and 60-second heartbeat summary.
         health_interval = 300
         heartbeat_interval = int(self.config.get('monitoring', {}).get('heartbeat_interval', 60))
         last_heartbeat = 0.0
@@ -2695,7 +2688,7 @@ class ArgusOrchestrator:
             await asyncio.sleep(10)  # Check every 10s for heartbeat granularity
 
     async def _run_market_session_monitor(self) -> None:
-        """Monitor market open/close transitions and send notifications."""
+        # Monitor market open/close transitions and send notifications.
         eastern = ZoneInfo("America/New_York")
 
         while self._running:
@@ -2726,7 +2719,7 @@ class ArgusOrchestrator:
             await asyncio.sleep(30)
 
     async def _send_market_open_notification(self, now_et: datetime) -> None:
-        """Send notification when market opens."""
+        # Send notification when market opens.
         if not self.telegram:
             return
         
@@ -2774,7 +2767,7 @@ class ArgusOrchestrator:
         await self.telegram.send_tiered_message("\n".join(lines), priority=2, key="market_open")
 
     async def _get_sentiment_summary(self) -> str:
-        """Build a combined sentiment summary for Telegram /sentiment command."""
+        # Build a combined sentiment summary for Telegram /sentiment command.
         lines = ["<b>📊 Sentiment Snapshot</b>", ""]
 
         # News sentiment
@@ -2832,7 +2825,7 @@ class ArgusOrchestrator:
         return "\n".join(lines)
 
     async def _send_market_close_notification(self, now_et: datetime) -> None:
-        """Send end-of-day summary when market closes."""
+        # Send end-of-day summary when market closes.
         if not self.telegram:
             return
 
@@ -2875,16 +2868,14 @@ class ArgusOrchestrator:
 
         await self.telegram.send_tiered_message("\n".join(lines), priority=2, key="market_close")
     
-    # =========================================================================
-    # Dashboard helper callbacks
-    # =========================================================================
+# Dashboard helper callbacks
 
     def _get_snapshot_section(self, key: str) -> Optional[Any]:
-        """Fetch a cached snapshot section if available."""
+        # Fetch a cached snapshot section if available.
         return self._status_snapshot.get(key)
 
     async def _refresh_status_snapshot(self, force: bool = False) -> None:
-        """Refresh cached dashboard/telegram status snapshot."""
+        # Refresh cached dashboard/telegram status snapshot.
         now = time.time()
         if not force and (now - self._status_snapshot_ts) < self._status_snapshot_interval:
             return
@@ -2977,7 +2968,7 @@ class ArgusOrchestrator:
             self.logger.debug(f"Status snapshot refreshed in {elapsed_ms:.1f}ms")
 
     async def _refresh_zombies_snapshot(self, force: bool = False) -> None:
-        """Refresh cached zombies report separately (heavier query)."""
+        # Refresh cached zombies report separately (heavier query).
         now = time.time()
         if not force and (now - self._zombies_snapshot_ts) < self._zombies_snapshot_interval:
             return
@@ -3003,7 +2994,7 @@ class ArgusOrchestrator:
         self.logger.debug(f"Zombies snapshot refreshed in {elapsed_ms:.1f}ms")
 
     async def _get_dashboard_system_status(self) -> Dict[str, Any]:
-        """System status for the dashboard /api/status endpoint."""
+        # System status for the dashboard /api/status endpoint.
         cached = self._get_snapshot_section('system')
         if cached:
             extra = {
@@ -3026,17 +3017,17 @@ class ArgusOrchestrator:
         return {**system, **extra}
 
     async def _get_provider_statuses(self) -> Dict[str, Any]:
-        """Provider health for dashboard using the activity tracker."""
+        # Provider health for dashboard using the activity tracker.
         return self._activity_tracker.get_provider_statuses()
 
     def _get_current_risk_flow(self) -> Optional[float]:
-        """Get the last computed GlobalRiskFlow value."""
+        # Get the last computed GlobalRiskFlow value.
         if self.global_risk_flow_updater:
             return self.global_risk_flow_updater._last_value
         return None
 
     async def _format_briefing_prices(self) -> List[str]:
-        """Format SPY, IBIT, QQQ prices for market briefing. Returns list of lines."""
+        # Format SPY, IBIT, QQQ prices for market briefing. Returns list of lines.
         lines = []
         bar_source = (self.config.get("data_sources") or {}).get("bars_primary", "alpaca")
         for symbol in ("SPY", "IBIT", "QQQ"):
@@ -3058,7 +3049,7 @@ class ArgusOrchestrator:
         return lines
 
     def _format_current_regime_for_telegram(self) -> str:
-        """Format current equity regime (vol/trend/risk) for Telegram. Uses last emitted regime (bar-driven)."""
+        # Format current equity regime (vol/trend/risk) for Telegram. Uses last emitted regime (bar-driven).
         if not self.regime_detector:
             return "📊 Regime: N/A"
         try:
@@ -3077,6 +3068,7 @@ class ArgusOrchestrator:
                         spy_trend = spy.get("trend_regime")
                 except Exception:
                     pass
+
             parts = [f"Risk: {risk}"]
             if spy_vol:
                 parts.append(f"SPY Vol: {spy_vol}")
@@ -3088,11 +3080,11 @@ class ArgusOrchestrator:
             return "📊 Regime: N/A"
 
     async def _get_detector_statuses(self) -> Dict[str, Any]:
-        """Detector activity status for dashboard."""
+        # Detector activity status for dashboard.
         return self._activity_tracker.get_detector_statuses()
 
     async def _compute_pnl_summary(self) -> Dict:
-        """Compute P&L summary without cached shortcut."""
+        # Compute P&L summary without cached shortcut.
         if self.paper_trader_farm:
             return await self.paper_trader_farm.get_pnl_for_telegram()
         if self.daily_review:
@@ -3101,19 +3093,19 @@ class ArgusOrchestrator:
         return {}
 
     async def _compute_positions_summary(self) -> List[Dict]:
-        """Compute positions summary without cached shortcut."""
+        # Compute positions summary without cached shortcut.
         if self.paper_trader_farm:
             return await self.paper_trader_farm.get_positions_for_telegram()
         return []
 
     async def _compute_farm_status(self) -> Dict[str, Any]:
-        """Compute farm status without cached shortcut."""
+        # Compute farm status without cached shortcut.
         if not self.paper_trader_farm:
             return {}
         return self.paper_trader_farm.get_status_summary()
 
     async def _run_dashboard_command(self, cmd: str) -> str:
-        """Execute a / command from the web dashboard."""
+        # Execute a / command from the web dashboard.
         cmd = cmd.strip()
         if not cmd.startswith('/'):
             cmd = '/' + cmd
@@ -3209,7 +3201,7 @@ class ArgusOrchestrator:
             return f"Error: {e}"
 
     async def _get_recent_logs_text(self) -> str:
-        """Return recent log lines as text for dashboard."""
+        # Return recent log lines as text for dashboard.
         cached = self._get_snapshot_section('recent_logs')
         if cached:
             return cached
@@ -3220,7 +3212,7 @@ class ArgusOrchestrator:
         return await self._read_recent_logs_text()
 
     async def _read_recent_logs_text(self) -> str:
-        """Read recent log lines directly (no cache)."""
+        # Read recent log lines directly (no cache).
         if self._recent_logs:
             return "\n".join(self._recent_logs)
         # Read from log file as fallback
@@ -3232,14 +3224,13 @@ class ArgusOrchestrator:
                 return "".join(lines[-100:])
         except Exception:
             pass
+
         return "No logs available"
 
-    # =========================================================================
-    # Market hours gating
-    # =========================================================================
+# Market hours gating
 
     def _is_us_market_open(self) -> bool:
-        """Check if US equity markets are open (Mon-Fri, 9:30-16:00 ET)."""
+        # Check if US equity markets are open (Mon-Fri, 9:30-16:00 ET).
         eastern = ZoneInfo("America/New_York")
         now_et = datetime.now(eastern)
         if now_et.weekday() >= 5:  # Weekend
@@ -3253,12 +3244,10 @@ class ArgusOrchestrator:
         close_time = now_et.replace(hour=close_h, minute=close_m, second=0, microsecond=0)
         return open_time <= now_et <= close_time
 
-    # =========================================================================
-    # DB maintenance task
-    # =========================================================================
+# DB maintenance task
 
     async def _run_db_maintenance(self) -> None:
-        """Periodic DB maintenance: retention cleanup + PRAGMA optimize."""
+        # Periodic DB maintenance: retention cleanup + PRAGMA optimize.
         while self._running:
             try:
                 await asyncio.sleep(3600)  # Run every hour
@@ -3285,7 +3274,7 @@ class ArgusOrchestrator:
     # ── Soak-test hardening helpers ─────────────────────────────────
 
     async def _get_soak_summary(self) -> Dict[str, Any]:
-        """Build the soak summary for /debug/soak endpoint."""
+        # Build the soak summary for /debug/soak endpoint.
         return build_soak_summary(
             bus=self.event_bus,
             bar_builder=self.bar_builder,
@@ -3306,7 +3295,7 @@ class ArgusOrchestrator:
     async def _send_soak_alert(
         self, severity: str, guard: str, message: str
     ) -> None:
-        """Send a soak guard alert via Telegram (rate-limited by guardian)."""
+        # Send a soak guard alert via Telegram (rate-limited by guardian).
         if not self.telegram:
             return
         icon = "\u26a0\ufe0f" if severity == "WARN" else "\u274c"
@@ -3321,7 +3310,7 @@ class ArgusOrchestrator:
             self.logger.warning(f"Failed to send soak alert: {e}")
 
     async def _export_tape(self, last_n_minutes: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Extract a slice of recorded tape data for export."""
+        # Extract a slice of recorded tape data for export.
         if not self.tape_recorder:
             return []
         with self.tape_recorder._lock:
@@ -3335,7 +3324,7 @@ class ArgusOrchestrator:
         return [e for e in snapshot if e.get("timestamp", 0) >= cutoff]
 
     async def _run_soak_guards(self) -> None:
-        """Periodically evaluate soak guards (every 30s)."""
+        # Periodically evaluate soak guards (every 30s).
         interval = int(
             self.config.get('soak', {}).get('guard_interval_s', 30)
         )
@@ -3358,7 +3347,7 @@ class ArgusOrchestrator:
                 self.logger.debug("Soak guard evaluation failed", exc_info=True)
 
     async def run(self) -> None:
-        """Start all components and run main loop."""
+        # Start all components and run main loop.
         self._running = True
         is_collector = self.mode == "collector"
 
@@ -3498,11 +3487,10 @@ class ArgusOrchestrator:
             self.logger.info("Shutdown requested")
     
     async def _poll_yahoo_market_hours_aware(self) -> None:
-        """Poll Yahoo Finance with market-hours awareness.
-
-        During US market hours: poll every 60s.
-        Off-hours: poll every off_hours_sample_interval_seconds (default 600s / 10 min).
-        """
+        # Poll Yahoo Finance with market-hours awareness.
+        #
+        # During US market hours: poll every 60s.
+        # Off-hours: poll every off_hours_sample_interval_seconds (default 600s / 10 min).
         off_interval = int(self._mh_cfg.get('off_hours_sample_interval_seconds', 600))
         on_interval = 60
 
@@ -3527,13 +3515,12 @@ class ArgusOrchestrator:
                 await asyncio.sleep(60)
 
     async def _poll_alpaca_market_hours_aware(self) -> None:
-        """Poll Alpaca for equity bars with market-hours awareness.
-
-        During US market hours: poll every poll_interval (config, default 60s).
-        Off-hours: poll every off_hours_sample_interval_seconds (default 600s).
-
-        NOTE: Runs in ALL modes (collector, paper, live) - this is DATA only, no execution.
-        """
+        # Poll Alpaca for equity bars with market-hours awareness.
+        #
+        # During US market hours: poll every poll_interval (config, default 60s).
+        # Off-hours: poll every off_hours_sample_interval_seconds (default 600s).
+        #
+        # NOTE: Runs in ALL modes (collector, paper, live) - this is DATA only, no execution.
         if not self.alpaca_client:
             return
             
@@ -3564,7 +3551,7 @@ class ArgusOrchestrator:
     # ── Heartbeat publisher ───────────────────────────────
 
     async def _publish_heartbeats(self) -> None:
-        """Emit :class:`HeartbeatEvent` every 60 s to drive persistence flushes."""
+        # Emit :class:`HeartbeatEvent` every 60 s to drive persistence flushes.
         seq = 0
         interval = self.config.get('monitoring', {}).get('heartbeat_interval', 60)
         while self._running:
@@ -3576,7 +3563,7 @@ class ArgusOrchestrator:
             )
 
     async def _publish_component_heartbeats(self) -> None:
-        """Emit structured heartbeats for all components every 60s."""
+        # Emit structured heartbeats for all components every 60s.
         interval = self.config.get('monitoring', {}).get('heartbeat_interval', 60)
         while self._running:
             await asyncio.sleep(interval)
@@ -3598,7 +3585,7 @@ class ArgusOrchestrator:
                 self.logger.debug("Component heartbeat emission failed", exc_info=True)
 
     async def _publish_status_snapshots(self) -> None:
-        """Periodically persist QueryLayer status snapshots to DB."""
+        # Periodically persist QueryLayer status snapshots to DB.
         interval = self.config.get('monitoring', {}).get('status_snapshot_persist_interval', 300)
         while self._running:
             await asyncio.sleep(interval)
@@ -3609,7 +3596,7 @@ class ArgusOrchestrator:
                 self.logger.debug("Status snapshot persist failed", exc_info=True)
 
     async def _publish_minute_ticks(self) -> None:
-        """Emit minute-boundary ticks aligned to UTC minute boundaries."""
+        # Emit minute-boundary ticks aligned to UTC minute boundaries.
         while self._running:
             now = time.time()
             next_minute = (int(now // 60) + 1) * 60
@@ -3622,7 +3609,7 @@ class ArgusOrchestrator:
             )
 
     async def _run_av_collector_loop(self) -> None:
-        """Periodic loop for continuous Alpha Vantage polling."""
+        # Periodic loop for continuous Alpha Vantage polling.
         if self.av_collector:
             try:
                 await self.av_collector.run_forever()
@@ -3630,11 +3617,10 @@ class ArgusOrchestrator:
                 self.logger.error("AlphaVantageCollector loop crash", exc_info=True)
 
     async def _run_external_metrics_loop(self) -> None:
-        """Periodic loop to compute and publish external metrics.
-
-        Supports global_risk_flow and news_sentiment with independent
-        intervals. The loop is non-blocking across metric updaters.
-        """
+        # Periodic loop to compute and publish external metrics.
+        #
+        # Supports global_risk_flow and news_sentiment with independent
+        # intervals. The loop is non-blocking across metric updaters.
         if not self.global_risk_flow_updater and not self.news_sentiment_updater:
             return
 
@@ -3675,7 +3661,7 @@ class ArgusOrchestrator:
                 break
 
     async def _get_kalshi_summary(self) -> Dict[str, Any]:
-        """Fetch summary of Kalshi performance and recent events from sidecar DB."""
+        # Fetch summary of Kalshi performance and recent events from sidecar DB.
         try:
             # 1. PnL Stats
             stats = await self.kalshi_db.get_kalshi_outcome_stats()
@@ -3703,7 +3689,7 @@ class ArgusOrchestrator:
             return {"error": str(e)}
 
     async def stop(self) -> None:
-        """Stop all components gracefully."""
+        # Stop all components gracefully.
         self.logger.info("Stopping Argus...")
         self._running = False
 
@@ -3796,7 +3782,7 @@ class ArgusOrchestrator:
 
 
 async def main() -> None:
-    """Entry point for Argus."""
+    # Entry point for Argus.
     argus = ArgusOrchestrator()
     
     # Setup signal handlers
@@ -3817,6 +3803,7 @@ async def main() -> None:
         await argus.run()
     except KeyboardInterrupt:
         pass
+
     finally:
         await argus.stop()
 

@@ -1,40 +1,37 @@
-"""
-Kalshi orderbook maintained from WebSocket snapshots + deltas.
+# Created by Oliver Meihls
 
-Design
-------
-Kalshi contracts have two sides: **yes** and **no**.  Each side has a
-separate order-book of bids.  There are no explicit asks — instead:
-
-    implied yes_ask = 100 - best_no_bid   (cents)
-    implied no_ask  = 100 - best_yes_bid  (cents)
-
-Data structure
---------------
-Each side stores price levels in a ``dict[int, int]`` mapping
-``price_cents → quantity`` (centi-contracts) for O(1) lookup/update, plus
-a **sorted list** of active prices maintained with ``bisect`` for O(1)
-best-price retrieval (best = last element for bids).
-
-Kalshi orderbook depth is capped at ~50 levels, so the ``bisect`` O(log n)
-insert/remove on a list of ≤50 elements is effectively O(1) in practice
-and avoids the overhead of heap-based structures (which don't support
-efficient arbitrary deletion).
-
-Sequence handling
------------------
-Kalshi snapshots and deltas carry a ``seq``. In practice, on multi-market
-subscriptions the observed sequence appears to be stream-wide rather than
-strictly per-market, so per-ticker updates can legitimately jump forward as
-other tickers interleave between them. We therefore require deltas to be
-strictly monotonic for a given ticker (``seq > last_seq``), not consecutive.
-Only duplicate or out-of-order deltas invalidate the book.
-
-Fixed-point (``*_fp``) fields
------------------------------
-Quantities arrive as ``"123.00"`` strings.  We convert to integer
-*centi-contracts* on ingest (``int(round(float(s) * 100))``).
-"""
+# Kalshi orderbook maintained from WebSocket snapshots + deltas.
+#
+# Design
+# ------
+# Kalshi contracts have two sides: **yes** and **no**.  Each side has a
+# separate order-book of bids.  There are no explicit asks — instead:
+#
+# implied yes_ask = 100 - best_no_bid   (cents)
+# implied no_ask  = 100 - best_yes_bid  (cents)
+#
+# Data structure
+# Each side stores price levels in a ``dict[int, int]`` mapping
+# ``price_cents → quantity`` (centi-contracts) for O(1) lookup/update, plus
+# a **sorted list** of active prices maintained with ``bisect`` for O(1)
+# best-price retrieval (best = last element for bids).
+#
+# Kalshi orderbook depth is capped at ~50 levels, so the ``bisect`` O(log n)
+# insert/remove on a list of ≤50 elements is effectively O(1) in practice
+# and avoids the overhead of heap-based structures (which don't support
+# efficient arbitrary deletion).
+#
+# Sequence handling
+# Kalshi snapshots and deltas carry a ``seq``. In practice, on multi-market
+# subscriptions the observed sequence appears to be stream-wide rather than
+# strictly per-market, so per-ticker updates can legitimately jump forward as
+# other tickers interleave between them. We therefore require deltas to be
+# strictly monotonic for a given ticker (``seq > last_seq``), not consecutive.
+# Only duplicate or out-of-order deltas invalidate the book.
+#
+# Fixed-point (``*_fp``) fields
+# Quantities arrive as ``"123.00"`` strings.  We convert to integer
+# *centi-contracts* on ingest (``int(round(float(s) * 100))``).
 
 from __future__ import annotations
 
@@ -55,25 +52,22 @@ log = ComponentLogger("orderbook")
 
 
 def _fp_to_centicx(fp_str: str) -> int:
-    """Convert a Kalshi ``*_fp`` string to an integer centi-contract count."""
+    # Convert a Kalshi ``*_fp`` string to an integer centi-contract count.
     return int(round(float(fp_str) * 100))
 
 
 def _centicx_to_fp(val: int) -> str:
-    """Convert centi-contracts back to ``"X.XX"`` format."""
+    # Convert centi-contracts back to ``"X.XX"`` format.
     return f"{val / 100:.2f}"
 
 
-# ---------------------------------------------------------------------------
 #  One side of the book (yes bids or no bids)
-# ---------------------------------------------------------------------------
 
 class _BookSide:
-    """Bid side for one contract side (yes or no).
-
-    Prices are in integer cents [1, 99].
-    Quantities are in integer centi-contracts.
-    """
+    # Bid side for one contract side (yes or no).
+    #
+    # Prices are in integer cents [1, 99].
+    # Quantities are in integer centi-contracts.
 
     __slots__ = ("_levels", "_sorted_prices")
 
@@ -86,7 +80,7 @@ class _BookSide:
         self._sorted_prices.clear()
 
     def set_level(self, price_cents: int, qty_centicx: int) -> None:
-        """Set quantity at *price_cents*.  If *qty_centicx* is 0, remove."""
+        # Set quantity at *price_cents*.  If *qty_centicx* is 0, remove.
         if qty_centicx <= 0:
             self.remove_level(price_cents)
             return
@@ -106,12 +100,12 @@ class _BookSide:
 
     @property
     def best_bid_cents(self) -> int:
-        """Highest bid price, or 0 if empty."""
+        # Highest bid price, or 0 if empty.
         return self._sorted_prices[-1] if self._sorted_prices else 0
 
     @property
     def best_bid_qty(self) -> int:
-        """Quantity (centi-contracts) at the best bid, or 0 if empty."""
+        # Quantity (centi-contracts) at the best bid, or 0 if empty.
         if not self._sorted_prices:
             return 0
         return self._levels.get(self._sorted_prices[-1], 0)
@@ -121,17 +115,15 @@ class _BookSide:
         return len(self._sorted_prices)
 
     def levels_snapshot(self) -> List[Tuple[int, int]]:
-        """Return ``[(price_cents, qty_centicx), ...]`` sorted descending."""
+        # Return ``[(price_cents, qty_centicx), ...]`` sorted descending.
         return [(p, self._levels[p]) for p in reversed(self._sorted_prices)]
 
 
-# ---------------------------------------------------------------------------
 #  Full orderbook for one market
-# ---------------------------------------------------------------------------
 
 @dataclass
 class OrderBook:
-    """Orderbook for a single Kalshi market ticker."""
+    # Orderbook for a single Kalshi market ticker.
 
     market_ticker: str
     yes_bids: _BookSide = field(default_factory=_BookSide)
@@ -145,18 +137,17 @@ class OrderBook:
     # -- snapshot / delta interface -----------------------------------------
 
     def apply_snapshot(self, snapshot: Dict, seq: int) -> None:
-        """Reset the book from a full snapshot payload.
-
-        Expected *snapshot* shape (Kalshi WS)::
-
-            {
-                "yes": [[price_cents_or_dollars, qty_fp_str], ...],
-                "no":  [[price_cents_or_dollars, qty_fp_str], ...],
-            }
-
-        Price may be int (legacy cents), str (price_dollars), or dict with
-        "price" / "price_dollars" (subpenny migration as of March 2026).
-        """
+        # Reset the book from a full snapshot payload.
+        #
+        # Expected *snapshot* shape (Kalshi WS)::
+        #
+        # {
+        # "yes": [[price_cents_or_dollars, qty_fp_str], ...],
+        # "no":  [[price_cents_or_dollars, qty_fp_str], ...],
+        # }
+        #
+        # Price may be int (legacy cents), str (price_dollars), or dict with
+        # "price" / "price_dollars" (subpenny migration as of March 2026).
         self.yes_bids.clear()
         self.no_bids.clear()
 
@@ -196,18 +187,17 @@ class OrderBook:
         self.has_snapshot = True
 
     def apply_delta(self, delta: Dict, seq: int) -> bool:
-        """Apply an incremental delta. Returns False on duplicate/out-of-order seq.
-
-        Expected *delta* shape::
-
-            {
-                "price": <int cents> or "price_dollars": "<str>",
-                "delta": <qty> or "delta_fp": "<str>",  (signed: + add, - remove)
-                "side": "yes" | "no",
-            }
-
-        Or a list of such entries. Prefers *_fp when present (March 2026).
-        """
+        # Apply an incremental delta. Returns False on duplicate/out-of-order seq.
+        #
+        # Expected *delta* shape::
+        #
+        # {
+        # "price": <int cents> or "price_dollars": "<str>",
+        # "delta": <qty> or "delta_fp": "<str>",  (signed: + add, - remove)
+        # "side": "yes" | "no",
+        # }
+        #
+        # Or a list of such entries. Prefers *_fp when present (March 2026).
         if not self.valid:
             return False
 
@@ -244,31 +234,30 @@ class OrderBook:
 
     @property
     def implied_yes_ask_cents(self) -> int:
-        """Best price to buy YES = 100 - best NO bid."""
+        # Best price to buy YES = 100 - best NO bid.
         nb = self.best_no_bid_cents
         return (100 - nb) if nb > 0 else 100
 
     @property
     def implied_no_ask_cents(self) -> int:
-        """Best price to buy NO = 100 - best YES bid."""
+        # Best price to buy NO = 100 - best YES bid.
         yb = self.best_yes_bid_cents
         return (100 - yb) if yb > 0 else 100
 
     @property
     def spread_cents(self) -> int:
-        """Bid-ask spread on the YES side."""
+        # Bid-ask spread on the YES side.
         return self.implied_yes_ask_cents - self.best_yes_bid_cents
 
     # -- microstructure metrics (Phase 2) ------------------------------------
 
     @property
     def order_book_imbalance(self) -> float:
-        """Order-book imbalance (OBI) at the best level.
-
-        Computed as ``(Q_yes_bid - Q_no_bid) / (Q_yes_bid + Q_no_bid)``.
-        Positive values indicate buying pressure on YES; negative on NO.
-        Returns 0.0 if both sides are empty.
-        """
+        # Order-book imbalance (OBI) at the best level.
+        #
+        # Computed as ``(Q_yes_bid - Q_no_bid) / (Q_yes_bid + Q_no_bid)``.
+        # Positive values indicate buying pressure on YES; negative on NO.
+        # Returns 0.0 if both sides are empty.
         q_yes = self.yes_bids.best_bid_qty
         q_no = self.no_bids.best_bid_qty
         total = q_yes + q_no
@@ -278,16 +267,15 @@ class OrderBook:
 
     @property
     def micro_price_cents(self) -> float:
-        """Volume-weighted micro-price (YES side, in cents).
-
-        Leans the mid-point between best YES bid and implied YES ask
-        toward the side with more quantity at the touch::
-
-            micro = yes_ask * Q_yes_bid / (Q_yes_bid + Q_no_bid)
-                  + yes_bid * Q_no_bid  / (Q_yes_bid + Q_no_bid)
-
-        Falls back to the simple midpoint if either side is empty.
-        """
+        # Volume-weighted micro-price (YES side, in cents).
+        #
+        # Leans the mid-point between best YES bid and implied YES ask
+        # toward the side with more quantity at the touch::
+        #
+        # micro = yes_ask * Q_yes_bid / (Q_yes_bid + Q_no_bid)
+        # + yes_bid * Q_no_bid  / (Q_yes_bid + Q_no_bid)
+        #
+        # Falls back to the simple midpoint if either side is empty.
         yb = self.best_yes_bid_cents
         ya = self.implied_yes_ask_cents
         q_yes = self.yes_bids.best_bid_qty
@@ -299,12 +287,12 @@ class OrderBook:
 
     @property
     def best_yes_bid_depth(self) -> int:
-        """Quantity (centi-contracts) available at the best YES bid."""
+        # Quantity (centi-contracts) available at the best YES bid.
         return self.yes_bids.best_bid_qty
 
     @property
     def best_no_bid_depth(self) -> int:
-        """Quantity (centi-contracts) available at the best NO bid."""
+        # Quantity (centi-contracts) available at the best NO bid.
         return self.no_bids.best_bid_qty
 
     def invalidate(self) -> None:

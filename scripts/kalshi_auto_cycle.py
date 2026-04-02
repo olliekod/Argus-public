@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
-"""
-kalshi_auto_cycle.py — Automated Kalshi farm run loop.
+# Created by Oliver Meihls
 
-Each cycle:
-  1. Start farm process
-  2. Wait for --duration-hours
-  3. Send SIGTERM to farm; wait for clean exit
-  4. Archive logs/paper_trades.jsonl → logs/training_data/run_TIMESTAMP.jsonl
-  5. Run kalshi_run_pack.py → logs/analysis/
-  6. Run kalshi_apply_promotion.py → update context policy
-  7. Run reset_kalshi_paper.py (preserves training archive)
-  8. Run kalshi_auto_promote.py on schedule → update promoted_bot_id for UI
-  9. Repeat until --cycles reached or KeyboardInterrupt
-
-Usage:
-  python scripts/kalshi_auto_cycle.py
-  python scripts/kalshi_auto_cycle.py --cycles 6 --duration-hours 8
-  python scripts/kalshi_auto_cycle.py --dry-run --cycles 1 --duration-hours 0.01
-  python scripts/kalshi_auto_cycle.py --skip-farm --cycles 1 --duration-hours 0
-"""
+# kalshi_auto_cycle.py — Automated Kalshi farm run loop.
+#
+# Each cycle:
+# 1. Start farm process
+# 2. Wait for --duration-hours
+# 3. Send SIGTERM to farm; wait for clean exit
+# 4. Archive logs/paper_trades.jsonl → logs/training_data/run_TIMESTAMP.jsonl
+# 5. Run kalshi_run_pack.py → logs/analysis/
+# 6. Run kalshi_apply_promotion.py → update context policy
+# 7. Run reset_kalshi_paper.py (preserves training archive)
+# 8. Run kalshi_auto_promote.py on schedule → update promoted_bot_id for UI
+# 9. Repeat until --cycles reached or KeyboardInterrupt
+#
+# Usage:
+# python scripts/kalshi_auto_cycle.py
+# python scripts/kalshi_auto_cycle.py --cycles 6 --duration-hours 8
+# python scripts/kalshi_auto_cycle.py --dry-run --cycles 1 --duration-hours 0.01
+# python scripts/kalshi_auto_cycle.py --skip-farm --cycles 1 --duration-hours 0
 
 from __future__ import annotations
 
@@ -96,7 +96,7 @@ def temporary_farm_cycle_offset(settings: str, cycle_offset: int, dry_run: bool)
 
 
 def archive_paper_trades(dry_run: bool) -> Path | None:
-    """Copy paper_trades.jsonl to logs/training_data/run_TIMESTAMP.jsonl."""
+    # Copy paper_trades.jsonl to logs/training_data/run_TIMESTAMP.jsonl.
     src = ROOT / "logs" / "paper_trades.jsonl"
     if not src.exists() or src.stat().st_size == 0:
         log("paper_trades.jsonl empty or missing — skipping archive")
@@ -113,7 +113,7 @@ def archive_paper_trades(dry_run: bool) -> Path | None:
 
 
 def run_script(script: str, *args: str, dry_run: bool = False) -> int:
-    """Run a script in the scripts/ directory."""
+    # Run a script in the scripts/ directory.
     cmd = [PYTHON, str(ROOT / "scripts" / script), *args]
     label = " ".join(Path(c).name if c.endswith(".py") else c for c in cmd)
     if dry_run:
@@ -152,16 +152,15 @@ def stop_farm(proc: subprocess.Popen, timeout: float = 30.0) -> None:
 
 
 def run_backtest_eval(dry_run: bool, skip_cross_val: bool = False) -> None:
-    """Cross-validate winner zone stability across runs (>=2 tapes required).
-
-    Note: grid_eval (param sweep against tape) is intentionally NOT run here.
-    The farm's 7,488 bots already constitute a live grid search — each bot is
-    one param combo. kalshi_bot_performance.json (written by apply_promotion)
-    captures per-param PnL directly. Running grid_eval against the aggregate
-    tape would mix signals from all bots and produce misleading results.
-    Cross-validation is still useful: it checks whether the winner zone is
-    stable across runs or just overfit to one market regime.
-    """
+    # Cross-validate winner zone stability across runs (>=2 tapes required).
+    #
+    # Note: grid_eval (param sweep against tape) is intentionally NOT run here.
+    # The farm's 7,488 bots already constitute a live grid search — each bot is
+    # one param combo. kalshi_bot_performance.json (written by apply_promotion)
+    # captures per-param PnL directly. Running grid_eval against the aggregate
+    # tape would mix signals from all bots and produce misleading results.
+    # Cross-validation is still useful: it checks whether the winner zone is
+    # stable across runs or just overfit to one market regime.
     tape_dir = ROOT / "logs" / "decision_tape"
     training_dir = ROOT / "logs" / "training_data"
     settlement_glob = str(training_dir / "*.jsonl")

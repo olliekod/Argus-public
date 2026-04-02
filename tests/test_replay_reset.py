@@ -1,11 +1,11 @@
-"""
-Tests for ExecutionModel reset at start of replay run() (10.7).
+# Created by Oliver Meihls
 
-Verifies:
-- Replay harness calls execution_model.reset() at run() start
-- Two consecutive runs produce identical metrics
-- Ledger starts clean each run (no leakage between runs)
-"""
+# Tests for ExecutionModel reset at start of replay run() (10.7).
+#
+# Verifies:
+# - Replay harness calls execution_model.reset() at run() start
+# - Two consecutive runs produce identical metrics
+# - Ledger starts clean each run (no leakage between runs)
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ import pytest
 _ROOT = Path(__file__).resolve().parent.parent
 
 def _import_from_file(module_name: str, file_path: Path):
-    """Import a module directly from its file path, bypassing __init__."""
+    # Import a module directly from its file path, bypassing __init__.
     spec = importlib.util.spec_from_file_location(module_name, str(file_path))
     mod = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = mod
@@ -48,12 +48,10 @@ TradeIntent = _replay_mod.TradeIntent
 from src.core.outcome_engine import BarData
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # Test strategy that generates predictable trades
-# ═══════════════════════════════════════════════════════════════════════════
 
 class DeterministicTrader(ReplayStrategy):
-    """Buys on bar 2, sells on bar 4. Predictable for testing."""
+    # Buys on bar 2, sells on bar 4. Predictable for testing.
 
     def __init__(self):
         self._bar_count = 0
@@ -86,7 +84,7 @@ class DeterministicTrader(ReplayStrategy):
 
 
 def _make_bars(n: int = 6) -> List[BarData]:
-    """Generate synthetic bars."""
+    # Generate synthetic bars.
     bars = []
     price = 100.0
     for i in range(n):
@@ -104,10 +102,10 @@ def _make_bars(n: int = 6) -> List[BarData]:
 
 
 class TestReplayReset:
-    """Verify execution_model.reset() is called at replay start."""
+    # Verify execution_model.reset() is called at replay start.
 
     def test_two_runs_identical_metrics(self):
-        """Running the same replay twice produces identical results."""
+        # Running the same replay twice produces identical results.
         bars = _make_bars(6)
         cfg = ExecutionConfig(max_spread_pct=5.0, slippage_per_contract=0.0)
         exec_model = ExecutionModel(cfg)
@@ -138,7 +136,7 @@ class TestReplayReset:
         assert result1.portfolio_summary["total_realized_pnl"] == result2.portfolio_summary["total_realized_pnl"]
 
     def test_ledger_starts_clean_each_run(self):
-        """Ledger should be empty at the start of each run()."""
+        # Ledger should be empty at the start of each run().
         bars = _make_bars(6)
         cfg = ExecutionConfig(max_spread_pct=5.0, slippage_per_contract=0.0)
         exec_model = ExecutionModel(cfg)
@@ -170,7 +168,7 @@ class TestReplayReset:
             f"Run2 fills ({fills_after_run2}) should equal Run1 ({fills_after_run1}), not accumulate"
 
     def test_no_accumulated_rejects(self):
-        """Rejects from run 1 should not appear in run 2's ledger."""
+        # Rejects from run 1 should not appear in run 2's ledger.
         bars = _make_bars(6)
         # Tight spread filter will reject some fills
         cfg = ExecutionConfig(max_spread_pct=0.001, slippage_per_contract=0.0)

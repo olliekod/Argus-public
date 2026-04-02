@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 from argus_kalshi.mispricing_scalper import _scalp_family_allowed
 
 

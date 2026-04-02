@@ -1,10 +1,9 @@
-"""
-Coinbase WebSocket Connector
-============================
+# Created by Oliver Meihls
 
-High-frequency WebSocket client for Coinbase spot market data.
-Uses the public feed - no authentication required for ticker data.
-"""
+# Coinbase WebSocket Connector
+#
+# High-frequency WebSocket client for Coinbase spot market data.
+# Uses the public feed - no authentication required for ticker data.
 
 import asyncio
 import json
@@ -21,12 +20,10 @@ logger = get_connector_logger('coinbase_ws')
 
 
 class CoinbaseWebSocket:
-    """
-    Coinbase WebSocket client for spot market data.
-    
-    Provides sub-second price ticks via the 'ticker' channel.
-    US-friendly and extremely reliable.
-    """
+    # Coinbase WebSocket client for spot market data.
+    #
+    # Provides sub-second price ticks via the 'ticker' channel.
+    # US-friendly and extremely reliable.
     
     BASE_URL = "wss://ws-feed.exchange.coinbase.com"
     
@@ -36,14 +33,12 @@ class CoinbaseWebSocket:
         on_ticker: Optional[Callable] = None,
         event_bus: Optional[Any] = None,
     ):
-        """
-        Initialize Coinbase WebSocket client.
-        
-        Args:
-            symbols: List of symbols (e.g., ['BTC/USDT', 'ETH/USDT'])
-            on_ticker: Callback for ticker updates
-            event_bus: Optional Argus event bus for publishing QuoteEvents
-        """
+        # Initialize Coinbase WebSocket client.
+        #
+        # Args:
+        # symbols: List of symbols (e.g., ['BTC/USDT', 'ETH/USDT'])
+        # on_ticker: Callback for ticker updates
+        # event_bus: Optional Argus event bus for publishing QuoteEvents
         self.symbols = [self._normalize_symbol(s) for s in symbols]
         self.on_ticker = on_ticker
         self._event_bus = event_bus
@@ -69,14 +64,14 @@ class CoinbaseWebSocket:
         logger.info(f"Coinbase WebSocket initialized for {self.symbols}")
 
     def _normalize_symbol(self, symbol: str) -> str:
-        """Convert unified symbol to Coinbase format (e.g. BTC-USD)."""
+        # Convert unified symbol to Coinbase format (e.g. BTC-USD).
         if ':' in symbol:
             symbol = symbol.split(':')[0]
         base = symbol.split('/')[0] if '/' in symbol else symbol.replace('USDT', '')
         return f"{base}-USD"
 
     async def connect(self) -> None:
-        """Start WebSocket connection and message loop."""
+        # Start WebSocket connection and message loop.
         self._running = True
         retry_count = 0
         
@@ -125,14 +120,14 @@ class CoinbaseWebSocket:
         self._ws = None
 
     async def disconnect(self) -> None:
-        """Stop WebSocket connection."""
+        # Stop WebSocket connection.
         self._running = False
         if self._ws:
             await self._ws.close()
             logger.info("Coinbase WebSocket disconnected")
 
     async def _message_loop(self) -> None:
-        """Process incoming WebSocket messages."""
+        # Process incoming WebSocket messages.
         if not self._ws:
             return
         
@@ -154,7 +149,7 @@ class CoinbaseWebSocket:
                 logger.error(f"Error handling Coinbase message: {e}")
 
     async def _handle_ticker(self, data: Dict[str, Any]) -> None:
-        """Parse ticker message and invoke callback."""
+        # Parse ticker message and invoke callback.
         try:
             symbol = data.get('product_id', '').replace('-', '')
             
@@ -221,13 +216,13 @@ class CoinbaseWebSocket:
             logger.error(f"Error parsing Coinbase ticker data: {e}")
 
     def is_connected(self) -> bool:
-        """Check if WebSocket is connected."""
+        # Check if WebSocket is connected.
         if self._ws is None:
             return False
         return not self._ws.closed
 
     def get_health_status(self) -> Dict[str, Any]:
-        """Return health for dashboard."""
+        # Return health for dashboard.
         now = time.time()
         connected = self.is_connected()
         age = (now - self.last_message_ts) if self.last_message_ts else None

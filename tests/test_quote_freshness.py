@@ -1,9 +1,9 @@
-"""
-Tests for quote freshness utilities.
+# Created by Oliver Meihls
 
-Validates receipt-time-based freshness checks, Greeks timestamp resolution,
-and staleness summary statistics.
-"""
+# Tests for quote freshness utilities.
+#
+# Validates receipt-time-based freshness checks, Greeks timestamp resolution,
+# and staleness summary statistics.
 
 from __future__ import annotations
 
@@ -20,9 +20,7 @@ from src.core.quote_freshness import (
 )
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # is_quote_fresh
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestIsQuoteFresh:
     def test_fresh_quote(self):
@@ -63,9 +61,7 @@ class TestIsQuoteFresh:
         assert is_quote_fresh(recv, max_age_ms=120_000) is True
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # quote_age_ms
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestQuoteAgeMs:
     def test_valid_age(self):
@@ -77,9 +73,7 @@ class TestQuoteAgeMs:
         assert quote_age_ms(0, reference_ms=1_700_000_000_000) == -1
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # effective_greeks_timestamp
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestEffectiveGreeksTimestamp:
     def test_prefers_event_ts(self):
@@ -120,9 +114,7 @@ class TestEffectiveGreeksTimestamp:
         assert source == "event"
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # is_greeks_fresh
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestIsGreeksFresh:
     def test_fresh_with_event_ts(self):
@@ -139,9 +131,7 @@ class TestIsGreeksFresh:
         assert is_greeks_fresh({}, max_age_ms=120_000, reference_ms=1_700_000_000_000) is False
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # freshness_summary
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestFreshnessSummary:
     def test_basic_summary(self):
@@ -182,9 +172,7 @@ class TestFreshnessSummary:
         assert s["age_p50_ms"] == 10_000
 
 
-# ═══════════════════════════════════════════════════════════════════════════
 # now_ms utility
-# ═══════════════════════════════════════════════════════════════════════════
 
 class TestNowMs:
     def test_returns_positive_int(self):

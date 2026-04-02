@@ -1,20 +1,20 @@
-"""
-Kalshi clean-run lock helper.
+# Created by Oliver Meihls
 
-Purpose:
-- Capture a baseline workspace/settings snapshot at run start.
-- Verify later whether a run remained "clean" or became "contaminated".
-
-Design notes:
-- Existing pre-run dirty files are allowed and recorded as baseline.
-- A run is marked contaminated only if state changes relative to baseline.
-- Volatile runtime paths are ignored by default (logs/, data/, tmp/, caches).
-
-Usage:
-    python scripts/kalshi_run_lock.py start --settings config/kalshi_family_adaptive.yaml
-    python scripts/kalshi_run_lock.py check --run-id <run_id>
-    python scripts/kalshi_run_lock.py check-latest
-"""
+# Kalshi clean-run lock helper.
+#
+# Purpose:
+# - Capture a baseline workspace/settings snapshot at run start.
+# - Verify later whether a run remained "clean" or became "contaminated".
+#
+# Design notes:
+# - Existing pre-run dirty files are allowed and recorded as baseline.
+# - A run is marked contaminated only if state changes relative to baseline.
+# - Volatile runtime paths are ignored by default (logs/, data/, tmp/, caches).
+#
+# Usage:
+# python scripts/kalshi_run_lock.py start --settings config/kalshi_family_adaptive.yaml
+# python scripts/kalshi_run_lock.py check --run-id <run_id>
+# python scripts/kalshi_run_lock.py check-latest
 
 from __future__ import annotations
 

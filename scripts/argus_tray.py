@@ -1,13 +1,12 @@
-"""
-Argus System Tray Application
-=============================
+# Created by Oliver Meihls
 
-Runs Argus in the background with a system tray icon.
-Supports:
-- Minimize to tray
-- Status notifications
-- Quick access to logs and controls
-"""
+# Argus System Tray Application
+#
+# Runs Argus in the background with a system tray icon.
+# Supports:
+# - Minimize to tray
+# - Status notifications
+# - Quick access to logs and controls
 
 import asyncio
 import sys
@@ -30,7 +29,7 @@ from src.orchestrator import ArgusOrchestrator
 
 
 class ArgusTray:
-    """System tray application for Argus."""
+    # System tray application for Argus.
     
     def __init__(self):
         self.icon = None
@@ -48,7 +47,7 @@ class ArgusTray:
             self.image = Image.new('RGB', (64, 64), color=(40, 44, 52))
     
     def create_menu(self):
-        """Create system tray menu."""
+        # Create system tray menu.
         return pystray.Menu(
             pystray.MenuItem("Argus Market Monitor", None, enabled=False),
             pystray.Menu.SEPARATOR,
@@ -67,7 +66,7 @@ class ArgusTray:
         )
     
     def open_logs(self, icon=None, item=None):
-        """Open logs folder."""
+        # Open logs folder.
         logs_path = Path(__file__).parent.parent / "logs"
         if logs_path.exists():
             os.startfile(str(logs_path))
@@ -76,17 +75,17 @@ class ArgusTray:
             os.startfile(str(logs_path))
     
     def check_database(self, icon=None, item=None):
-        """Run database check script."""
+        # Run database check script.
         script_path = Path(__file__).parent / "check_db.py"
         os.system(f'start cmd /k python "{script_path}"')
     
     def open_config(self, icon=None, item=None):
-        """Open config folder."""
+        # Open config folder.
         config_path = Path(__file__).parent.parent / "config"
         os.startfile(str(config_path))
     
     def stop_argus(self, icon=None, item=None):
-        """Stop Argus gracefully."""
+        # Stop Argus gracefully.
         if self._running and self.orchestrator:
             self._running = False
             if self._loop:
@@ -97,12 +96,12 @@ class ArgusTray:
             self.icon.notify("Argus Stopped", "Market monitoring has been stopped")
     
     def quit_app(self, icon=None, item=None):
-        """Quit the application."""
+        # Quit the application.
         self.stop_argus()
         self.icon.stop()
     
     async def run_orchestrator(self):
-        """Run the Argus orchestrator."""
+        # Run the Argus orchestrator.
         self._loop = asyncio.get_event_loop()
         self.orchestrator = ArgusOrchestrator()
         self._running = True
@@ -117,7 +116,7 @@ class ArgusTray:
             self._running = False
     
     def start_orchestrator_thread(self):
-        """Start Argus in a background thread."""
+        # Start Argus in a background thread.
         def run():
             asyncio.run(self.run_orchestrator())
         
@@ -125,7 +124,7 @@ class ArgusTray:
         self._thread.start()
     
     def run(self):
-        """Run the system tray application."""
+        # Run the system tray application.
         # Single instance check
         lock_file = Path(os.getenv('TEMP')) / "argus.lock"
         
@@ -172,7 +171,7 @@ class ArgusTray:
 
 
 def main():
-    """Entry point."""
+    # Entry point.
     # Change to project directory
     os.chdir(Path(__file__).parent.parent)
     

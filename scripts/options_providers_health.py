@@ -1,18 +1,19 @@
-"""Options & Greeks stream health: primary + secondary from data_sources.
+# Created by Oliver Meihls
 
-Uses config data_sources.options_snapshots_primary (Tastytrade) and
-options_snapshots_secondary (Public when public_options.enabled). Does not
-assume Alpaca options.
-
-- Tastytrade: REST option chain snapshots + DXLink Greeks (IV in snapshots
-  when Greeks cache is populated).
-- Public: REST option chain snapshots with IV/Greeks from Public API.
-
-Usage:
-  python scripts/options_providers_health.py
-  python scripts/options_providers_health.py --hours 6 --db data/argus.db
-  python scripts/options_providers_health.py --symbol SPY
-"""
+# Options & Greeks stream health: primary + secondary from data_sources.
+#
+# Uses config data_sources.options_snapshots_primary (Tastytrade) and
+# options_snapshots_secondary (Public when public_options.enabled). Does not
+# assume Alpaca options.
+#
+# - Tastytrade: REST option chain snapshots + DXLink Greeks (IV in snapshots
+# when Greeks cache is populated).
+# - Public: REST option chain snapshots with IV/Greeks from Public API.
+#
+# Usage:
+# python scripts/options_providers_health.py
+# python scripts/options_providers_health.py --hours 6 --db data/argus.db
+# python scripts/options_providers_health.py --symbol SPY
 
 from __future__ import annotations
 
@@ -29,7 +30,7 @@ if str(_REPO) not in sys.path:
 
 
 def _get_providers_from_policy() -> tuple[list[str], str]:
-    """Return (list of provider names, description)."""
+    # Return (list of provider names, description).
     try:
         from src.core.config import load_config
         from src.core.data_sources import get_data_source_policy

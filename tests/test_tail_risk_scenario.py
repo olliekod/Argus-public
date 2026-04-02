@@ -1,9 +1,8 @@
-"""
-Test: Tail-Risk Scenario
-=========================
+# Created by Oliver Meihls
 
-Verify prob_touch > threshold reduces contracts deterministically.
-"""
+# Test: Tail-Risk Scenario
+#
+# Verify prob_touch > threshold reduces contracts deterministically.
 
 import pytest
 
@@ -18,7 +17,7 @@ from src.analysis.tail_risk_scenario import (
 class TestAnalyticalProbTouch:
 
     def test_already_touching(self):
-        """Price at barrier → prob = 1.0 (for downside barrier S == barrier)."""
+        # Price at barrier → prob = 1.0 (for downside barrier S == barrier).
         assert _analytical_prob_touch(50.0, 50.0, 30/365, 0.40) == 1.0
         # S=48 < barrier=50 is an upside barrier case (barrier > S),
         # so prob < 1.0 (high probability but not certain).
@@ -26,24 +25,24 @@ class TestAnalyticalProbTouch:
         assert prob > 0.5  # likely to touch nearby upside barrier
 
     def test_far_otm(self):
-        """Very far OTM barrier → low touch probability."""
+        # Very far OTM barrier → low touch probability.
         prob = _analytical_prob_touch(100.0, 50.0, 30/365, 0.20)
         assert prob < 0.01
 
     def test_higher_vol_increases_prob(self):
-        """Higher volatility increases touch probability."""
+        # Higher volatility increases touch probability.
         prob_low = _analytical_prob_touch(50.0, 45.0, 30/365, 0.20)
         prob_high = _analytical_prob_touch(50.0, 45.0, 30/365, 0.60)
         assert prob_high > prob_low
 
     def test_longer_time_increases_prob(self):
-        """Longer time to expiry increases touch probability."""
+        # Longer time to expiry increases touch probability.
         prob_short = _analytical_prob_touch(50.0, 45.0, 7/365, 0.40)
         prob_long = _analytical_prob_touch(50.0, 45.0, 90/365, 0.40)
         assert prob_long > prob_short
 
     def test_invalid_inputs(self):
-        """Invalid inputs → prob = 0.0."""
+        # Invalid inputs → prob = 0.0.
         assert _analytical_prob_touch(0.0, 45.0, 30/365, 0.40) == 0.0
         assert _analytical_prob_touch(50.0, 45.0, 0.0, 0.40) == 0.0
         assert _analytical_prob_touch(50.0, 45.0, 30/365, 0.0) == 0.0
@@ -65,7 +64,7 @@ class TestEvaluateTailRisk:
         return TailRiskConfig(**defaults)
 
     def test_disabled_returns_proposed(self):
-        """Disabled tail risk returns proposed contracts unchanged."""
+        # Disabled tail risk returns proposed contracts unchanged.
         config = self._default_config(enabled_for_options=False)
         result = evaluate_tail_risk(
             S=50.0, short_strike=45.0, long_strike=40.0,
@@ -77,7 +76,7 @@ class TestEvaluateTailRisk:
         assert not result.capped
 
     def test_zero_contracts(self):
-        """Zero proposed contracts → zero allowed."""
+        # Zero proposed contracts → zero allowed.
         config = self._default_config()
         result = evaluate_tail_risk(
             S=50.0, short_strike=45.0, long_strike=40.0,
@@ -88,7 +87,7 @@ class TestEvaluateTailRisk:
         assert result.allowed_contracts == 0
 
     def test_high_prob_touch_reduces_contracts(self):
-        """High prob_touch (close to ATM, high vol) should reduce contracts."""
+        # High prob_touch (close to ATM, high vol) should reduce contracts.
         config = self._default_config(max_prob_touch=0.20)
         result = evaluate_tail_risk(
             S=50.0,
@@ -106,7 +105,7 @@ class TestEvaluateTailRisk:
         assert result.allowed_contracts <= 10
 
     def test_low_prob_touch_passes(self):
-        """Low prob_touch (far OTM, low vol) → contracts pass through."""
+        # Low prob_touch (far OTM, low vol) → contracts pass through.
         config = self._default_config(max_prob_touch=0.90)
         result = evaluate_tail_risk(
             S=100.0,
@@ -123,7 +122,7 @@ class TestEvaluateTailRisk:
         assert not result.capped
 
     def test_invalid_T_returns_zero(self):
-        """T ≤ 0 → zero contracts."""
+        # T ≤ 0 → zero contracts.
         config = self._default_config()
         result = evaluate_tail_risk(
             S=50.0, short_strike=45.0, long_strike=40.0,
@@ -135,7 +134,7 @@ class TestEvaluateTailRisk:
         assert result.capped
 
     def test_deterministic_with_seed(self):
-        """Same inputs + same seed → same result."""
+        # Same inputs + same seed → same result.
         config = self._default_config(seed=123, mc_simulations=5_000)
         kwargs = dict(
             S=50.0, short_strike=45.0, long_strike=40.0,
@@ -148,7 +147,7 @@ class TestEvaluateTailRisk:
         assert r1.allowed_contracts == r2.allowed_contracts
 
     def test_stress_loss_caps_contracts(self):
-        """Stress loss exceeding equity fraction caps contracts."""
+        # Stress loss exceeding equity fraction caps contracts.
         config = self._default_config(
             max_stress_loss_pct=0.01,  # Very tight: 1% of equity
         )

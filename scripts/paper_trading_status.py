@@ -1,10 +1,9 @@
-"""
-Paper Trading Status Script
-===========================
+# Created by Oliver Meihls
 
-Check paper trading performance and open positions.
-Run: python scripts\paper_trading_status.py
-"""
+# Paper Trading Status Script
+#
+# Check paper trading performance and open positions.
+# Run: python scripts\paper_trading_status.py
 
 import asyncio
 import sys
@@ -19,7 +18,7 @@ from src.analysis.performance_tracker import PerformanceTracker
 
 
 async def main():
-    """Show paper trading status."""
+    # Show paper trading status.
     print("=" * 60)
     print("PAPER TRADING STATUS")
     print("=" * 60)

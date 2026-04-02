@@ -1,8 +1,9 @@
-"""News sentiment external metric updater.
+# Created by Oliver Meihls
 
-Builds a sentiment score from fetched headlines and a finance lexicon, then
-publishes ``ExternalMetricEvent(key="news_sentiment", value=...)``.
-"""
+# News sentiment external metric updater.
+#
+# Builds a sentiment score from fetched headlines and a finance lexicon, then
+# publishes ``ExternalMetricEvent(key="news_sentiment", value=...)``.
 
 from __future__ import annotations
 
@@ -24,7 +25,7 @@ _DEFAULT_FEEDS = [
 
 
 def format_news_sentiment_telegram(payload: Optional[Dict[str, Any]]) -> str:
-    """Format a concise news sentiment summary line for Telegram."""
+    # Format a concise news sentiment summary line for Telegram.
     if not payload or payload.get("label") == "stub":
         return "⚪ News: (stub/unavailable)"
 
@@ -36,7 +37,7 @@ def format_news_sentiment_telegram(payload: Optional[Dict[str, Any]]) -> str:
 
 
 class NewsSentimentUpdater:
-    """Collect and publish a ``news_sentiment`` external metric."""
+    # Collect and publish a ``news_sentiment`` external metric.
 
     def __init__(self, bus: EventBus, config: Dict[str, Any]) -> None:
         self._bus = bus
@@ -71,7 +72,7 @@ class NewsSentimentUpdater:
         await self._fetcher.close()
 
     def get_last_payload(self) -> Optional[Dict[str, Any]]:
-        """Return the last computed/published payload, if available."""
+        # Return the last computed/published payload, if available.
         return self._last_payload
 
     @staticmethod
@@ -93,7 +94,7 @@ class NewsSentimentUpdater:
         )
 
     async def update(self) -> Optional[Dict[str, Any]]:
-        """Fetch, score, aggregate, and publish news sentiment payload."""
+        # Fetch, score, aggregate, and publish news sentiment payload.
         now_ms = int(time.time() * 1000)
 
         if not self._enabled:

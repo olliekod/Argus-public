@@ -1,10 +1,9 @@
-"""
-Run Strategy Backtest
-=====================
+# Created by Oliver Meihls
 
-Backtests the IBIT put spread strategy using BITO as proxy.
-Run: python scripts/run_backtest.py
-"""
+# Run Strategy Backtest
+#
+# Backtests the IBIT put spread strategy using BITO as proxy.
+# Run: python scripts/run_backtest.py
 
 import sys
 from pathlib import Path
@@ -17,7 +16,7 @@ from src.analysis.backtester import StrategyBacktester
 
 
 def main():
-    """Run backtest with current strategy parameters."""
+    # Run backtest with current strategy parameters.
     print("=" * 60)
     print("📈 IBIT PUT SPREAD STRATEGY BACKTEST")
     print("    Using BITO as proxy for IBIT")

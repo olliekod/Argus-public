@@ -1,3 +1,5 @@
+# Created by Oliver Meihls
+
 import sys
 from pathlib import Path
 

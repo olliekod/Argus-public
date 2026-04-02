@@ -1,8 +1,8 @@
-"""
-Tests for TapeRecorder boundedness and determinism replay.
+# Created by Oliver Meihls
 
-Run with:  python -m pytest tests/test_tape_capture.py -v
-"""
+# Tests for TapeRecorder boundedness and determinism replay.
+#
+# Run with:  python -m pytest tests/test_tape_capture.py -v
 
 import json
 import os
@@ -129,7 +129,7 @@ class TestTapeExport:
 
 class TestTapeReplay:
     def test_replay_determinism(self):
-        """Two replays of the same tape produce identical bars."""
+        # Two replays of the same tape produce identical bars.
         BASE = 1_700_000_000.0
         M0 = _minute_floor(BASE)
         M1 = M0 + 60
